@@ -1,0 +1,10 @@
+***********
+* Welcome to DUSTY2.08
+*
+* - To begin copy all filenames .init to filenames without the .init
+*
+* - Next compile dusty2.08.f with any fortran compiler it is in standard
+*     fortran77 fixed form
+*
+* - The dusty.inp file is the standard input file
+*

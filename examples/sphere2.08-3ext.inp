@@ -1,0 +1,418 @@
+ ----------------------------------------------------------------------
+    Input data for DUSTY                                               
+ ---------------------------------------------------------------------- 
+ This is an input file for radiative transfer code DUSTY, version 2.07. 
+ NOTE: this input file is not compatible with old versions of Dusty 
+ due to the added new input options. Examples of each input option are 
+ given at the end of this file. For a more detailed description please 
+ refer to the Manual. 
+ 
+ This input file has a free format. Text and empty lines can be entered
+ arbitrarily. The occurrence of relevant numerical input, which is 
+ entered in standard FORTRAN conventions, is flagged by the equal sign.  
+ The only restrictions are that all required input entries must be 
+ specified, and in the correct order; the most likely source of an input
+ error is failure to comply with these requirements.  Single entries are
+ always preceded by the equal sign and terminated by a blank, which can 
+ be optionally preceded with a punctuation mark. Some input is entered 
+ as a list, in which case only the first member is preceded by the equal
+ sign, while each following member must be preceded by a blank (a comma 
+ followed by a blank can be entered for additional separation). Because 
+ of the special role of the equal sign as a flag for input entry, care 
+ must be taken not to introduce any equal signs except when required. 
+ All text following the `%' sign is ignored (as in TeX) and this can be 
+ used to comment out material that includes equal signs. All lines that 
+ start with the `*' sign are echoed in the output.
+
+* ----------------------------------------------------------------------
+* NOTES:                                                                
+* This is an example of adding external illumination by the interstellar 
+* radiation field. 
+* ----------------------------------------------------------------------
+
+   I. GEOMETRY
+
+     flag = 1       % spherical 
+
+                                                                        
+  II. PHYSICAL PARAMETERS                                                 
+     1) Source(s) 
+
+          central = 1       external = 1
+        (flag can be 1 or 0 for source presence or absence, resp.)
+
+   1.1) Central source radiation:    
+        Spectral shape:     Spectrum = 1  
+                        Number of BB = 1
+                         Temperature = 6500 K 
+    
+        Scale:         type of entry = 2       % Fi at the inner boundary  
+                                  Fi = 1.6e04  % W/m2
+
+   1.2) External radiation:    
+        Spectral shape:     Spectrum = 1  
+                        Number of BB = 1
+                         Temperature = 50 K 
+
+        Scale:         type of entry = 2   % dilution factor
+                                   W = 1   % 
+
+
+     2) Dust Properties 
+     
+      2.1 Chemical composition                       
+           optical properties index = 1
+           Abundances for supported grain types:
+               Sil-Ow  Sil-Oc  Sil-DL  grf-DL  amC-Hn  SiC-Pg 
+           x =  0.00    0.00    0.53    0.47    0.00    0.00
+       
+      2.2 Grain size distribution
+
+        - size distribution = 1  % standard MRN                         
+                                                                        
+
+     3) Density Distribution
+        - density type = 1                    
+        - number of powers = 1                
+        - shell's relative thickness = 1e04
+        - power = 2.0        
+        
+        
+     4) Optical Depth     
+        - grid type = 2                    % log grid
+        - lambda0 = 0.55 micron            % optical depth specified 
+        - tau(min) = 0.1; tau(max) = 10.0   % for the visual wavelength   
+        - number of models = 3            
+  ----------------------------------------------------------------------
+                                                                        
+  II NUMERICS                                                           
+      
+     - accuracy for flux conservation = 0.05                                                                 
+  ----------------------------------------------------------------------
+                                                                        
+  III OUTPUT PARAMETERS                                                 
+
+    The flags governing file production are as follows: 
+    If flag.eq.0 the particular file(s) is not produced. If flag.eq.1
+	all model results are in corresponding files with extensions 'spp' 
+	(sp.properties), 'stb' (spectra), 'itb' (images and visibilities, 
+	if chosen), 'rtb' (radial profiles) and 'mtb' (messages).  If 
+	flag.eq.2 each model result is in a separate corresponding file, 
+	with visibilities contained in fname.i###. If the images flag.eq.3 
+	the visibilities will be in separate files fname.v### (the flag for 
+	visibilities has to be the same as for images).
+                                                                        
+        FILE DESCRIPTION                               FLAG        
+       ------------------------------------------------------------     
+       - properties of emerging spectra;             fname.spp = 1    
+       - detailed spectra for each model;           fname.s### = 1   
+       - images at specified wavelengths;           fname.i### = 1  
+         If this flag is set to 1, here specify these wavelengths: 
+         the first entry is the number of such wavelengths (<20), 
+         followed by a list of these wavelengths in microns.                             
+         number of wavelengths  = 4                                                 
+         wavelengths = 2.2, 10., 100., 1000. microns
+       - visibility function at spec. wavelengths;  fname.v### = 0                                        
+       - radial profiles for each model;            fname.r### = 1   
+       - detailed run-time messages;                fname.m### = 1
+       ------------------------------------------------------------- 
+ 
+
+  The end of the input parameters listing.                                                                       
+  **********************************************************************
+  EXAMPLES OF INPUT:
+  ----------------------------------------------------------------------
+   I. GEOMETRY
+
+     flag = 1  for spherical or flag = 0 for slab geometry
+                                                                        
+  II. PHYSICAL PARAMETERS                       
+                            
+   1) Source(s) - here the user chooses the sources illuminating 
+   the spherical shell (plane-parallel slab). 1 is for source presence;
+   0 for source absence. Example:
+
+        central = 1       external = 0
+                                                                      
+  1.1 Central Source Radiation
+      Six input options, flag selected, are available. Three involve 
+      entry in analytical form: (1) a combination of black-bodies, 
+      (2) a modified black body as Engelke-Marengo function, and 
+      (3) broken power law. The other three are for entry in numerical 
+	  form as a separate user-supplied input file which lists either 
+	  (4) lambda*F_lambda (= nu*F_nu), (5) F_lambda or (6) F_nu vs. lambda. 
+	  Here lambda is wavelength in microns, and nu is the corresponding 
+	  frequency. F_lambda or F_nu is the external flux density in arbitrary 
+	  units. Examples of the different options are as follows:
+   
+      (1) Two black bodies, e.g. a binary system:
+                Spectrum =  1                
+            Number of BB =  2                
+            Temperatures = 10000, 2500 K   
+            Luminosities = 4, 1              
+
+      (2) Modified black body spectrum using Engelke-Marengo function
+                Spectrum = 3                  
+                     Tbb = 2500 K                  
+       SiO feature depth = 10.0 % 
+	   
+      (3) A flat spectrum confined between 0.1 and 1.0 microns:
+                Spectrum = 2                  
+                       N = 1                  
+                  lambda = 0.1, 1 micron      
+                       k = 0                  
+
+      (4) Spectrum tabulated in file AGN.dat:
+                Spectrum = 4          % in lamF_lam units  
+                 AGN.dat
+
+      Options (5) and (6) are entered analogously to option (4).
+                                                                        
+      Input of spectral shape is followed by boundary condition - 
+	  either dust temperature at r1 (type of entry = 1) or input flux 
+	  (type of entry = 2, 3 or 4). If spectrum is from a file its bol.flux 
+	  is found from the file and the ONLY other input is type of entry=1 
+	  (i.e. T1) , or 2 (normalization factor).
+	  Examples of the two options are as follows:    
+
+	  Scale:   
+	  (1) Td at the inner boundary : 
+	           type of entry = 1     
+                          Td = 1000   K
+
+	  (2) External flux at the inner boundary in W/m^2: 
+	           type of entry = 2     
+                          Fi = 1.0e4 W/m2
+	  
+	  (3) Luminosity of the central source (in units of Lo)
+	      and its distance to the inner boundary (r1, in cm): 
+	           type of entry = 3     
+                           L = 1.0e4  Lo
+                          r1 = 1.0e14 cm
+
+	  (4) effective temperature corresponding to the bol. flux at r1: 
+	            type of entry = 4     
+                           Te = 600   K
+
+
+  1.2 External Source Radiation
+      The external radiation is considered isotropic and specified by 
+	  its spectral shape and energy density. Analitical spectral profiles
+	  are entered in the same way as for the central source. Then the 
+	  scale is given by either 
+	  (1) the mean intensity value Jo in [W/m2]
+	  	 Example:
+         Scale:         type of entry = 1         % Jext value
+                                 Jext = 1.0e-05    W/m2
+      or, 
+	  (2) dilution factor W, if the source parameters are chosen as a 
+	  black body. For a combination of black-bodies the dilution factor 
+	  refers to the highest luminosity black body, since their relative 
+	  luminosities are given. 
+	     Example:
+         Spectral shape:     Spectrum = 1  
+                         Number of BB = 2
+                          Temperature = 10000  ,  4000 K 
+                Relative Luminosities = 1, 22            
+
+               Scale:   type of entry = 2         % dilution factor
+                                    W = 1.0e-13    
+   
+	  If the spectrum is from a file(in SI units) there is only one 
+	  option for type of entry=2 (normalization factor_, allowing scaling 
+	  the spectrum up or down; if Norm=1 the file is taken as it is.
+      
+	  Example of external source with data for the Interstellar 
+	  radiation field in file 'ISRF.dat'. Jo is found from the file and 
+	  multiplied by 20:
+
+         Spectral shape:     Spectrum = 4  
+                               ISRF.dat						              
+         Scale:         type of entry = 2   % norm. factor for spectrum
+                                 Norm = 20  % 
+        
+            
+      
+
+   2) Dust Properties
+      Dust optical properties are determined by the sizes of the grains 
+      and by their absorption and scattering efficiencies, which depend 
+      also on the grain material. The grains chemical composition is 
+      specified first, followed by the size distribution and the dust 
+      temperature at the inner boundary.
+
+   2.1 Chemical composition                                          
+      
+      DUSTY contains data for the optical properties of 6 common grain 
+      types. Optical properties for additional grains can be supplied by
+      the user.  In this case, the user can either specify directly the 
+      absorption and scattering coefficients or have DUSTY calculate 
+      them from provided index of refraction. Examples:
+
+      (1) Mixture containing only dust grains with built-in data for
+          optical properties:
+
+                Optical properties index = 1
+                Abundances for supported grain types:
+                Sil-Ow  Sil-Oc  Sil-DL  grf-DL  amC-Hn   SiC-Pg 
+            x =  0.00    0.00    0.53    0.47    0.00     0.00
+
+      (2) Three additional grain types with the refractive index 
+          provided by the user in data files amC-zb1.nk, amC-zb2.nk and
+          amC-zb3.nk:
+                Optical properties index = 2
+                Abundances for supported grain types:
+                Sil-Ow  Sil-Oc  Sil-DL  grf-DL  amC-Hn   SiC-Pg 
+            x =  0.00    0.00    0.00    0.35    0.00     0.00
+
+          Number of additional components = 3, properties listed in:
+                     amC-zb1.nk
+                     amC-zb2.nk
+                     amC-zb3.nk
+          Abundances for these components = 0.45, 0.10, 0.23 
+       
+      (3) Absorption and scattering cross sections from the file 
+          ism-stnd.dat (in this case skip the entry for size distribution)
+
+          Optical properties index = 3; cross-sections entered in file
+                   ism-stnd.dat 
+ 
+   2.2 Grain size distribution                                             
+                                                                        
+      The grain size distribution must be specified only when the 
+      previous option was set to 1 or 2.  When the dust cross sections 
+      are read from a file previous option set at 3, the present option 
+      is skipped. Examples:
+      
+      (1) Standard MRN distribution. No input required other than the
+          option flag.
+          
+          Size distribution = 1
+ 
+      (2) Modified MRN distribution. The option flag is followed by 
+          listing of the power index, q, lower limit a(min) and upper 
+          limit a(max) in microns.
+
+          Size distribution = 2
+          q = 3.5, a(min) = 0.005 micron, a(max) = 0.25 micron 
+
+      (3) KMH distribution. The option flag is followed by a list of 
+          the power index, q, lower limit a(min) and the characteristic 
+          size a0 in microns
+          
+          Size distribution = 3
+          q = 3.5, a(min) = 0.005 micron, a0 = 0.2 micron
+
+                                             
+   3) Density Distribution - only for spherical shell
+      DUSTY provides 3 methods for entering the density distribution: 
+      prescribed analytical forms, hydrodynamic calculation of winds 
+      driven by radiation pressure on dust particles, and numerical 
+      tabulation in a file. Examples:                                          
+                                              
+      (1) Broken power law:                                        
+
+                   density type = 1
+                              N = 3
+               transition radii =   10   100    1000
+               power indices    =    2     1       0   
+          
+          Or for a single power-law:
+          
+               density type = 1; N = 1; Y = 1000; p = 2
+          
+                                              
+      (2) Exponentially decreasing density distribution:
+
+               density type = 2; Y = 100; sigma = 4                                    
+                                                        
+      (3) Full numerical solution for radiatively driven winds:
+
+               density type = 3;     Y = 1.e4                                             
+                                                        
+                                                        
+      (4) Analytical approximation for radiatively driven winds:
+
+               density type = 4;     Y = 10000.0                                           
+                                                        
+                                                        
+      (5) Density profile tabulated in a file:
+
+               density type = 5;  profile supplied in the file 
+               collapse.dat
+      
+   4) Optical Depth
+                            
+      For a given set of the parameters specified above, DUSTY can 
+      generate up to 999 models covering a range of optical depths tau0, 
+      specified at some fiducial wavelength lambda0. DUSTY will cover 
+      this range taking either linear or logarithmic steps. The user 
+      specifies the grid type: 1 for linear, 2 for logarithmic and 3 for 
+      tau-grid from a file. This is followed by lambda0, the end points of 
+      the tau0 range and the number of grid points. In the case of file  
+      supplied grid the only entry is the file name. Example:
+
+                grid type = 2               % logarithmic
+                lambda0 = 0.55 micron
+                tau(min) = 0.1; tau(max) = 10
+                number of models = 3
+                           
+                            
+  III) NUMERICAL ACCURACY
+                            
+     The numerical accuracy and convergence of DUSTY calculations are 
+     controlled by a parameter specifying the required accuracy of 
+     bolometric flux conservation, qacc.  The radial grid is refined 
+     until the relative error of flux conservation at every point of 
+     the radial grid is less than qacc. Whenever DUSTY calculates also 
+     the density profile, the numerical accuracy of that calculation is 
+     controlled by the same parameter.  The recommended value is:
+     
+          qacc = 0.05                           
+                            
+                            
+  IV) OUTPUT CONTROL FLAGS                       
+                                                        
+     A typical DUSTY run generates an enormous amount of information, 
+     and the user is in control of the volume of output. For an input
+     file fname.inp the default output is written to fname.out. 
+     Additional output can be controlled by five flags that turn on and
+     off the tabulation of various quantities for each of the optical 
+     depths included in the run. If flag = 0 the particular file(s) is 
+	 not produced. If flag = 1 all model results are in the corresponding 
+	 file with extension 'stb' for spectra, 'itb' for images and visibilities 
+	 (if chosen), 'rtb' for radial profiles and 'mtb' for messages. If 
+	 flag = 2 each model result is in  a corresponding file, with visibilities 
+	 contained in fname.i###. If the images flag = 3 the visibilities will be 
+	 in separate files fname.v### .The visibility flag must be the same as the 
+	 images flag. The sp.properties of all model spectra are in the file 
+	 fname.spp which is the same for any of the above flag values.
+
+     For example, the set of flags below will will produce the following 
+	 output files: sp.properties fname.spp; one file fname.stb with all model 
+	 spectra; one file with images and visibilities fname.itb. The radial 
+	 profiles and messages for all models will be in fname.rtb and fname.mtb.
+
+
+         FILE DESCRIPTION                               FLAG        
+       ------------------------------------------------------------     
+       - properties of emerging spectra;             fname.spp = 1     
+       - detailed spectra for each model;           fname.s### = 1   
+       - images at specified wavelengths;           fname.i### = 1  
+         If this flag is set to 1, here specify these wavelengths: 
+         the first entry is the number of such wavelengths (<20), 
+         followed by a list of these wavelengths in microns.                             
+         number of wavelengths  = 8                                                 
+         wavelengths = 0.55, 1, 2.2, 4, 10, 50, 100, 1000 microns   
+         If the flag is set to 0 delete the above two lines, or 
+         delete the equal signs.                                 
+       - visibility function at spec. wavelengths;  fname.v### = 1                                        
+       - radial profiles for each model;            fname.r### = 1   
+       - detailed run-time messages;                fname.m### = 1
+       ------------------------------------------------------------- 
+                                                                        
+  ----------------------------------------------------------------------
+     The end of the input file.                                          
+  **********************************************************************
+                                                                        
+                                                                        

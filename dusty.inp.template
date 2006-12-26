@@ -1,0 +1,15 @@
+% ------- Master Input File for DUSTY -------------------------------      
+% The flag 'verbose' controlls printout of messages to screen.                
+% If set to 0, there will be no screen output; if set to 1 - only minimal     
+% messages are printed out; if set to 2 - more detailed screen output          
+% -------------------------------                                             
+   verbose =  1                                                               
+% -------------------------------                                              
+examples/slab2.08-1  
+examples/slab2.08-2  
+examples/slab2.08-2a  
+examples/sphere2.08-1  
+examples/sphere2.08-2  
+examples/sphere2.08-3ext  
+examples/sphere2.08-4ext
+
