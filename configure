@@ -8,4 +8,4 @@ cp ./dusty.inp.template dusty.inp;                 echo "  ... dusty.inp"
 cp ./lambda_grid.dat.template lambda_grid.dat;     echo "  ... lambda_grid.dat"
 cp ./taugrid.dat.template taugrid.dat;             echo "  ... taugrid.dat"
 cp ./slab_ang_grid.dat.template slab_ang_grid.dat; echo "  ... slab_ang_grid.dat"
-echo "Finished. Please read the file README.first !"; echo
+echo "Finished. Please read the file README !"; echo

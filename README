@@ -1,10 +1,10 @@
 ***********
-* Welcome to DUSTY2.08
+* Welcome to DUSTY
 *
-* - To begin copy all filenames .init to filenames without the .init
+* - To begin, execute the configure script. It will create some userfiles for you from .template files:
+*   ./configure
 *
-* - Next compile dusty2.08.f with any fortran compiler it is in standard
-*     fortran77 fixed form
+* - Next, compile dusty.f with any fortran compiler. It is in standard fortran77 fixed form.
 *
-* - The dusty.inp file is the standard input file
+* - The dusty.inp file is the standard input file.
 *
