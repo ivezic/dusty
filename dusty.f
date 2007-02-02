@@ -354,7 +354,8 @@ c ======================================================================
      &      Te_min, iPSF, NlambdaOut, iOUT, iVerb, iSPP,                        
      &      iA, iB, iC, iX, iInn, iV, Nconv, Nvisi, iD, zline                   
       CHARACTER*4 version                                                                           
-      CHARACTER*235 path, apath                                                                     
+      CHARACTER*235 path, apath   
+      CHARACTER*235 dustyinpfile,arg                                                                            
       CHARACTER*235 nameIn, nameOut, nameQ(npG), nameNK(10)                                         
       INTEGER error, nG, model, Nmodel, GridType, io1, Empty, lpath,                                
      &        Nrec, lambdaOK                                                                        
@@ -394,8 +395,17 @@ c     first read lambda grid
       IF (lambdaOK.EQ.0) THEN                                                                       
          goto 999                                                                                   
       END IF                                                                                        
-c     open master input file dusty.inp                                                              
-      open(13,ERR=998,file='dusty.inp',STATUS='OLD')                                                
+c     open master input file dusty.inp 
+      call getarg(1,arg)
+      if(arg.ne."")then
+      	READ(arg,'(A)')dustyinpfile
+      else
+      	dustyinpfile="dusty.inp"
+      endif
+
+      open(13,ERR=998,file=dustyinpfile,STATUS='OLD')
+                    
+c      open(13,ERR=998,file='dusty.inp',STATUS='OLD')                                                
       io1 = 0                                                                                       
 c     read the verbose mode                                                                         
       iVerb = RDINP(Equal,13)                                                                       
@@ -463,8 +473,9 @@ c     end of the loop over input files
 c     end this run                                                                                  
       goto 999                                                                                      
 c     to execute if the master input file is missing                                                
-998   write(*,*)' *********** FATAL ERROR IN DUSTY ***********'                                     
-      write(*,*)' * Master input file dusty.inp is missing!? *'                                     
+998   write(*,*)' *********** FATAL ERROR IN DUSTY ***********'  
+      write(*,'("   Problem with input file ",A25,"1?")')dustyinpfile                                                 
+      write(*,*)' * Master input file *.inp is missing!? *'                                     
       write(*,*)' ********************************************'                                     
 c ----------------------------------------------------------------------                            
 999   STOP                                                                                          
