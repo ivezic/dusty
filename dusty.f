@@ -33,7 +33,7 @@ c                                                          [MN, Apr'98]
 c =====================================================================                             
       BLOCK DATA DustChem                                                                           
        IMPLICIT none                                                                                
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npP, npX, npL, npG,npR                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -301,7 +301,7 @@ c master input file dusty.inp. For details see the Manual.
 c                                                       [Z.I. and M.N.]                             
 c ======================================================================                            
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npP, npX, npL, npG,npR 
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -354,8 +354,8 @@ c ======================================================================
      &      Te_min, iPSF, NlambdaOut, iOUT, iVerb, iSPP,                        
      &      iA, iB, iC, iX, iInn, iV, Nconv, Nvisi, iD, zline                   
       CHARACTER*4 version                                                                           
-      CHARACTER*235 path, apath   
-      CHARACTER*235 dustyinpfile,arg                                                                            
+      CHARACTER*235 dustyinpfile,arg
+      CHARACTER*235 path, apath                                                                     
       CHARACTER*235 nameIn, nameOut, nameQ(npG), nameNK(10)                                         
       INTEGER error, nG, model, Nmodel, GridType, io1, Empty, lpath,                                
      &        Nrec, lambdaOK                                                                        
@@ -395,16 +395,15 @@ c     first read lambda grid
       IF (lambdaOK.EQ.0) THEN                                                                       
          goto 999                                                                                   
       END IF                                                                                        
-c     open master input file dusty.inp 
+c     open master input file dusty.inp                                                              
       call getarg(1,arg)
       if(arg.ne."")then
-      	READ(arg,'(A)')dustyinpfile
+        READ(arg,'(A)')dustyinpfile
       else
-      	dustyinpfile="dusty.inp"
+        dustyinpfile="dusty.inp"
       endif
-
+c      READ(5,*)dustyinpfile
       open(13,ERR=998,file=dustyinpfile,STATUS='OLD')
-                    
 c      open(13,ERR=998,file='dusty.inp',STATUS='OLD')                                                
       io1 = 0                                                                                       
 c     read the verbose mode                                                                         
@@ -473,9 +472,8 @@ c     end of the loop over input files
 c     end this run                                                                                  
       goto 999                                                                                      
 c     to execute if the master input file is missing                                                
-998   write(*,*)' *********** FATAL ERROR IN DUSTY ***********'  
-      write(*,'("   Problem with input file ",A25,"1?")')dustyinpfile                                                 
-      write(*,*)' * Master input file *.inp is missing!? *'                                     
+998   write(*,*)' *********** FATAL ERROR IN DUSTY ***********'                                     
+      write(*,*)'   Problem with input file ',dustyinpfile,'!? '                                     
       write(*,*)' ********************************************'                                     
 c ----------------------------------------------------------------------                            
 999   STOP                                                                                          
@@ -574,7 +572,7 @@ c fills the wavelength grid in array lambda passed through COMMON grids2.
 c                                                  [ZI,Feb'96; MN,Apr'99]                           
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npP, npX, npL, npG,npR                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -649,7 +647,7 @@ c =======================================================================
 c This subroutine closes output files.             [ZI,Feb'96; MN,Apr'99]                           
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER denstyp, Ntr, iterETA, nYEtaf                                     
@@ -1060,7 +1058,7 @@ c     This subroutine is for reading the stellar input parameters
 c                                                             [MN,Mar'99]                           
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER startyp(2), Nlamtr(2), nBB(2), typEntry(2), Left, Right           
@@ -1201,7 +1199,7 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER denstyp, Ntr, iterETA, nYEtaf                                     
@@ -1249,7 +1247,7 @@ c =======================================================================
       COMMON /psf2/ kPSF, FWHM1, FWHM2, Theta1,                                 
      &       xpsf, ypsf, psfArea                                                
       INTEGER Nmu, transmit                                                     
-      DOUBLE PRECISION theta(35),  muobs, tauT, Sfn                             
+      DOUBLE PRECISION theta(npR),  muobs, tauT, Sfn                             
       COMMON/slbint/ theta,  muobs, tauT, Sfn, Nmu, transmit                    
 c      INCLUDE 'disk.inc'                                                                           
       INTEGER ver                                                               
@@ -2212,10 +2210,13 @@ c     This subroutine reads the set of input or output illumination angles
 c     for slab case.                                           [MN, 2005]                           
 c =======================================================================                           
       IMPLICIT none                                                                                 
+      INTEGER npY, npR, npP, npX, npL, npG                                           
+      INCLUDE 'userpar.inc'                                                     
+      PARAMETER (npG=1)                                                         
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
       INTEGER Nmu, transmit                                                     
-      DOUBLE PRECISION theta(35),  muobs, tauT, Sfn                             
+      DOUBLE PRECISION theta(npR),  muobs, tauT, Sfn                             
       COMMON/slbint/ theta,  muobs, tauT, Sfn, Nmu, transmit                    
       INTEGER ang_type, error, imu                                                                  
       DOUBLE PRECISION th_min, th_max, AngStep, Cth_min, Cth_max, Caux,                             
@@ -2337,7 +2338,7 @@ c =======================================================================
       DOUBLE PRECISION Elems(Nrows,Ncols)                                                           
 c -----------------------------------------------------------------------                           
       DO k = 1, rows                                                                                
-        write(unt,'(1p,21E11.3)') (Elems(k,i),i=1,cols)                                             
+        write(unt,'(1p,91E11.3)') (Elems(k,i),i=1,cols)                                             
       END DO                                                                                        
 c -----------------------------------------------------------------------                           
       RETURN                                                                                        
@@ -2558,7 +2559,7 @@ c =======================================================================
 c This subroutine prints the results out.              [Z.I., Feb. 1996]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER denstyp, Ntr, iterETA, nYEtaf                                     
@@ -2783,7 +2784,7 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -2809,13 +2810,13 @@ c =======================================================================
      &            TAUmax, xC, xCuser, SigExfid, TAUfid, lamfid, qsd,            
      &            a1, a2, aveV, aveA, iLfid, szds, top, Nfiles                  
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
                                                                                 
       INTEGER Nmu, transmit                                                     
-      DOUBLE PRECISION theta(35),  muobs, tauT, Sfn                             
+      DOUBLE PRECISION theta(npR),  muobs, tauT, Sfn                             
       COMMON/slbint/ theta,  muobs, tauT, Sfn, Nmu, transmit                    
       INTEGER nYok, nPok                                                        
       DOUBLE PRECISION                                                          
@@ -3309,7 +3310,7 @@ c        write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,Nmu)
 c       printout angles in degrees                                                                  
 c        write(unt,'(a9,37f11.1,a9)') hdint,                                                        
 c     &                    (theta(imu)*180./Pi,imu=1,Nmu),'     IstR'                               
-        write(unt,'(a9,37f11.1)') hdint,                                                            
+        write(unt,'(a9,91f11.1)') hdint,                                                            
      &                    (theta(imu)*180./Pi,imu=1,Nmu)                                            
 c        CALL MakeTable(Elems,Nrows,Ncols,nL,Nmu+1,unt)                                             
 c       adding the column with stellar Ints at the end of the table                                 
@@ -3329,7 +3330,7 @@ c       adding the column with stellar Ints at the end of the table
         END DO                                                                                      
 c        write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,Nmu)                                      
 c       printout angles in degrees                                                                  
-        write(unt,'(a9,37f11.1)')hdint,(theta(imu)*180./Pi,imu=1,Nmu)                               
+        write(unt,'(a9,90f11.1)')hdint,(theta(imu)*180./Pi,imu=1,Nmu)                               
         CALL MakeTable(Elems,Nrows,Ncols,nL,Nmu+1,unt)                                              
                                                                                                     
        ELSE                                                                                         
@@ -3489,7 +3490,7 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER startyp(2), Nlamtr(2), nBB(2), typEntry(2), Left, Right           
@@ -3744,7 +3745,7 @@ c     WriteOut prints in fname.out all input, read before density
 c     distribution type.                                                                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER denstyp, Ntr, iterETA, nYEtaf                                     
@@ -4007,7 +4008,7 @@ c =======================================================================
 c     Doubles the initial Y grid for tests of external radiation. [MN]                              
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -4073,7 +4074,7 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -4207,7 +4208,7 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -4316,7 +4317,7 @@ c This is an auxiliary function used in determining the dust temperature
 c                                                      [Z.I., Nov. 1995]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER iW, nW                                                                                
@@ -4354,7 +4355,7 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -4465,7 +4466,7 @@ c existing subroutines as much as possible, so some parts might seem to
 c be a little awkward.                           [ZI,Jul'96;MN,Sep'97]                              
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -4561,7 +4562,7 @@ c It uses approximations given by eqs. B5 and B7 from IE97.
 c T(y) is found as 4(T/Te)^4*y^2*qP(T) = Int{qa_l*Utot_l dl}.  [ZI'96; MN'00]                       
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -4614,7 +4615,7 @@ c =======================================================================
       COMMON /numerics/ accRomb, accuracy, accConv, delTAUsc, facc,             
      &                  dynrange, EtaRat, accFbol, Ncav, Nins                   
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -4753,7 +4754,7 @@ c The only exception is if pstar>0.9999 when only a single ray is
 c inserted.                                            [Z.I., Feb. 1996]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -4806,7 +4807,7 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -4932,7 +4933,7 @@ c performed analytically by MAPLE (these results are given through
 c soubroutine Maple3).                         [ZI,Feb'96,MN,Aug'97]                                
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER denstyp, Ntr, iterETA, nYEtaf                                     
@@ -4981,7 +4982,7 @@ c [Utot] = [Us+Em] + [mat0]*[omega*Utot] by calling LINSYS subroutine.
 c                                                      [Z.I., Nov. 1995]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER Ncav, Nins                                                        
@@ -5057,7 +5058,7 @@ c in subroutine ROMBERG2 (slightly changed version of 'qromb' from Num.
 c Recipes).                                     [ZI,Feb'96;MN,Sep'97]                               
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -5153,7 +5154,7 @@ c along the line of sight and mat is radiative transfer matrix.
 c =======================================================================                           
       IMPLICIT none                                                                                 
       INTEGER m                                                                                     
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -5379,7 +5380,7 @@ c optical depths along the line of sight.
 c =======================================================================                           
       IMPLICIT none                                                                                 
       INTEGER m                                                                                     
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -5622,7 +5623,7 @@ c polynomial of order Nanal-1, to these points and evaluates integral
 c analytically.                                        [Z.I., Nov. 1995]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER iWARNING, iERROR, iCUMM                                           
@@ -5711,7 +5712,7 @@ c     neglect occultation by the central source.
 c =======================================================================                           
       IMPLICIT NONE                                                                                 
       CHARACTER*10 Tstrg                                                                            
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -5783,7 +5784,7 @@ c =======================================================================
 c     After having the Y grid, generate the P grid (impact parameters)                              
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -5926,7 +5927,7 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -6253,7 +6254,7 @@ c Sets the Y and P grids based on GrayBody flux conservation.
 c                                                     [MN & ZI, July'96]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -6413,7 +6414,7 @@ c This subroutine solves the continuum radiative transfer problem for a
 c spherically symmetric envelope.                      [Z.I., Nov. 1995]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -6665,7 +6666,7 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -6718,7 +6719,7 @@ c =======================================================================
      &       xSiO, r1rs, Tei, Teo, chi, dilutn, UsR, startyp, Nlamtr,           
      &       nBB, typEntry, Left, Right, nameStar                               
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -6964,7 +6965,7 @@ c This function evaluates auxiliary functions needed in trapzd2.
 c                                           [MN & ZI,Aug'96; MN,Sep'97]                             
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER denstyp, Ntr, iterETA, nYEtaf                                     
@@ -7029,7 +7030,7 @@ c in radial optical depth given through matrices alpha, beta, gamma and
 c delta (see MYSPLINE).                         [ZI,Dec'95;MN,Sep'97]                               
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER iYfirst, YPequal, Plast                                           
@@ -7084,7 +7085,7 @@ c many points (> npY from userpar.inc). This subroutine calls function ETA
 c which evaluates the normalized density profile.    [ZI, Nov'95; MN,Sep'99]                        
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -7401,7 +7402,7 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -7427,7 +7428,7 @@ c =======================================================================
      &            TAUmax, xC, xCuser, SigExfid, TAUfid, lamfid, qsd,            
      &            a1, a2, aveV, aveA, iLfid, szds, top, Nfiles                  
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -7752,7 +7753,7 @@ c (nL,nY) [coming from grids.inc], and qBol is an array of physical size
 c (npY) and real size nY.                              [Z.I., Mar. 1996]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -7788,7 +7789,7 @@ c more than accuracy from the median value fmed. If so FbolOK = 0,
 c otherwise FbolOK = 1. dev is maximal deviation from fmed. [ZI,'96;MN'00]                          
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -7823,7 +7824,7 @@ c is smaller than accuracy, Aconv is assigned 1, otherwise 0.
 c                                                      [Z.I., Jul. 1996]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, iY, Aconv                                                                         
@@ -7852,7 +7853,7 @@ c places. The current criterion is increasing the flux difference from
 c tolern to its maximum value.                         [MN & ZI,July'96]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -8010,7 +8011,7 @@ c the maximum relative difference is smaller than the required accuracy,
 c Aconv is assigned 1, otherwise 0.              [Z.I.Jul 96;M.N.Apr.97]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, iY, Aconv                                                                         
@@ -8044,7 +8045,7 @@ c the maximum relative difference is smaller than required accuracy,
 c Aconv is assigned 1, otherwise 0.             [Z.I.Jul 96; M.N.Apr.97]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nL, iY, iL, Aconv                                                                 
@@ -8083,7 +8084,7 @@ c at the center, now the convolved intensities are normalized by the area
 c A = 2*pi*Int{psf(x)*x}dx                             [MN, 2005]                                   
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -8291,7 +8292,7 @@ c Yout is the relative thickness, Yout=rout/r1. Y is the radial position.
 c                                                          [ZI'95; ZI'99]                           
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -8508,7 +8509,7 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -8896,7 +8897,7 @@ c sections and the component abundancies. This is temporary (trivial)
 c version  for single size grains.                     [Z.I., Mar. 1996]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -8943,7 +8944,7 @@ c =====================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -9262,7 +9263,7 @@ c This subroutine generates total optical depth TAUtot.
 c                                                      [Z.I., Mar. 1996]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -9361,7 +9362,7 @@ c analytically in function IntETA
 c                                               [ZI,Feb'95; MN,Aug'97]                              
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -9539,7 +9540,7 @@ c Coefficients ETAcoef are later used in getETAzp to calculate ETAzp.
 c                                                [ZI, Feb'96; MN,Aug'97]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -9615,7 +9616,7 @@ c     This subroutine finds the spectral features for spp and zpp files.
 c     It employs Sub SpFeatur                              [MN, Jan'99]                             
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nYok, nPok                                                        
@@ -9687,7 +9688,7 @@ c Filters data from Neugebauer et al, 1984, ApJ, 278, L1.
 c Procedure described in Bedijn, 1987, A&A, 186, 136.  [Z.I., Mar. 1996]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       CHARACTER*100 zline(999)                                                  
@@ -9860,7 +9861,7 @@ c The work horse is subroutine Visi2D, and this subroutine is used to
 c prepare everything.                                  [Z.I., Jan. 1997]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -10044,7 +10045,7 @@ c [qOut] = [q1] + [q2] + [q3]. qout, q1, q2 and q2 are matrices of
 c physical size (np2,np1) and real size (nr2,nr1).     [Z.I., Nov. 1995]                            
 c ======================================================================                            
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER  np1, nr1, np2, nr2, i2, i1                                                           
@@ -10070,7 +10071,7 @@ c This subroutine is auxiliary for finding the bolometric
 c components of the scattered and emitted diffuse flux.   [MN, May'99]                              
 c ======================================================================                            
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, iY                                                                                
@@ -10099,7 +10100,7 @@ c linear equations and subsequent call to the linear system solver
 c LINSYS.                                              [Z.I., Nov. 1995]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER iWARNING, iERROR, iCUMM                                           
@@ -10356,7 +10357,7 @@ c greater than maxerr, or funmid<0, a straight line is produced between
 c x(i) and x(i+1).                                   [Z.I., Feb. 1995]                              
 c ======================================================================                            
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER N, i, iC                                                                              
@@ -10419,7 +10420,7 @@ c greater than maxerr, or funmid<0, a straight line is produced between
 c x(i) and x(i+1).                                     [Z.I., Feb. 1995]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER N, i, iC                                                                              
@@ -10460,7 +10461,7 @@ c This subroutine finds maximum err in flux conservation for both
 c spherical and slab case as (fmax-fmin)/(fmax+fmin)   [MN,Aug'99]                                  
 c =========================================================================                         
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER Ncav, Nins                                                        
@@ -10649,7 +10650,7 @@ c MPROVE. These three subroutines are taken from Numerical Recipes.
 c                                                      [Z.I., Nov. 1995]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER Nreal, indx(npY), i, j, error                                                         
@@ -10885,7 +10886,7 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER Ncav, Nins                                                        
@@ -10934,7 +10935,7 @@ c (np2,np3) and real size (nr2,nr3)
 c 1, 2 and 3 correspond to nY, nL and nP.              [Z.I., Nov. 1995]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -10981,7 +10982,7 @@ c a(i) = alpha(i,1)*f(1) + alpha(i,2)*f(2) + ... + alpha(i,N)*f(N)
 c and b,c,d analogously.                               [Z.I., Dec. 1995]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER N, i, j, dummy, Kron                                                                  
@@ -11462,7 +11463,7 @@ c for x(i).LE.x.LE.x(i+1) is a cubic spline approximation of fun(x),
 c with i=1..N.                                         [Z.I., Feb. 1995]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER N, i                                                                                  
@@ -11695,7 +11696,7 @@ c
 c Notations follow EI01 (MNRAS 327, 403)                                                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -11874,7 +11875,7 @@ c
 c Implementing equations from EI01 (MNRAS 327, 403)                                                 
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nG, nY, iY, itr, ETAconv, uconv, err, ipr, itmax, ver                                 
@@ -11937,7 +11938,7 @@ c ver = 1 triggers the linear version, 2 the quadratic (eq. D1)
 c All symbols are as defined there, ws = tauV/QV and P2 = P^2                                       
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER ver, nY, iY                                                                           
@@ -12019,7 +12020,7 @@ c Calculates the dimensionless density profile ETA(y) from EI eq. 25 given
 c the velocity profile w(y) and its corresponding drift zeta(y)                                     
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER iY, nY                                                                                
@@ -12047,7 +12048,7 @@ c Calculates the drift profile zeta from EI01 eq. 24
 c without the correction for sub-sonic drift (theta = 0).                                           
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, iY                                                                                
@@ -12160,7 +12161,7 @@ c     Integration of U(lam,t)*E2|Tau-t| to get the diffuse flux.
 c     flag=1 is for scattered and flag=0 for emitted flux. [MN, Apr'98]                             
 c =========================================================================                         
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER iL, iY, j, nL, nY, flag                                                               
@@ -12348,7 +12349,7 @@ c In case of nonconservation inserts a number of points at certain
 c places.                                             [MN,99; ZI'96]                                
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -12384,7 +12385,7 @@ c =======================================================================
      &            TAUmax, xC, xCuser, SigExfid, TAUfid, lamfid, qsd,            
      &            a1, a2, aveV, aveA, iLfid, szds, top, Nfiles                  
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -12475,7 +12476,7 @@ c     fbol from fmed.                                     [MN,Aug'98]
 c =======================================================================                           
       IMPLICIT NONE                                                                                 
       INTEGER iY, nY, imid, iup, idn                                                                
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER Ncav, Nins                                                        
@@ -12541,11 +12542,11 @@ c     comment the call to Spectral in 'Main.for' and the calls to FindErr
 c     in 'Analysis.for'                                      [MN, May'98]                           
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -12702,7 +12703,7 @@ c It is based on the analogous subroutine InitTemp for spherical shell
 c written by ZI, Jul'96.                                    [MN, Dec'97]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -12763,7 +12764,7 @@ c =======================================================================
       COMMON /numerics/ accRomb, accuracy, accConv, delTAUsc, facc,             
      &                  dynrange, EtaRat, accFbol, Ncav, Nins                   
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -12860,7 +12861,7 @@ c This subroutine evaluates the radiative transfer matrix for slab geometry.
 c TAUslb is the array of optical depths along the line of sight. [MN, Dec'97]                       
 c ======================================================================                            
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -12943,7 +12944,7 @@ c ********************************************************************
       SUBROUTINE SLBRadT(nG,error)                                                                  
 c ======================================================================                            
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -13006,22 +13007,22 @@ c ======================================================================
      &       xSiO, r1rs, Tei, Teo, chi, dilutn, UsR, startyp, Nlamtr,           
      &       nBB, typEntry, Left, Right, nameStar                               
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
                                                                                 
       INTEGER Nmu, transmit                                                     
-      DOUBLE PRECISION theta(35),  muobs, tauT, Sfn                             
+      DOUBLE PRECISION theta(npR),  muobs, tauT, Sfn                             
       COMMON/slbint/ theta,  muobs, tauT, Sfn, Nmu, transmit                    
       INTEGER iY, iL, nG, itnum, itlim, imu                                                         
       INTEGER error, Conv, iter, Fconv, Uconv, BolConv, m14                                         
       DOUBLE PRECISION mat0(npL,npY,npY), Em(npL,npY), fdsp(npL,npY),                               
      &    fdsm(npL,npY), fdep(npL,npY), fdem(npL,npY), fbolold(npY),                                
      &    Uold(npL,npY), dmaxU, dmaxF, olderr, oldmaxU, res, xP, Pi,                                
-     &    IauxL(npL),IauxR(npL), IbolL(35), IbolR(35), Ibol(35),                                    
+     &    IauxL(npL),IauxR(npL), IbolL(npR), IbolR(npR), Ibol(npR),                                    
      &    Udbol(npY), Usbol(npY), QpTd1, QUtot1, qaux(npL), resaux,                                 
-     &    PsiU, Tb, Qad, PSi0, qae,  Planck, IsbolL(35),IsbolR(35)                                  
+     &    PsiU, Tb, Qad, PSi0, qae,  Planck, IsbolL(npR),IsbolR(npR)                                  
 c --------------------------------------------------------------------------                        
       Pi = 2.0*ASIN(1.0)                                                                            
       IF (iInn.eq.1) THEN                                                                           
@@ -13273,15 +13274,15 @@ c =======================================================================
       IMPLICIT none                                                                                 
        DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
        COMMON /constants/ Pi, sigma, Gconst, r_gd                               
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER Nmu, transmit                                                     
-      DOUBLE PRECISION theta(35),  muobs, tauT, Sfn                             
+      DOUBLE PRECISION theta(npR),  muobs, tauT, Sfn                             
       COMMON/slbint/ theta,  muobs, tauT, Sfn, Nmu, transmit                    
       INTEGER nL, nY, iL, iY, imu                                                                   
       DOUBLE PRECISION Em(npL,npY), Utot(npL,npY), omega(npL,npY), mu1,                             
-     &       TAUslb(npL,npY),SlbIntL(35,npL),SlbIntR(35,npL),                                       
+     &       TAUslb(npL,npY),SlbIntL(npR,npL),SlbIntR(npR,npL),                                       
      &       tau1(npY), IstR(npL), IdifL, IdifR, fs(npL,npY), res,                                  
      &       Sexp, Kron                                                                             
       EXTERNAL Sexp                                                                                 
@@ -13341,9 +13342,12 @@ c **********************************************************************
 c     This is the function under the tau-integral; it is called from Romby.                         
 c     Here t = tau(iY); the flag 'transmit' is in 'slbintens.inc'.                                  
 c ======================================================================                            
+      INTEGER npY, npR, npP, npX, npL, npG                                           
+      INCLUDE 'userpar.inc'                                                     
+      PARAMETER (npG=1)                                                         
       DOUBLE PRECISION t, arg, efact                                                                
       INTEGER Nmu, transmit                                                     
-      DOUBLE PRECISION theta(35),  muobs, tauT, Sfn                             
+      DOUBLE PRECISION theta(npR),  muobs, tauT, Sfn                             
       COMMON/slbint/ theta,  muobs, tauT, Sfn, Nmu, transmit                    
 c -----------------------------------------------------------------                                 
         IF(transmit.eq.1) THEN                                                                      
@@ -13374,7 +13378,7 @@ c This subroutine solves the continuum radiative transfer problem in
 c planar geometry.                                      [MN, Dec.'97]                               
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -13413,7 +13417,7 @@ c =======================================================================
      &      Te_min, iPSF, NlambdaOut, iOUT, iVerb, iSPP,                        
      &      iA, iB, iC, iX, iInn, iV, Nconv, Nvisi, iD, zline                   
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -13610,7 +13614,7 @@ c This subroutine generates the stellar moments in case of slab geometry.
 c is=1 is for the left src, is=2 is the right src          [MN, Feb.'99]                            
 c =======================================================================                           
       IMPLICIT none                                                                                 
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER nY, nYprev, nP, nL, nPcav                                         
@@ -13663,7 +13667,7 @@ c =======================================================================
      &       xSiO, r1rs, Tei, Teo, chi, dilutn, UsR, startyp, Nlamtr,           
      &       nBB, typEntry, Left, Right, nameStar                               
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -13745,7 +13749,8 @@ c       if startyp.EQ.3 generate power-law spectrum
               k = 0                                                                                 
               DO WHILE (kstop.EQ.0)                                                                 
                 k = k + 1                                                                           
-                IF (lambda(iL).GE.lamtr(is,k)) THEN                                                 
+                IF (lambda(iL).GE.lamtr(is,k).and.
+     *              lambda(iL).LT.lamtr(is,k+1)) THEN                                                 
                   kstop = 1                                                                         
                   fpl(iL) = fsrc(k)*(lamtr(is,k)/lambda(iL))**klam(is,k)                            
                 END IF                                                                              
@@ -13887,7 +13892,7 @@ c and equidistant in the middle.                             [MN,Sep'98]
 c ======================================================================                            
       IMPLICIT none                                                                                 
       INTEGER nL, nY, iY, iL                                                                        
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       DOUBLE PRECISION TAUslb(npL,npY),TauTot(npL),TAU(npY),delT(npY)                               
@@ -13915,7 +13920,7 @@ c     grazing angle of incidence.                            [MN,Jan'99]
 c ======================================================================                            
       IMPLICIT NONE                                                                                 
       INTEGER nL, nY, iY, iL, Nthick, Nskin, iadj                                                   
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       DOUBLE PRECISION TAUslb(npL,npY), TAUTot(npL), TAU(npY), Y(npY),                              
@@ -13981,7 +13986,7 @@ c     nY in the line for slab calculation in 'userpar.inc'.         [MN,Sep'98]
 c =======================================================================                           
       IMPLICIT NONE                                                                                 
       INTEGER nY, iY                                                                                
-      INTEGER npY, npP, npX, npL, npG                                           
+      INTEGER npY, npR, npP, npX, npL, npG                                           
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       DOUBLE PRECISION dTAU(npY), TAUmax                                                            
