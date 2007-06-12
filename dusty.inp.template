@@ -3,7 +3,11 @@
 % If set to 0, there will be no screen output; if set to 1 - only minimal     
 % messages are printed out; if set to 2 - more detailed screen output          
 % -------------------------------                                             
-   verbose =  1                                                               
+   verbose =  1 
+% -------------------------------
+%  flag for spectra in W/m^2 units.
+%  If set to 0 the stb files have normalized sp. shapes.
+   iPhys = 1                                             
 % -------------------------------                                              
 examples/slab2.08-1  
 examples/slab2.08-2  
