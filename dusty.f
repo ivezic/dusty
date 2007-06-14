@@ -7634,7 +7634,7 @@ c =======================================================================
      &       fsbolL(npY), UsbolL(npY), UsbolR(npY), zeta, Faux(npL),                                
      &       m1p(npL,npY), m1m(npL,npY), fsbolR(npY), dyn2, expow,                                  
      &       fsRpbol(npY), fsRmbol(npY), coeff_c, coeff_e  , res,                                   
-     &       m0bol(npY),m1bol(npY), denom,glam                                                           
+     &       m0bol(npY),m1bol(npY), denom,integext                                                          
 c -----------------------------------------------------------------------                           
 c      dyn2 = dynrange*dynrange                                                                     
       dyn2 = 1.0e-20                                                                                
@@ -7807,8 +7807,8 @@ c ----
       REAL*8 mu,Ymax,res1,res2
       integer iL,gilam,flg
       common /glamblock/mu,Ymax,gilam,flg
-      external glamintg1
-      external glamintg2
+      external intg1
+c      external intg2
 c =======================================================================                           
 c      write(6,*) ' function glam(il)'
       Ymax = Yout
@@ -7818,7 +7818,7 @@ c      write(6,*) ' function glam(il)'
       mu_max = 1.0
 c        glamintg1 = mu * exp(-tlam(mu))
          flg = 1
-         call romby(glamintg1,mu_min,mu_max,res1)
+         call romby(intg1,mu_min,mu_max,res1)
          glam = res1
       return
       end
