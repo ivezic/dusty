@@ -5,10 +5,6 @@
 % -------------------------------                                             
    verbose =  1 
 % -------------------------------
-%  flag for spectra in W/m^2 units.
-%  If set to 0 the stb files have normalized sp. shapes.
-   iPhys = 1                                             
-% -------------------------------                                              
 examples/slab2.08-1  
 examples/slab2.08-2  
 examples/slab2.08-2a  
