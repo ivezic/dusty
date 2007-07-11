@@ -4319,7 +4319,8 @@ c       if startyp.EQ.3 generate power-law spectrum
               k = 0                                                                                 
               DO WHILE (kstop.EQ.0)                                                                 
                 k = k + 1                                                                           
-                IF (lambda(iL).GE.lamtr(is,k)) THEN                                                 
+                IF (lambda(iL).GE.lamtr(is,k).and.     
+     *                 lambda(iL).LE.lamtr(is,k+1)) THEN                                                  
                   kstop = 1                                                                         
                   fpl(iL) = fL(k) * (lamtr(is,k)/lambda(iL))**klam(is,k)                            
                 END IF                                                                              
