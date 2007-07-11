@@ -489,9 +489,9 @@ c     end of the loop over input files
 c     end this run                                                                                  
       goto 999                                                                                      
 c     to execute if the master input file is missing                                                
-998   write(*,*)' *********** FATAL ERROR IN DUSTY ***********'                                     
-      write(*,*)' * Master input file dusty.inp is missing!? *'                                     
-      write(*,*)' ********************************************'                                     
+998   write(*,*)' *********** FATAL ERROR IN DUSTY ********************' 
+      write(*,*)' * Problem finding input file ',dustyinpfile,'!? '                                    
+      write(*,*)' *****************************************************'                                     
 c ----------------------------------------------------------------------                            
 999   STOP                                                                                          
       END                                                                                           
@@ -767,7 +767,7 @@ c  ----------  for slab output ----------------------------
      & '  (4) External bolometrix flux at the slab left boundary'                                    
          ELSE                                                                                       
          write(12,*)                                                                                
-     & '  (4) Position of the left slab boundary'                                
+     & '  (4) Position of the left slab boundary for L=1E4 Lsun'                                
          END IF 
          write(12,*)                                                                                
      & '  (5) Dust temperature at the right slab face'                                              
@@ -1270,7 +1270,7 @@ c =======================================================================
       COMMON /psf2/ kPSF, FWHM1, FWHM2, Theta1,                                 
      &       xpsf, ypsf, psfArea                                                
       INTEGER Nmu, transmit                                                     
-      DOUBLE PRECISION theta(35),  muobs, tauT, Sfn                             
+      DOUBLE PRECISION theta(npR),  muobs, tauT, Sfn                             
       COMMON/slbint/ theta,  muobs, tauT, Sfn, Nmu, transmit                    
 c      INCLUDE 'disk.inc'                                                                           
       INTEGER ver                                                               
@@ -2249,10 +2249,13 @@ c     This subroutine reads the set of input or output illumination angles
 c     for slab case.                                           [MN, 2005]                           
 c =======================================================================                           
       IMPLICIT none                                                                                 
-       DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
-       COMMON /constants/ Pi, sigma, Gconst, r_gd                               
+      DOUBLE PRECISION Pi, sigma, Gconst, r_gd                                 
+      COMMON /constants/ Pi, sigma, Gconst, r_gd
+      INTEGER npY, npP, npX, npL, npG, npR                                          
+      INCLUDE 'userpar.inc'                                                     
+      PARAMETER (npG=1)                                          
       INTEGER Nmu, transmit                                                     
-      DOUBLE PRECISION theta(35),  muobs, tauT, Sfn                             
+      DOUBLE PRECISION theta(npR),  muobs, tauT, Sfn                             
       COMMON/slbint/ theta,  muobs, tauT, Sfn, Nmu, transmit                    
       INTEGER ang_type, error, imu                                                                  
       DOUBLE PRECISION th_min, th_max, AngStep, Cth_min, Cth_max, Caux,                             
@@ -2846,13 +2849,13 @@ c =======================================================================
      &            TAUmax, xC, xCuser, SigExfid, TAUfid, lamfid, qsd,            
      &            a1, a2, aveV, aveA, iLfid, szds, top, Nfiles                  
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
                                                                                 
       INTEGER Nmu, transmit                                                     
-      DOUBLE PRECISION theta(35),  muobs, tauT, Sfn                             
+      DOUBLE PRECISION theta(npR),  muobs, tauT, Sfn                             
       COMMON/slbint/ theta,  muobs, tauT, Sfn, Nmu, transmit                    
       INTEGER nYok, nPok                                                        
       DOUBLE PRECISION                                                          
@@ -3373,7 +3376,7 @@ c        write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,Nmu)
 c       printout angles in degrees                                                                  
 c        write(unt,'(a9,37f11.1,a9)') hdint,                                                        
 c     &                    (theta(imu)*180./Pi,imu=1,Nmu),'     IstR'                               
-        write(unt,'(a9,37f11.1)') hdint,                                                            
+        write(unt,'(a9,100f11.1)') hdint,                                                            
      &                    (theta(imu)*180./Pi,imu=1,Nmu)                                            
         CALL MakeTable(Elems,Nrows,Ncols,nL,Nmu+1,unt)                                             
 c       adding the column with stellar Ints at the end of the table                                 
@@ -3394,7 +3397,7 @@ c        CALL MakeTable(Elems,Nrows,Ncols,nL,Nmu+2,unt)
         END DO                                                                                      
 c        write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,Nmu)                                      
 c       printout angles in degrees                                                                  
-        write(unt,'(a9,37f11.1)')hdint,(theta(imu)*180./Pi,imu=1,Nmu)                               
+        write(unt,'(a9,99f11.1)')hdint,(theta(imu)*180./Pi,imu=1,Nmu)                               
         CALL MakeTable(Elems,Nrows,Ncols,nL,Nmu+1,unt)                                              
                                                                                                     
        ELSE                                                                                         
@@ -4679,7 +4682,7 @@ c =======================================================================
       COMMON /numerics/ accRomb, accuracy, accConv, delTAUsc, facc,             
      &                  dynrange, EtaRat, accFbol, Ncav, Nins                   
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -6794,7 +6797,7 @@ c =======================================================================
      &       xSiO, r1rs, Tei, Teo, chi, dilutn, UsR, startyp, Nlamtr,           
      &       nBB, typEntry, Left, Right, nameStar                               
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -7881,7 +7884,7 @@ c =======================================================================
      &            TAUmax, xC, xCuser, SigExfid, TAUfid, lamfid, qsd,            
      &            a1, a2, aveV, aveA, iLfid, szds, top, Nfiles                  
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -10746,7 +10749,11 @@ c
       pi1(j)=pi1(j) - rn*pi0(j)/(rn-1.)                                                             
       pi0(j) = pi(j)                                                                                
 999   continue                                                                                      
-      if (n-1-nstop) 200, 300, 300                                                                  
+      if((n-1-nstop).ge.0)then 
+         go to 300 
+      else 
+         go to 200 
+      endif                                                              
 300   qsca=(2./(x*x))*qsca                                                                          
       qext=(4./(x*x))*real(s1(1))                                                                   
       qback=(4./(x*x))*cabs(s1(2*nang -1))*cabs(s1(2*nang -1))                                      
@@ -11511,7 +11518,10 @@ c -----------------------------------------------------------------------
           hp=xa(i+m)-x                                                                              
           w=c(i+1)-d(i)                                                                             
           den=ho-hp                                                                                 
-          if(den.eq.0.)pause 'failure in polint'                                                    
+          if(den.eq.0.) then 
+             write(6,'(A)') 'failure in polint'
+             stop
+          endif
           den=w/den                                                                                 
           d(i)=hp*den                                                                               
           c(i)=ho*den                                                                               
@@ -11974,7 +11984,10 @@ c -------------------------------------------------------------------------
       goto 1                                                                                        
       endif                                                                                         
       h=xa(khi)-xa(klo)                                                                             
-      if (h.eq.0.) pause 'bad xa input in splint'                                                   
+      if (h.eq.0.) then
+         write(6,'(a)')'bad xa input in splint'                                                   
+         stop
+      endif
       a=(xa(khi)-x)/h                                                                               
       b=(x-xa(klo))/h                                                                               
       y=a*ya(klo)+b*ya(khi)+((a**3-a)*y2a(klo)+(b**3-b)*y2a(khi))*(h**                              
@@ -12100,17 +12113,20 @@ c     IF's added to prevent breaking of slab case on DEC [MN,Jun'99]
             xl=zriddr                                                                               
             fl=fnew                                                                                 
           else                                                                                      
-            pause 'never get here in zriddr'                                                        
+            write(6,'(a)')'Fatal error in zriddr'
+            stop
           endif                                                                                     
           if(dabs(xh-xl).le.xacc) return                                                            
 11      continue                                                                                    
-        pause 'zriddr exceed maximum iterations'                                                    
+        write(6,'(a)')'zriddr exceed maximum iterations'
+        stop
       else if (fl.eq.0.) then                                                                       
         zriddr=x1                                                                                   
       else if (fh.eq.0.) then                                                                       
         zriddr=x2                                                                                   
       else                                                                                          
-        pause 'root must be bracketed in zriddr'                                                    
+        write(6,'(a)')'root must be bracketed in zriddr'
+        stop
       endif                                                                                         
 c -------------------------------------------------------------------------                         
       RETURN                                                                                        
@@ -12844,7 +12860,7 @@ c =======================================================================
      &            TAUmax, xC, xCuser, SigExfid, TAUfid, lamfid, qsd,            
      &            a1, a2, aveV, aveA, iLfid, szds, top, Nfiles                  
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -13005,7 +13021,7 @@ c =======================================================================
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -13223,7 +13239,7 @@ c =======================================================================
       COMMON /numerics/ accRomb, accuracy, accConv, delTAUsc, facc,             
      &                  dynrange, EtaRat, accFbol, Ncav, Nins                   
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -13466,13 +13482,13 @@ c ======================================================================
      &       xSiO, r1rs, Tei, Teo, chi, dilutn, UsR, startyp, Nlamtr,           
      &       nBB, typEntry, Left, Right, nameStar                               
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
                                                                                 
       INTEGER Nmu, transmit                                                     
-      DOUBLE PRECISION theta(35),  muobs, tauT, Sfn                             
+      DOUBLE PRECISION theta(npR),  muobs, tauT, Sfn                             
       COMMON/slbint/ theta,  muobs, tauT, Sfn, Nmu, transmit                    
       INTEGER iY, iL, nG, itnum, itlim, imu                                                         
       INTEGER error, Conv, iter, Fconv, Uconv, BolConv, m14                                         
@@ -13738,11 +13754,11 @@ c =======================================================================
       INCLUDE 'userpar.inc'                                                     
       PARAMETER (npG=1)                                                         
       INTEGER Nmu, transmit                                                     
-      DOUBLE PRECISION theta(35),  muobs, tauT, Sfn                             
+      DOUBLE PRECISION theta(npR),  muobs, tauT, Sfn                             
       COMMON/slbint/ theta,  muobs, tauT, Sfn, Nmu, transmit                    
       INTEGER nL, nY, iL, iY, imu                                                                   
       DOUBLE PRECISION Em(npL,npY), Utot(npL,npY), omega(npL,npY), mu1,                             
-     &       TAUslb(npL,npY),SlbIntL(35,npL),SlbIntR(35,npL),                                       
+     &       TAUslb(npL,npY),SlbIntL(npR,npL),SlbIntR(npR,npL),                                       
      &       tau1(npY), IstR(npL), IdifL, IdifR, fs(npL,npY), res,                                  
      &       Sexp, Kron                                                                             
       EXTERNAL Sexp                                                                                 
@@ -13802,9 +13818,13 @@ c **********************************************************************
 c     This is the function under the tau-integral; it is called from Romby.                         
 c     Here t = tau(iY); the flag 'transmit' is in 'slbintens.inc'.                                  
 c ======================================================================                            
+      IMPLICIT NONE
+      INTEGER npY, npP, npX, npL, npG, npR                                          
+      INCLUDE 'userpar.inc'                                                     
+      PARAMETER (npG=1)            
       DOUBLE PRECISION t, arg, efact                                                                
       INTEGER Nmu, transmit                                                     
-      DOUBLE PRECISION theta(35),  muobs, tauT, Sfn                             
+      DOUBLE PRECISION theta(npR),  muobs, tauT, Sfn                             
       COMMON/slbint/ theta,  muobs, tauT, Sfn, Nmu, transmit                    
 c -----------------------------------------------------------------                                 
         IF(transmit.eq.1) THEN                                                                      
@@ -13874,7 +13894,7 @@ c =======================================================================
      &      Te_min, iPSF, NlambdaOut, iOUT, iVerb, iSPP,                        
      &      iA, iB, iC, iX, iInn, iV, Nconv, Nvisi, iD, iPhys, zline                   
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,           
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),              
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),              
      &         IstR(npL), AveDev, RMS, maxFerr                                  
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,           
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                              
@@ -14126,7 +14146,7 @@ c =======================================================================
      &       xSiO, r1rs, Tei, Teo, chi, dilutn, UsR, startyp, Nlamtr,                               
      &       nBB, typEntry, Left, Right, nameStar                                                   
       DOUBLE PRECISION TAUslb(npL,npY), fsbol(npY), fpbol(npY), fmax,                               
-     &         fmbol(npY), fmed, SLBIntR(35,npL), SLBIntL(35,npL),                                  
+     &         fmbol(npY), fmed, SLBIntR(npR,npL), SLBIntL(npR,npL),                                  
      &         IstR(npL), AveDev, RMS, maxFerr                                                      
       COMMON /slab/ TAUslb, fsbol, fpbol, fmax, fmbol, fmed, SLBIntR,                               
      &         SLBIntL, IstR, AveDev, RMS, maxFerr                                                  
