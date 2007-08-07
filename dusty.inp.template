@@ -4,6 +4,7 @@
 % messages are printed out; if set to 2 - more detailed screen output          
 % -------------------------------                                             
    verbose =  1 
+   iphys = 0
 % -------------------------------
 examples/slab2.08-1  
 examples/slab2.08-2  
