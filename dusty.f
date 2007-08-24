@@ -11012,19 +11012,19 @@ c     is bound by the numerical accuracy of the flux calculation
         if (fmax.LT.0.0D+00) then                                                                        
 c     bad solution; overall flux cannot be negative                                                 
             maxFerr = 1                                                                             
-           write(6,'(3E12.3)') fmax, fmin,maxferr
+c           write(6,'(3E12.3)') fmax, fmin,maxferr
 
         else                                                                              
            maxFerr = (fmax - fmin)/(fmax + dabs(fmin))                                             
-           write(6,'(3E12.3)') fmax, fmin,maxferr
+c           write(6,'(3E12.3)') fmax, fmin,maxferr
 
-        end if                                                                                      
+        end if
 c -----------------------------------------------------------------------                           
-      RETURN                                                                                        
-      END                                                                                           
-c *************************************************************************                         
-                                                                                                    
-                                                                                                    
+      RETURN
+      END
+c *************************************************************************
+
+
 c ***********************************************************************                           
       SUBROUTINE FindMax(NN,i1,i2,A,Amax)                                                           
 c =======================================================================                           
