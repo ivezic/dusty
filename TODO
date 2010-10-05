@@ -1,0 +1,18 @@
+List of TODOs for DUSTY. Change '-' to '+' when addressed.
+Date format: yyyy-mm-dd
+Developer initials:
+FH = Frank Heymann
+RN = Robert Nikutta
+MN = Maia Nenkova
+ZI = Zeljko Ivesic
+MS = Matthew Sirocky
+ME = Moshe Elitzur
+----------------------------------------------------------
+
+2010-10-04 RN:
+- Make sure iPhys=0/1 flag in DUSTY's input files works as designed.
+
+- Implement user option to make DUSTY output dust cross sections into
+  a sub-directory (for instance Xsecs/, see also
+  tags/2.08-beta2/Xsecs/)
+
