@@ -1042,15 +1042,15 @@ subroutine Kernel(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error,Lprint)
       end if
     end if
 !    15 is the file with spectra
-     close(15)
+!     close(15)
 !    16 is the file with radial properties
-     close(16)
+!     close(16)
 !    17 is the file for images
-     close(17)
+!     close(17)
 !    25 is the file for slab z-spectra
-     close(25)
+!     close(25)
 !    18 is the message file
-     close(18)
+!     close(18)
 !  if the last model is solved, then stop
    if ((model-1).eq.Nmodel.and.fbolOK.eq.1) then
      istop = 1
