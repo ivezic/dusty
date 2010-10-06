@@ -3,9 +3,11 @@
 \usepackage{graphicx}
 \usepackage{subfigure}
 \usepackage{amssymb}
-\usepackage[hypertex, dvips,ps2pdf,colorlinks,linkbordercolor={0 0 0},
+\usepackage[colorlinks,linkbordercolor={0 0 0},
+%\usepackage[hypertex, dvips,ps2pdf,colorlinks,linkbordercolor={0 0 0},
   pdfborder={0 0 0},linkcolor=blue,citecolor=blue,urlcolor=blue,
   breaklinks=true]{hyperref}
+
 
 \oddsidemargin 0.0in
 \evensidemargin 0.0in
@@ -48,20 +50,19 @@
 
 \title{User Manual for DUSTY}
 
-\author{\v Zeljko \Ivezic\footnote{Current address: Department of Astronomy, 
-  University of Washington, Seattle, WA 98105.}, 
-  Maia Nenkova\footnote{Current address: Seneca College, Toronto, ON M2J 2X5, Canada.}, 
-  M. Deka\footnote{email: \href{mpdeka@pa.uky.edu}{mpdeka@pa.uky.edu}}, 
+\author{\v Zeljko \Ivezic\footnote{Current address: Department of Astronomy,
+  University of Washington, Seattle, WA 98105.},
+  Maia Nenkova\footnote{Current address: Seneca College, Toronto, ON M2J 2X5, Canada.},
+  M. Deka\footnote{email: \href{mpdeka@pa.uky.edu}{mpdeka@pa.uky.edu}},
   \& Moshe Elitzur\\
-  \\Department of Physics and Astronomy\\ 
+  \\Department of Physics and Astronomy\\
   University of Kentucky\\
   Lexington, KY 40506\\
   \\September, 2009
 }
 \date{}
 
-\maketitle
-\thispagestyle{empty}
+\maketitle \thispagestyle{empty}
 
 \vfil
 \begin{abstract}
@@ -101,16 +102,15 @@ without acknowledging its origin. Use of this code is not restricted, provided
 that acknowledgement is made in each publication.  The bibliographic reference
 to this version of \D\ is \Ivezic, \v Z., Nenkova, M., Deka, M.\ \& Elitzur,
 M., 2009, User Manual for \D, University of Kentucky Internal Report,
-accessible at \href{http://www.pa.uky.edu:~/moshe/dusty}
-{http://www.pa.uky.edu:~/moshe/dusty} (astro-ph XXX).
+accessible at \href{http://www.pa.uky.edu/~moshe/dusty}
+{http://www.pa.uky.edu/$\sim$moshe/dusty} (astro-ph XXX).
 
 Make sure that you have the current version, with the latest options and
 problem fixes, by checking the \D\ Web site.
 
 \newpage
 
-\pagenumbering{arabic}
-\setcounter{page}{1}
+\pagenumbering{arabic} \setcounter{page}{1}
 
 %******* Table of contents *****
 {\large\tableofcontents}
@@ -121,145 +121,140 @@ problem fixes, by checking the \D\ Web site.
 \label{Introduction}
 
 The code \D\ was developed at the University of Kentucky by \v Zeljko \Ivezic,
-Maia Nenkova, Mridupawan Deka and Moshe Elitzur for a commonly encountered astrophysical
-problem: radiation from some source (star, galactic nucleus, etc.) viewed after
-processing by a dusty region. The original radiation is scattered, absorbed and
-reemitted by the dust, and the emerging processed spectrum often provides the
-only available information about the embedded object. \D\ can handle both
-planar and centrally-heated spherical density distributions.  The solution is
-obtained through an integral equation for the spectral energy density,
-introduced in \cite{IE97}. The number of independent input model parameters is
-minimized by fully implementing the scaling properties of the radiative
-transfer problem, and the spatial temperature profile is found from radiative
-equilibrium at every point in the dusty region. 
+Maia Nenkova, Mridupawan Deka and Moshe Elitzur for a commonly encountered
+astrophysical problem: radiation from some source (star, galactic nucleus,
+etc.) viewed after processing by a dusty region. The original radiation is
+scattered, absorbed and reemitted by the dust, and the emerging processed
+spectrum often provides the only available information about the embedded
+object. \D\ can handle both planar and centrally-heated spherical density
+distributions.  The solution is obtained through an integral equation for the
+spectral energy density, introduced in \cite{IE97}. The number of independent
+input model parameters is minimized by fully implementing the scaling
+properties of the radiative transfer problem, and the spatial temperature
+profile is found from radiative equilibrium at every point in the dusty region.
 
-The dimensional quantities in \D\ are in SI units with minor exceptions: $\lambda$ in \mic, 
-radius of the inner shell boundary $r_1$ in cm, and the luminosity of the source in $L_\odot$. 
+The dimensional quantities in \D\ are in SI units with minor exceptions:
+$\lambda$ in \mic, radius of the inner shell boundary $r_1$ in cm, and the
+luminosity of the source in $L_\odot$.
 
 The purpose of this manual is to help users get quickly acquainted with the
-code. Following a short description of the installation procedure in 
-Section~\ref{installation},  the input and output are described in full for 
-the spherical case in Sections~\ref{input} and~\ref{output}, respectively. Finally, 
+code. Following a short description of the installation procedure in
+Section~\ref{installation},  the input and output are described in full for the
+spherical case in Sections~\ref{input} and~\ref{output}, respectively. Finally,
 Section~\ref{user_control} describes the user control of \D
 
 \subsection{Major Changes}
 \label{major_changes}
 
-This new version of \D\ ({\tt dusty.06.2009.v1.f90}) is faster than its previous public 
-release (version 2.0), particularly for the slab case. Because of the addition of 
-some new features, the structure of the input has changed and old input files will 
-not run on the current version. The major changes are listed below:
+This new version of \D\ ({\tt dusty.06.2009.v1.f90}) is faster than its
+previous public release (version 2.0), particularly for the slab case. Because
+of the addition of some new features, the structure of the input has changed
+and old input files will not run on the current version. The major changes are
+listed below:
 %
 \begin{itemize}
-\item
-{\bf External radiation for spherical case:} The new code {\tt dusty.06.2009.v1.f90} now has 
-the option for external isotropic radiation together with central source for spherical 
-case. Previous version has only the central source option.
+\item {\bf External radiation for spherical case:} The new code {\tt
+    dusty.06.2009.v1.f90} now has the option for external isotropic
+    radiation together with central source for spherical case. Previous
+    version has only the central source option.
 %
-\item
-{\bf Format of input files:} The input file format has been changed. It now takes 
-descriptive keywords wherever possible instead of numerical flags, e.g. to specify 
-``spherical'' geometry, one should write {\tt  Geometry = SPHERE} instead of the 
-previously used numerical flag {\tt  Geometry = 0}. The details of the format of 
-input files, and available options are described in Section~\ref{input}. 
+\item {\bf Format of input files:} The input file format has been changed.
+    It now takes descriptive keywords wherever possible instead of
+    numerical flags, e.g. to specify ``spherical'' geometry, one should
+    write {\tt  Geometry = SPHERE} instead of the previously used numerical
+    flag {\tt  Geometry = 0}. The details of the format of input files, and
+    available options are described in Section~\ref{input}.
 
-\noindent{\bf Note:\ The keywords can be upper or lower cases, and each keyword must be followed by a blank 
-space}.
+\noindent{\bf Note:\ The keywords can be upper or lower cases, and each
+keyword must be followed by a blank space}.
 %
-\item
-{\bf Flux conservation:} The flux conservation condition is different from the previous 
-version. The new code uses diffuse bolometric flux for checking flux conservation whereas 
-the previous version used total bolometric flux. This new scheme is adopted because if we 
-only have external isotropic illumination in spherical case, then the total bolometric flux 
-is zero always. But diffuse bolometric flux is not zero. Same is the situation for slab when
-we have equal isotropic illumination from both sides. In this case too, diffuse bolometric flux 
-is not zero except at the midpoint inside the slab.  
+\item {\bf Flux conservation:} The flux conservation condition is different
+    from the previous version. The new code uses diffuse bolometric flux
+    for checking flux conservation whereas the previous version used total
+    bolometric flux. This new scheme is adopted because if we only have
+    external isotropic illumination in spherical case, then the total
+    bolometric flux is zero always. But diffuse bolometric flux is not
+    zero. Same is the situation for slab when we have equal isotropic
+    illumination from both sides. In this case too, diffuse bolometric flux
+    is not zero except at the midpoint inside the slab.
 
-Due to this change, the numerical accuracy level for flux conservation has been increased from
-5\% to 10 \%. It is because of the fact that diffuse bolometric flux is lower than the total 
-bolometric flux for low optical depth ($\le 20.0$), and 10 \% level of accuracy is more 
-stringent for comparing two small numbers than that of 5 \% for comparing total bolometric 
-fluxes.
+Due to this change, the numerical accuracy level for flux conservation has
+been increased from 5\% to 10 \%. It is because of the fact that diffuse
+bolometric flux is lower than the total bolometric flux for low optical
+depth ($\le 20.0$), and 10 \% level of accuracy is more stringent for
+comparing two small numbers than that of 5 \% for comparing total
+bolometric fluxes.
 %
-\item
-{\bf Starting optical depth and increment in optical depth:} Unlike previous version(s), new 
-\D\ start solving from an optically thin dusty medium to have a good approximation of initial 
-guess for dust temeperature array. Once the dust temperature convergence, and flux conservation 
-is obtaned, then \D\ solves for the next optical depth obtained from the user-defined 
-increment in optical depths. Therefore, a \D\ run will involve a series of optical depths, 
-always starting with a small value of optical depth. The output files are produced only for the 
-user defined (supplied) optical depths(see~\ref{optical_depth}). The initial optical depth 
-usually taken to be $\le 1.0$, and the increment in optical depth to be $\le 2.0$.
+\item {\bf Starting optical depth and increment in optical depth:} Unlike
+    previous version(s), new \D\ start solving from an optically thin dusty
+    medium to have a good approximation of initial guess for dust
+    temeperature array. Once the dust temperature convergence, and flux
+    conservation is obtaned, then \D\ solves for the next optical depth
+    obtained from the user-defined increment in optical depths. Therefore,
+    a \D\ run will involve a series of optical depths, always starting with
+    a small value of optical depth. The output files are produced only for
+    the user defined (supplied) optical depths(see~\ref{optical_depth}).
+    The initial optical depth usually taken to be $\le 1.0$, and the
+    increment in optical depth to be $\le 2.0$.
 \end{itemize}
 
 
 \section{Installation}
 \label{installation}
 
-Download the file {\tt dusty.06.2009.v1.tar.gz} from 
-\href{http://www.pa.uky.edu:~/moshe/dusty}
-{http://www.pa.uky.edu:$^\sim$/moshe/dusty}, and then unzip and untar it.
-The gzipped file contains the following:
+Download the file {\tt dusty.06.2009.v1.tar.gz} from
+\href{http://www.pa.uky.edu/~moshe/dusty}
+{http://www.pa.uky.edu/$\sim$moshe/dusty}, and then unzip and untar it. The
+gzipped file contains the following:
 %
 \begin{itemize}
 %
-\item
-  The source code {\tt dusty.06.2009.v1.f90}
+\item The source code {\tt dusty.06.2009.v1.f90}
 %
 \item The module file {\tt common.f90}
 %
-\item
-  The wavelength grid {\tt lambda\_grid.dat}
+\item The wavelength grid {\tt lambda\_grid.dat}
 %
-\item
-  The file with user adjustable array sizes  {\tt userpar.inc}
+\item The file with user adjustable array sizes  {\tt userpar.inc}
 %
-\item
-  A few auxiliary {\tt \*.dat} files.
+\item A few auxiliary {\tt \*.dat} files.
 %
-\item
-  The master input file {\tt dusty.inp}.
+\item The master input file {\tt dusty.inp}.
 %
-\item
-  The subdirectory, {\tt stnd\_dust\_lib}, for the optical properties of standard dust.
+\item The subdirectory, {\tt stnd\_dust\_lib}, for the optical properties
+    of standard dust.
 %
-\item 
-  The subdirectory, {\tt Lib\_nk}, for the optical properties of additional dust.
+\item The subdirectory, {\tt Lib\_nk}, for the optical properties of
+    additional dust.
 %
-\item
-7 sample input files in th subdirectory {\tt examples} (that can be used as templates). 
-They are listed in the master input file, {\tt dusty.inp}:
+\item 7 sample input files in th subdirectory {\tt examples} (that can be
+    used as templates). They are listed in the master input file, {\tt
+    dusty.inp}:
 %
 \begin{itemize}
 %
-\item
-  sphere1.inp
+\item sphere1.inp
 %
-\item
-  sphere2.inp
+\item sphere2.inp
 %
-\item
-  sphere3.inp
+\item sphere3.inp
 %
-\item
-  sphere\_bb\_bath.inp
-% 
-\item
-  slab1.inp
-% 
-\item
-  slab2.inp
+\item sphere\_bb\_bath.inp
 %
-\item
-  slab\_bb\_bath.inp
+\item slab1.inp
+%
+\item slab2.inp
+%
+\item slab\_bb\_bath.inp
 \end{itemize}
 
-All input files contain explanations and examples of the various options. Their 
-corresponding outputs are produced in the same subdirectory {\tt examples}.
-\end{itemize} 
- 
-\D\ is written in standard FORTRAN 90, and producing the executable file  
-is rather straightforward.  For example, it can be compiled on a Unix machine as
+All input files contain explanations and examples of the various options.
+Their corresponding outputs are produced in the same subdirectory {\tt
+examples}.
+\end{itemize}
+
+\D\ is written in standard FORTRAN 90, and producing the executable file is
+rather straightforward.  For example, it can be compiled on a Unix machine as
 
 \bigskip
 
@@ -272,44 +267,44 @@ is rather straightforward.  For example, it can be compiled on a Unix machine as
 to run \D\ as
 
 \bigskip
-{\tt 
+{\tt
 >./dusty.exe
-} 
+}
 
-\bigskip\noindent without any further action. It should produce the 
-output files {\tt sphere\#.out} and {\tt slab\#.out}, printed in 
+\bigskip\noindent without any further action. It should produce the
+output files {\tt sphere\#.out} and {\tt slab\#.out}, printed in
 appendices~\ref{sphere1} and~\ref{slab1}, respectively.
 
 \subsection{Numerical Test}
 
-Due to the complications related to the solution of radiative transfer, 
-it calls for a numerical test of \D\ in a situation where one knows  
-the exact analytical solution(s) {\it a priori}. Then one can compare the 
-analytical solution(s) to the numerical result(s) obtained from \D\. One such 
-situation which can be considered is a dust distribution of any geometry and 
-any optical depth embedded in a black-body radiation field  when there is no 
-scattering, only absorption. In that case, the radiation field will equilibrate 
-with the black-body temperature, and dust temperature would be constant 
-throughout the distribution. This implies we can test the external radiation 
-option of \D\ by checking that a black-body field will produce a constant 
-temperature for gray dust and also for physical dust if the scattering is 
-removed. User can go through this numerical test. The \D\ package includes 
-two input files, {\tt sphere\_bb\_bath.inp} (for sphere) and {\tt slab\_bb\_bath.inp} 
-(for slab). It has both the options for testing, one with gray dust (the .dat file 
-to be used is {\tt GrayAbs.dat}), and the other with physical dust without
-scattering (the .dat file to be used is {\tt ism-noscatt.dat}).
+Due to the complications related to the solution of radiative transfer, it
+calls for a numerical test of \D\ in a situation where one knows the exact
+analytical solution(s) {\it a priori}. Then one can compare the analytical
+solution(s) to the numerical result(s) obtained from \D\. One such situation
+which can be considered is a dust distribution of any geometry and any optical
+depth embedded in a black-body radiation field  when there is no scattering,
+only absorption. In that case, the radiation field will equilibrate with the
+black-body temperature, and dust temperature would be constant throughout the
+distribution. This implies we can test the external radiation option of \D\ by
+checking that a black-body field will produce a constant temperature for gray
+dust and also for physical dust if the scattering is removed. User can go
+through this numerical test. The \D\ package includes two input files, {\tt
+sphere\_bb\_bath.inp} (for sphere) and {\tt slab\_bb\_bath.inp} (for slab). It
+has both the options for testing, one with gray dust (the .dat file to be used
+is {\tt GrayAbs.dat}), and the other with physical dust without scattering (the
+.dat file to be used is {\tt ism-noscatt.dat}).
 
 \section{Input}
 \label{input}
 
 A single \D\ run can process an unlimited number of models.  To accomplish
-this, \D's input is always the master input file {\tt dusty.inp} which lists 
-the names of the actual input files for all models. The file {\tt dusty.inp} 
+this, \D's input is always the master input file {\tt dusty.inp} which lists
+the names of the actual input files for all models. The file {\tt dusty.inp}
 must be kept with the \D\ executable file in the same directory. These
 filenames must have the form {\tt fname.inp}, where {\tt fname} is arbitrary
-and can include the full path, so that a single run may produce output models in
-different directories. In {\tt dusty.inp}, each input filename must be listed
-on a separate line, with the implied extension {\tt .inp} omitted. Since
+and can include the full path, so that a single run may produce output models
+in different directories. In {\tt dusty.inp}, each input filename must be
+listed on a separate line, with the implied extension {\tt .inp} omitted. Since
 FORTRAN requires termination of input records with a carriage return, make sure
 you press the ``Enter" key after every filename you enter, especially if it is
 in the last line of {\tt dusty.inp}. Empty lines are ignored, as is all text
@@ -371,19 +366,18 @@ commented to ease initial use, and can be used as templates.
 \subsection{Geometry}
 \label{geometry}
 
-\D\ can handle two types of geometry - (1) spherical, and (2) planar or slab. Each input
-file has the option for only one type of geometry. The option is provided as follows:
+\D\ can handle two types of geometry - (1) spherical, and (2) planar or slab.
+Each input file has the option for only one type of geometry. The option is
+provided as follows:
 %
 \begin{enumerate}
 %
-\item
-  For sphrical case, it is
+\item For sphrical case, it is
 \begin{verbatim}
    GEOMETRY = SPHERE
 \end{verbatim}
 %
-\item
-  For planar geometry, it is
+\item For planar geometry, it is
 \begin{verbatim}
    GEOMETRY = SLAB
 \end{verbatim}
@@ -396,21 +390,25 @@ file has the option for only one type of geometry. The option is provided as fol
 \subsubsection{Sources}
 \label{sources}
 
-In the spherical case, \D\ assumes that the external radiation comes either (a) from a
-point source at the center of the density distribution, or (b) from an istropic
-radiation otside the shell, or (c) from both point source and isotropic radiation.
+In the spherical case, \D\ assumes that the external radiation comes either (a)
+from a point source at the center of the density distribution, or (b) from an
+istropic radiation otside the shell, or (c) from both point source and
+isotropic radiation.
 
-In the slab case, the radiation comes always from the left side. The illumination from
-the right side is optional. The radiation for slab can be either directional or isotropic.
+In the slab case, the radiation comes always from the left side. The
+illumination from the right side is optional. The radiation for slab can be
+either directional or isotropic.
 
-The options are provided in the input files by the {\tt ON} or {\tt OFF} flag. For example,
-in spherical case, if the radiation comes only from central source, then it will be':
+The options are provided in the input files by the {\tt ON} or {\tt OFF} flag.
+For example, in spherical case, if the radiation comes only from central
+source, then it will be':
 %
 \begin{verbatim}
             central = ON       external = OFF
 \end{verbatim}
 
-Likewise, in the slab case, if radiation comes both from left and right sides, then it will be:
+Likewise, in the slab case, if radiation comes both from left and right sides,
+then it will be:
 %
 \begin{verbatim}
             left = ON       right = ON
@@ -419,31 +417,30 @@ Likewise, in the slab case, if radiation comes both from left and right sides, t
 \subsubsection{Types of External Radiation}
 \label{type_raiation}
 %
-Thanks to scale invariance, the only relevant property of the external radiation
-is its spectral shape (see \cite{IE97}). Six different selected input
-options are available in \D. Three involve entry in analytical form:
-(1) a combination of black-bodies, (2) an empirical expression devised by
-Engelke~\cite{Engelk} and Marengo~\cite{Mareng}, and (3) broken power law. The other
-three are for entry in numerical form as a separate user-supplied input
+Thanks to scale invariance, the only relevant property of the external
+radiation is its spectral shape (see \cite{IE97}). Six different selected input
+options are available in \D. Three involve entry in analytical form: (1) a
+combination of black-bodies, (2) an empirical expression devised by
+Engelke~\cite{Engelk} and Marengo~\cite{Mareng}, and (3) broken power law. The
+other three are for entry in numerical form as a separate user-supplied input
 file which lists either (4) $\lambda F_\lambda$ (= $\nu F_\nu$) or (5)
-$F_\lambda$, or (6) $F_\nu$ vs $\lambda$.  Here $\lambda$ is wavelength in \mic\
-and $\nu$ the corresponding frequency, and $F_\lambda$ or $F_\nu$ is the
+$F_\lambda$, or (6) $F_\nu$ vs $\lambda$.  Here $\lambda$ is wavelength in
+\mic\ and $\nu$ the corresponding frequency, and $F_\lambda$ or $F_\nu$ is the
 external flux density in arbitrary units. The detailed properties of the
 different options are as follows:
 
 \begin{enumerate}
 %
-\item
-A combination of up to 10 black bodies, each described by a Planck function of
-a given temperature. Following the spectrum flag, the number of black bodies is
-specified, followed by a list of the temperatures.  When more then one
-black-body is specified, the temperature list must be followed by a list of the
-fractional contributions of the different components to the total luminosity.
+\item A combination of up to 10 black bodies, each described by a Planck
+    function of a given temperature. Following the spectrum flag, the
+    number of black bodies is specified, followed by a list of the
+    temperatures.  When more then one black-body is specified, the
+    temperature list must be followed by a list of the fractional
+    contributions of the different components to the total luminosity.
 %
 \begin{itemize}
 %
-\item
-A single black body:
+\item A single black body:
 \begin{verbatim}
          Spectral Shape = BLACK_BODY
            Number of BB = 1
@@ -454,10 +451,10 @@ Note that this could also be entered on a single line as
 
 \hskip 1in {\tt type = BLACK\_BODY , N = 1, T = 1E4}
 
-\item
-Two black bodies, e.g. a binary system, with the first one contributing
-80\% of the total luminosity; note that the distance between the stars must be
-sufficiently small that the assumption of a central point source remain valid:
+\item Two black bodies, e.g. a binary system, with the first one
+    contributing 80\% of the total luminosity; note that the distance
+    between the stars must be sufficiently small that the assumption of
+    a central point source remain valid:
 \begin{verbatim}
          Spectral Shape = BLACK_BODY
            Number of BB = 2
@@ -467,21 +464,20 @@ sufficiently small that the assumption of a central point source remain valid:
 
 \end{itemize}
 
-\item
-Engelke-Marengo function.  This expression improves upon the black-body
-description of cool star emission by incorporating empirical corrections for
-the main atmospheric effects. Engelke \cite{Engelk} found that changing the
-temperature argument of the Planck function from $T$ to $0.738T[1 +
-79450/(\lambda T)]^{0.182}$ adequately accounts for the spectral effect of
-H$^-$. Massimo Marengo \cite{Mareng} devised an additional empirical correction
-for molecular SiO absorption around 8 \mic, and has kindly made his results
-available to DUSTY. The selection of this combined Engelke-Marengo function
-requires as input the temperature and the relative (to the continuum) SiO
-absorption depth in~\%.
+\item Engelke-Marengo function.  This expression improves upon the
+    black-body description of cool star emission by incorporating empirical
+    corrections for the main atmospheric effects. Engelke \cite{Engelk}
+    found that changing the temperature argument of the Planck function
+    from $T$ to $0.738T[1 + 79450/(\lambda T)]^{0.182}$ adequately accounts
+    for the spectral effect of H$^-$. Massimo Marengo \cite{Mareng} devised
+    an additional empirical correction for molecular SiO absorption around
+    8 \mic, and has kindly made his results available to DUSTY. The
+    selection of this combined Engelke-Marengo function requires as input
+    the temperature and the relative (to the continuum) SiO absorption
+    depth in~\%.
 
 \begin{itemize}
-\item
-Stellar spectrum parametrized with Engelke--Marengo function:
+\item Stellar spectrum parametrized with Engelke--Marengo function:
 \begin{verbatim}
                Spectral Shape = ENGELKD_MARENGO
                   Temperature = 2500 K
@@ -489,8 +485,7 @@ Stellar spectrum parametrized with Engelke--Marengo function:
 \end{verbatim}
 \end{itemize}
 
-\item
-Broken power law of the form:
+\item Broken power law of the form:
 $$
  \lambda F_\lambda \propto \cases{
         0       &  $\phantom{\lambda(1) < {}} \lambda \le \lambda(1)$   \cr
@@ -501,10 +496,10 @@ $$
                 0       &  $\lambda(N+1) < \lambda$                     \cr}
 $$
 
-In this case, after the option selection the number $N$ is entered, followed by
-a list of the break points $\lambda(i)$, $i = 1\dots N+1$, in \mic\ and a list
-of the power indices $k(i)$, $i = 1\dots N$.  It is important to list the
-wavelengths $\lambda(i)$ in increasing order.
+In this case, after the option selection the number $N$ is entered,
+followed by a list of the break points $\lambda(i)$, $i = 1\dots N+1$, in
+\mic\ and a list of the power indices $k(i)$, $i = 1\dots N$.  It is
+important to list the wavelengths $\lambda(i)$ in increasing order.
 
 \begin{itemize}
 \item A flat spectrum confined to the range 0.1--1.0 \mic:
@@ -514,23 +509,24 @@ wavelengths $\lambda(i)$ in increasing order.
                  lambda = 0.1, 1 micron
                       k = 0
 \end{verbatim}
-All spectral points entered outside the range covered by \D's wavelength grid
-are ignored. If the input spectrum does not cover the entire wavelength range,
-all undefined points are assumed zero.
+All spectral points entered outside the range covered by \D's
+wavelength grid are ignored. If the input spectrum does not cover the
+entire wavelength range, all undefined points are assumed zero.
 \end{itemize}
 
-\item
-Stellar spectrum tabulated in a file. The filename for the input spectrum
-must be entered separately in the line following the numerical flag. This input
-file must have a three-line header of arbitrary text followed by a two-column
-tabulation of $\lambda$ and $\lambda F_\lambda$, where $\lambda$ is in \mic\ and
-$\lambda F_\lambda$ is in arbitrary units. The number of entry data points is
-limited to a maximum of 10,000 but is otherwise arbitrary. The tabulation must
-be ordered in wavelength but the order can be either ascending or descending. If
-the shortest tabulated wavelength is longer than 0.01 \mic, the external flux is
-assumed to vanish at all shorter wavelengths.  If the longest tabulated
-wavelength is shorter than 3.6 cm, \D\ will extrapolate the rest of the spectrum
-with a Rayleigh-Jeans tail.
+\item Stellar spectrum tabulated in a file. The filename for the input
+    spectrum must be entered separately in the line following the numerical
+    flag. This input file must have a three-line header of arbitrary text
+    followed by a two-column tabulation of $\lambda$ and $\lambda
+    F_\lambda$, where $\lambda$ is in \mic\ and $\lambda F_\lambda$ is in
+    arbitrary units. The number of entry data points is limited to a
+    maximum of 10,000 but is otherwise arbitrary. The tabulation must be
+    ordered in wavelength but the order can be either ascending or
+    descending. If the shortest tabulated wavelength is longer than 0.01
+    \mic, the external flux is assumed to vanish at all shorter
+    wavelengths.  If the longest tabulated wavelength is shorter than 3.6
+    cm, \D\ will extrapolate the rest of the spectrum with a Rayleigh-Jeans
+    tail.
 
 \begin{itemize}
 \item Spectral Shape tabulated in file {\tt quasar.dat}:
@@ -541,7 +537,8 @@ quasar.dat}
 \end{itemize}
 
 \item  Stellar spectrum read from a file as in the previous option, but
-$F_\lambda$ is specified (in arbitrary units) instead of $\lambda F_\lambda$.
+    $F_\lambda$ is specified (in arbitrary units) instead of $\lambda
+    F_\lambda$.
 
 \begin{itemize}
 \item Kurucz model atmosphere tabulated in file {\tt kurucz10.dat}:
@@ -552,16 +549,16 @@ kurucz10.dat}
 \end{itemize}
 
 \item  Stellar spectrum read from a file as in the previous option, but
-$F_\nu$ is specified (in arbitrary units) instead of $F_\lambda$.
+    $F_\nu$ is specified (in arbitrary units) instead of $F_\lambda$.
 
 {\tt Spectral Shape = FILE\_F\_NU}
 \end{enumerate}
 
 Note that in the last three entry options, the filename for the input spectrum
-must be entered separately in the line following the name flag.
-Optionally, you may separate the flag line and the filename line by an
-arbitrary number of lines that are either empty or commented out (starting with
-{\tt `\%'}). The files quasar.dat and kurucz10.dat are distributed with DUSTY.
+must be entered separately in the line following the name flag. Optionally, you
+may separate the flag line and the filename line by an arbitrary number of
+lines that are either empty or commented out (starting with {\tt `\%'}). The
+files quasar.dat and kurucz10.dat are distributed with DUSTY.
 
 
 \subsubsection{Scaling Options}
@@ -569,29 +566,30 @@ arbitrary number of lines that are either empty or commented out (starting with
 
 {\bf\underline{Central source for sphere or left side illumination for slab}}\\
 
-There are five different ways to enter scaling for the input radiation:
-(1) flux, (2) luminosity and distance, (3) energy density, (4) black body radiation
-with dilutuon factor, and (5) sublimation temperature at the boundary. The option (5)
-is applicable if we have central source only for spherical case, and left side
-illumination for slab case. Examples of these  options are given as follows:
+There are five different ways to enter scaling for the input radiation: (1)
+flux, (2) luminosity and distance, (3) energy density, (4) black body radiation
+with dilutuon factor, and (5) sublimation temperature at the boundary. The
+option (5) is applicable if we have central source only for spherical case, and
+left side illumination for slab case. Examples of these  options are given as
+follows:
 %
 \begin{enumerate}
 %
 \item
 \begin{itemize}
 %
-\item
-For analytical spectra, input is the external bolometric flux in $W/m^2$ for central
-(or, directional illumination only). e.g.
+\item For analytical spectra, input is the external bolometric flux in
+    $W/m^2$ for central (or, directional illumination only). e.g.
 \begin{verbatim}
   Scale:    type of entry = FLUX
                       Fei = 2.6E4 W/m^2
 \end{verbatim}
 %
-\item
-For user-supplied source spectra, $\lambda F_{\lambda}$, $F_{\lambda}$ or $F_{\nu}$, the user
-has the freedom to re-scale the input spectrum by using a normalization factor , e.g., normalization
-factor of 1 will take the data as they are in the file:
+\item For user-supplied source spectra, $\lambda F_{\lambda}$,
+    $F_{\lambda}$ or $F_{\nu}$, the user has the freedom to re-scale
+    the input spectrum by using a normalization factor , e.g.,
+    normalization factor of 1 will take the data as they are in the
+    file:
 %
 \begin{verbatim}
                   Spectral Shape = FILE\_LAMBDA\_F\_LAMBDA
@@ -601,33 +599,34 @@ factor of 1 will take the data as they are in the file:
                             Norm = 0.25  % reduced flux from file
 \end{verbatim}
 \end{itemize}
-The default output file will list the dust temperature at the illuminated boundary.
+The default output file will list the dust temperature at the illuminated
+boundary.
 %
-\item
-The luminosity of the source (in $L_\odot$ always) and its distance (in cm) from the boundary 
-are given in input. e.g.
+\item The luminosity of the source (in $L_\odot$ always) and its distance
+    (in cm) from the boundary are given in input. e.g.
 \begin{verbatim}
  Scale:     type of entry = LUM_R1
                         L = 1.0E4       % Luminosity [in Lo] and
                        r1 = 3.43e14 cm  % distance [cm] from the source
 \end{verbatim}
 %
-The default output file will list the dust temperature at the illuminated surface and corresponding flux.
+The default output file will list the dust temperature at the illuminated
+surface and corresponding flux.
 %
-\item
-  Example of input of the mean intensity or energy density of the external radiation at the boundary:
+\item Example of input of the mean intensity or energy density of the
+    external radiation at the boundary:
 \begin{verbatim}
        Scale:     type of entry = ENERGY_DEN       % mean intensity of
                               J = 2.5e-5 W/m^2 % the ext.radiation
 \end{verbatim}
 %
-\item
-if the source parameters are chosen as a black body or a combination of black-bodies, the dilution
-factor can also be used as the scale. For a combination of black-bodies, the dilution factor
-refers to the highest luminosity black body, since their relative luminosities are provided.
+\item if the source parameters are chosen as a black body or a combination
+    of black-bodies, the dilution factor can also be used as the scale. For
+    a combination of black-bodies, the dilution factor refers to the
+    highest luminosity black body, since their relative luminosities are
+    provided.
 \begin{itemize}
-\item
-single blackbody without dilution:
+\item single blackbody without dilution:
 \begin{verbatim}
                   Spectral Shape = BLACK_BODY
                     Number of BB = 1
@@ -637,8 +636,7 @@ single blackbody without dilution:
                                W = 1.0
 \end{verbatim}
 %
-\item
-multiple blacbodies with dilution factor of 1.0e-13:
+\item multiple blacbodies with dilution factor of 1.0e-13:
 \begin{verbatim}
                   Spectral Shape = BLACK_BODY
                     Number of BB = 2
@@ -650,16 +648,18 @@ multiple blacbodies with dilution factor of 1.0e-13:
 \end{verbatim}
 \end{itemize}
 %
-\item
-Dust temperature on the inner boundary of the spherical shell or on the left side of the slab
-is specified in this option. In principle, different types of grains can have different
-temperatures at the same location. However, \D\ currently treats mixtures as single-type grains
-whose properties average the actual mix. Therefore, only one temperature is specified. e.g.
+\item Dust temperature on the inner boundary of the spherical shell or on
+    the left side of the slab is specified in this option. In principle,
+    different types of grains can have different temperatures at the same
+    location. However, \D\ currently treats mixtures as single-type grains
+    whose properties average the actual mix. Therefore, only one
+    temperature is specified. e.g.
 \begin{verbatim}
  Scale:     type of entry = T1      % Td at the inner boundary
                        Td = 1000  K
 \end{verbatim}
-The corresponding external bolometric flux will be listed in the default output file.
+The corresponding external bolometric flux will be listed in the default
+output file.
 \end{enumerate}
 
 
@@ -669,12 +669,14 @@ The corresponding external bolometric flux will be listed in the default output 
 %\hspace{2cm}
   \subfigure[] %[Spherical Shell]
          {\label{fluxconsvslabdir}
-           {\includegraphics[width=0.35\hsize]{slab_dir.eps}}}%
+%           {\includegraphics[width=0.35\hsize]{slab_dir.eps}}}%
+           {\includegraphics[width=0.35\hsize]{slab_dir}}}%
          \hspace{1.5cm}
    \subfigure []% [Slab]
           {\label{fluxconsvslabiso}
-        {\includegraphics[width=0.35\hsize]{slab_iso.eps}}}
-\caption{(a) Directional illumination of slab from both sides and 
+%        {\includegraphics[width=0.35\hsize]{slab_iso.eps}}}
+        {\includegraphics[width=0.35\hsize]{slab_iso}}}
+\caption{(a) Directional illumination of slab from both sides and
 (b) Isotropic illumination from both sides.}
 \label{impact parameter}
 \end{figure}
@@ -683,12 +685,13 @@ The corresponding external bolometric flux will be listed in the default output 
 
 {\bf Additional parameters for slab}\\
 
-For slab case, each input radiation is also characterized by angular distribution in addition to
-spectral shape. The only angular distributions that do not break the planar symmetry involve
-parallel rays, incident at some angle, and isotropic radiation. The parallel-rays distribution
-is specified by the cosine ($> 0.05$) of the illumination angle, and the isotropic distribution
-is selected by setting this input parameter to $-1$. So, the only additional paprameters needed
-to be introduced is the following for directional case:
+For slab case, each input radiation is also characterized by angular
+distribution in addition to spectral shape. The only angular distributions that
+do not break the planar symmetry involve parallel rays, incident at some angle,
+and isotropic radiation. The parallel-rays distribution is specified by the
+cosine ($> 0.05$) of the illumination angle, and the isotropic distribution is
+selected by setting this input parameter to $-1$. So, the only additional
+paprameters needed to be introduced is the following for directional case:
 \begin{verbatim}
        kind of illumination = DIRECTIONAL %(spectral shape entered previously)
        illumination angle theta = 60.0
@@ -701,15 +704,17 @@ and for istropic case it will be
 
 {\bf\underline{Isotropic illumination for sphere or right side illumination for slab}}\\
 
-{\bf In this case, the option sublimation temperature, {\tt T1}, at the boundary (option \# 5 for Central
-source for sphere or left side illumination for slab) is not available for both spherical and slab
-cases.}
+{\bf In this case, the option sublimation temperature, {\tt T1}, at the
+boundary (option \# 5 for Central source for sphere or left side illumination
+for slab) is not available for both spherical and slab cases.}
 
-For spherical case, scaling options are the same as for Central source and entered in the same manner.
+For spherical case, scaling options are the same as for Central source and
+entered in the same manner.
 
-For slab case, scaling options for two-sided illumination are specified by a non-zero ratio, {\tt R},
-between left and right side illuminations so that  $0 < {\tt R} \le 1$. A sample case with isotropic
-illuimination on both sides is the following:
+For slab case, scaling options for two-sided illumination are specified by a
+non-zero ratio, {\tt R}, between left and right side illuminations so that  $0
+< {\tt R} \le 1$. A sample case with isotropic illuimination on both sides is
+the following:
 \begin{verbatim}
 Left-side source radiation:
                         Spectral Shape = black_body
@@ -746,24 +751,24 @@ removed in future releases which will provide full treatment of grain mixtures.
 \D\ contains data for the optical properties of six common grain types.  In
 models that utilize these standard properties, the only input required is the
 fractional abundance of the relevant grains.  In addition, optical properties
-for other grains can be supplied by the user.  In this case, the user can either
-specify directly the absorption and scattering coefficients or have \D\
+for other grains can be supplied by the user.  In this case, the user can
+either specify directly the absorption and scattering coefficients or have \D\
 calculate them from provided index of refraction. The various alternatives are
 selected by a flag, as follows:
 
 \begin{enumerate}
 
-\item \D\ contains data for six common grain types: `warm' and `cold' silicates
-from Ossenkopff et al (\cite{Oss92}, {\tt Sil-Ow} and {\tt Sil-Oc}); silicates
-and graphite grains from Draine and Lee (\cite{DL84}, {\tt Sil-DL} and {\tt
-grf-DL}); amorphous carbon from Hanner (\cite{Hann88}, {\tt amC-Hn}); and SiC
-by P\`egouri\`e (\cite{Peg88}, {\tt SiC-Pg}).  Fractional number abundances
-must be entered for all these grain types, in the order listed.
+\item \D\ contains data for six common grain types: `warm' and `cold'
+    silicates from Ossenkopff et al (\cite{Oss92}, {\tt Sil-Ow} and {\tt
+    Sil-Oc}); silicates and graphite grains from Draine and Lee
+    (\cite{DL84}, {\tt Sil-DL} and {\tt grf-DL}); amorphous carbon from
+    Hanner (\cite{Hann88}, {\tt amC-Hn}); and SiC by P\`egouri\`e
+    (\cite{Peg88}, {\tt SiC-Pg}).  Fractional number abundances must be
+    entered for all these grain types, in the order listed.
 
 \begin{itemize}
-\item
-Mixture containing only dust grains with built-in data for optical
-properties:
+\item Mixture containing only dust grains with built-in data for
+    optical properties:
 
 \begin{verbatim}
    optical properties index = COMMON_GRAIN
@@ -774,34 +779,36 @@ properties:
 \end{verbatim}
 \end{itemize}
 The overall abundance normalization is arbitrary.  In this example, the
-silicate and graphite abundances could have been entered equivalently as 53 and
-47, respectively.
+silicate and graphite abundances could have been entered equivalently as 53
+and 47, respectively.
 
-\item
-With this option, the user can introduce up to ten additional grain types
-on top of those built-in.  First, the abundances of the six built-in types of
-grains are entered as in the previous option. Next, the number ($\le 10$) of
-additional grain types is entered, followed by the names of the data files,
-listed separately one per line, that contain the relevant optical properties.
-These properties are specified by the index of refraction, and \D\ calculates
-the absorption and scattering coefficients using Mie theory.  Each data file
-must start with seven header lines (arbitrary text) followed by a three-column
-tabulation of wavelength in \mic, and real ({\tt n}) and imaginary ({\tt k})
-parts of the index of refraction. The number of table entries is arbitrary, up
-to a maximum of 10,000. The tabulation must be ordered in wavelength but the
-order can be either ascending or descending. \D\ will linearly interpolate the
-data for {\tt n} and {\tt k} to its built-in wavelength grid. If the supplied
-data does not fully cover \D's wavelength range, the refraction index will be
-assumed constant in the unspecified range, with a value equal to the
-corresponding end point of the user tabulation. The file list should be
-followed by a list of abundances, entered in the same order as the names of the
-corresponding data files.
+\item With this option, the user can introduce up to ten additional grain
+    types on top of those built-in.  First, the abundances of the six
+    built-in types of grains are entered as in the previous option. Next,
+    the number ($\le 10$) of additional grain types is entered, followed by
+    the names of the data files, listed separately one per line, that
+    contain the relevant optical properties. These properties are specified
+    by the index of refraction, and \D\ calculates the absorption and
+    scattering coefficients using Mie theory.  Each data file must start
+    with seven header lines (arbitrary text) followed by a three-column
+    tabulation of wavelength in \mic, and real ({\tt n}) and imaginary
+    ({\tt k}) parts of the index of refraction. The number of table entries
+    is arbitrary, up to a maximum of 10,000. The tabulation must be ordered
+    in wavelength but the order can be either ascending or descending. \D\
+    will linearly interpolate the data for {\tt n} and {\tt k} to its
+    built-in wavelength grid. If the supplied data does not fully cover
+    \D's wavelength range, the refraction index will be assumed constant in
+    the unspecified range, with a value equal to the corresponding end
+    point of the user tabulation. The file list should be followed by a
+    list of abundances, entered in the same order as the names of the
+    corresponding data files.
 
 \begin{itemize}
-\item Draine \& Lee graphite grains with three additional grain types whose {\tt
-n} and {\tt k} are provided by the user in data files {\tt amC-zb1.nk}, {\tt
-amC-zb2.nk} and {\tt amC-zb3.nk}, distributed with DUSTY.  These files tabulate
-the most recent properties for amorphous carbon by Zubko et al \cite{Zubko}:
+\item Draine \& Lee graphite grains with three additional grain types
+    whose {\tt n} and {\tt k} are provided by the user in data files
+    {\tt amC-zb1.nk}, {\tt amC-zb2.nk} and {\tt amC-zb3.nk},
+    distributed with DUSTY.  These files tabulate the most recent
+    properties for amorphous carbon by Zubko et al \cite{Zubko}:
 
 \begin{verbatim}
    Optical properties index = COMMON_AND_ADDL_GRAIN
@@ -817,27 +824,26 @@ the most recent properties for amorphous carbon by Zubko et al \cite{Zubko}:
 \end{verbatim}
 \end{itemize}
 
-\item
-This option is similar to the previous one, only the absorption and
-scattering coefficients are tabulated instead of the complex index of
-refraction, so that the full optical properties are directly specified and there
-is no further calculation by \D.  The data filename is listed in the line
-following the option flag.  This file must start with a three-line header of
-arbitrary text followed by a three-column tabulation of wavelength in \mic,
-absorption ($\sigma_{\rm abs}$) and scattering ($\sigma_{\rm sca}$) cross
-sections. Units for $\sigma_{\rm abs}$ and $\sigma_{\rm sca}$ are arbitrary,
-only
-their spectral variation is relevant. The number of entries is arbitrary, with a
-maximum of 10,000. The handling of the wavelength grid is the same as in the
-previous option.
+\item This option is similar to the previous one, only the absorption and
+    scattering coefficients are tabulated instead of the complex index of
+    refraction, so that the full optical properties are directly specified
+    and there is no further calculation by \D.  The data filename is listed
+    in the line following the option flag.  This file must start with a
+    three-line header of arbitrary text followed by a three-column
+    tabulation of wavelength in \mic, absorption ($\sigma_{\rm abs}$) and
+    scattering ($\sigma_{\rm sca}$) cross sections. Units for $\sigma_{\rm
+    abs}$ and $\sigma_{\rm sca}$ are arbitrary, only their spectral
+    variation is relevant. The number of entries is arbitrary, with a
+    maximum of 10,000. The handling of the wavelength grid is the same as
+    in the previous option.
 
 \begin{itemize}
-\item
-Absorption and scattering cross sections from the file {\tt
-ism-stnd.dat}, supplied with \D, listing the optical properties for the
-standard interstellar dust mixture:
+\item Absorption and scattering cross sections from the file {\tt
+    ism-stnd.dat}, supplied with \D, listing the optical properties for
+    the standard interstellar dust mixture:
 
-{\tt Optical properties index = TABULATED \% cross-sections entered in file
+{\tt Optical properties index = TABULATED \% cross-sections entered in
+file
 
 \hskip 0.5in        ism-stnd.dat}
 \end{itemize}
@@ -852,9 +858,9 @@ appendix \ref{nklib}.
 \subsubsection{Grain Size Distribution}
 
 The grain size distribution must be specified only when the previous option was
-set to {\tt COMMON\_GRAIN} or {\tt COMMON\_AND\_ADDL\_GRAIN}.  When the dust cross
-sections are read from a file (previous option set at {\tt TABULATED}), this particular
-option is skipped.
+set to {\tt COMMON\_GRAIN} or {\tt COMMON\_AND\_ADDL\_GRAIN}.  When the dust
+cross sections are read from a file (previous option set at {\tt TABULATED}),
+this particular option is skipped.
 
 \D\ recognizes two distribution functions for grain sizes $n(a)$ --- the MRN
 \cite{MRN77} power-law with sharp boundaries
@@ -879,13 +885,12 @@ select different cutoffs as well as power index for both distributions.
 
 No input required other than the option flag.
 
-\item Modified MRN distribution.  The option flag is followed by listing of the
-power index $q$, lower limit $a_{\rm min}$ and upper limit $a_{\rm max}$ in
-\mic.
+\item Modified MRN distribution.  The option flag is followed by listing of
+    the power index $q$, lower limit $a_{\rm min}$ and upper limit $a_{\rm
+    max}$ in \mic.
 
 \begin{itemize}
-\item
-Standard MRN distribution can be entered with this option as:
+\item Standard MRN distribution can be entered with this option as:
 
 {\tt  Size distribution = MODIFIED\_MRN
 
@@ -901,13 +906,14 @@ Standard MRN distribution can be entered with this option as:
 \end{verbatim}
 \end{itemize}
 
-\item
-KMH distribution.  The option flag is followed by a list of the power
-index $q$, lower limit $a_{\rm min}$ and the characteristic size $a_0$ in \mic.
+\item KMH distribution.  The option flag is followed by a list of the power
+    index $q$, lower limit $a_{\rm min}$ and the characteristic size $a_0$
+    in \mic.
 
 \begin{itemize}
-\item Size distribution for grains in the dusty envelope around IRC+10216 as
-obtained by Jura \cite{Jura} and verified in \Ivezic\ \& Elitzur \cite{IE96b}:
+\item Size distribution for grains in the dusty envelope around
+    IRC+10216 as obtained by Jura \cite{Jura} and verified in \Ivezic\
+    \& Elitzur \cite{IE96b}:
 
 {\tt  Size distribution = KMH
 
@@ -919,9 +925,9 @@ obtained by Jura \cite{Jura} and verified in \Ivezic\ \& Elitzur \cite{IE96b}:
 \subsection{Density Distribution}
 \label{density}
 
-{\bf The option has to be specified only in the spherical case}. In the slab case,
-we assume uniform density distribution so that there is no reference to spatial
-variables, and the problem can be solved fully in optical-depth space.
+{\bf The option has to be specified only in the spherical case}. In the slab
+case, we assume uniform density distribution so that there is no reference to
+spatial variables, and the problem can be solved fully in optical-depth space.
 
 In spherical geometry, the density distribution  is specified in terms of the
 scaled radius
@@ -959,21 +965,23 @@ $$
                      &  \qquad $\vdots$          \cr
         y^{-p(N)}    &  $y(N - 1) \le y \le y(N)$ \cr}
 $$
-After the option selection, the number $N$ is entered, followed by a list of the
-break points $y(i)$, $i = 1\dots N$, and a list of the power indices $p(i)$, $i
-= 1\dots N$.  The list must be ascending in $y$. Examples:
+After the option selection, the number $N$ is entered, followed by a list
+of the break points $y(i)$, $i = 1\dots N$, and a list of the power indices
+$p(i)$, $i = 1\dots N$.  The list must be ascending in $y$. Examples:
 
 \begin{itemize}
 
-\item Density falling off as $y^{-2}$ in the entire shell, as in a steady-state
-wind with constant velocity.  The shell extends to 1000 times its inner radius:
+\item Density falling off as $y^{-2}$ in the entire shell, as in a
+    steady-state wind with constant velocity.  The shell extends to
+    1000 times its inner radius:
 
 \begin{verbatim}
    density type = POWD ;     N = 1;   Y = 1.e3;    p = 2
 \end{verbatim}
 
-\item Three consecutive shells with density fall-off softening from $y^{-2}$ to
-a constant distribution as the radius increases by factor 10:
+\item Three consecutive shells with density fall-off softening from
+    $y^{-2}$ to a constant distribution as the radius increases by
+    factor 10:
 
 \begin{verbatim}
               density type = POWD
@@ -987,12 +995,12 @@ a constant distribution as the radius increases by factor 10:
 \eq{
           \eta \propto  \exp\left(-\sigma\, \frac{y - 1}{Y - 1}\right)
 }
-where $Y$ is the shell's outer boundary and $\sigma$ determines the fall-off
-rate. Following the option flag, the user enters $Y$ and $\sigma$.
+where $Y$ is the shell's outer boundary and $\sigma$ determines the
+fall-off rate. Following the option flag, the user enters $Y$ and $\sigma$.
 
 \begin{itemize}
-\item Exponential fall-off of the density to $e^{-4}$ of its inner value at the
-shell's outer boundary $Y = 100$:
+\item Exponential fall-off of the density to $e^{-4}$ of its inner
+    value at the shell's outer boundary $Y = 100$:
 
 \hskip 0.5in {\tt  density type = EXPD ; Y = 100; sigma = 4 }
 \end{itemize}
@@ -1006,61 +1014,60 @@ objects such as AGB stars, where the envelope expansion is driven by radiation
 pressure on the dust grains. \D\ can compute the wind structure by solving the
 hydrodynamics equations, including dust drift and the star's gravitational
 attraction, as a set coupled to radiative transfer.  This solution is triggered
-with {\tt density type = RDW}, while {\tt density type = RDWA} utilizes an analytic
-approximation for the dust density profile which is appropriate in most cases
-and offers the advantage of a much shorter run time.
+with {\tt density type = RDW}, while {\tt density type = RDWA} utilizes an
+analytic approximation for the dust density profile which is appropriate in
+most cases and offers the advantage of a much shorter run time.
 
 \begin{enumerate}
 \setcounter{enumi}{2}
-\item
-An exact calculation of the density structure from a full dynamics calculations
-(see \cite{IE95} and references therein).  The calculation is performed for a
-typical wind in which the final expansion velocity exceeds 5 \kms, but is
-otherwise arbitrary. The only input parameter that needs to be specified is the
-shell thickness $Y = r_{\rm out}/r_1$.
+\item An exact calculation of the density structure from a full dynamics
+    calculations (see \cite{IE95} and references therein).  The calculation
+    is performed for a typical wind in which the final expansion velocity
+    exceeds 5 \kms, but is otherwise arbitrary. The only input parameter
+    that needs to be specified is the shell thickness $Y = r_{\rm
+    out}/r_1$.
 
 \begin{itemize}
-\item
-Numerical solution for radiatively driven winds, extending to a distance $10^4$
-times the inner radius:
+\item Numerical solution for radiatively driven winds, extending to a
+    distance $10^4$ times the inner radius:
 
 \begin{verbatim}
    density type = RDW ;     Y = 1.e4
 \end{verbatim}
 \end{itemize}
 The steepness of the density profile near the wind origin increases with
-optical depth, and with it the numerical difficulties.  DUSTY handles the full
-dynamics calculation for models that have \tV\ \la\ 1,000, corresponding to
-\Mdot\ \about\ 4\x\E{-4} \Mo\ $\rm yr^{-1}$.
+optical depth, and with it the numerical difficulties.  DUSTY handles the
+full dynamics calculation for models that have \tV\ \la\ 1,000,
+corresponding to \Mdot\ \about\ 4\x\E{-4} \Mo\ $\rm yr^{-1}$.
 
-\item
-When the variation of flux-averaged opacity with radial distance is negligible,
-the problem can be solved analytically \cite{IEprep}.  In the limit of
-negligible drift, the analytic solution takes the form
+\item When the variation of flux-averaged opacity with radial distance is
+    negligible, the problem can be solved analytically \cite{IEprep}.  In
+    the limit of negligible drift, the analytic solution takes the form
 \eq{
-    \eta \propto {1\over y^2}\left[{y \over y - 1 + (v_1/v_e)^2}\right]^{1/2}
+    \eta \propto {1\over y^2}\left[{y \over y - 1 +
+    (v_1/v_e)^2}\right]^{1/2}
 }
 This density profile provides an excellent approximation under all
 circumstances to the actual results of detailed numerical calculations
 (previous option). The ratio of initial to final velocity, $\epsilon_v =
 v_1/v_e$, is practically irrelevant as long as $\epsilon_v$ \la\ 0.2. The
 selection {\tt density type = 4} invokes this analytical solution with the
-default value $\epsilon_v = 0.2$. As for the previous option, the only input
-parameter that needs to be specified in this case is the outer boundary $Y$.
+default value $\epsilon_v = 0.2$. As for the previous option, the only
+input parameter that needs to be specified in this case is the outer
+boundary $Y$.
 
 \begin{itemize}
-\item
-Analytical approximation for radiatively driven winds, the shell relative
-thickness is $Y = 10^4$:
+\item Analytical approximation for radiatively driven winds, the shell
+    relative thickness is $Y = 10^4$:
 
 \begin{verbatim}
    density type = RDWA ;     Y = 1.e4
 \end{verbatim}
 \end{itemize}
-Run times for this option are typically 2--3 times shorter and it can handle
-larger optical depths than the previous one. Although this option suffices for
-the majority of cases of interest, for detailed final fitting you may wish to
-switch to the former.
+Run times for this option are typically 2--3 times shorter and it can
+handle larger optical depths than the previous one. Although this option
+suffices for the majority of cases of interest, for detailed final fitting
+you may wish to switch to the former.
 
 \end{enumerate}
 
@@ -1072,20 +1079,20 @@ formation), and \D\ would produce the corresponding IR spectrum.
 
 \begin{enumerate}
 \setcounter{enumi}{4}
-\item
-The input filename must be entered separately in the line following the
-numerical flag. This input file must consist of a three-line header of
-arbitrary text, followed by a two-column tabulation of radius and density,
-ordered in increasing radius.  The inner radius (first entry) corresponds to
-the dust temperature $T_1$, entered previously.  Otherwise, the
-units of both radius and density are arbitrary; \D\ will transform both to
-dimensionless variables. The number of entry data points is limited to a
-maximum of 1,000 but is otherwise arbitrary. \D\ will transform the table to
-its own radial grid, with typically \about\ 20--30 points.  Note that \D\ may
-have trouble handling density profiles that have large derivatives, or that
-drop to 0 at some radii. The cubic spline method employed by \D\ significantly
-reduces the number of radial grid points, but is not capable of describing
-sharp features.
+\item The input filename must be entered separately in the line following
+    the numerical flag. This input file must consist of a three-line header
+    of arbitrary text, followed by a two-column tabulation of radius and
+    density, ordered in increasing radius.  The inner radius (first entry)
+    corresponds to the dust temperature $T_1$, entered previously.
+    Otherwise, the units of both radius and density are arbitrary; \D\ will
+    transform both to dimensionless variables. The number of entry data
+    points is limited to a maximum of 1,000 but is otherwise arbitrary. \D\
+    will transform the table to its own radial grid, with typically \about\
+    20--30 points.  Note that \D\ may have trouble handling density
+    profiles that have large derivatives, or that drop to 0 at some radii.
+    The cubic spline method employed by \D\ significantly reduces the
+    number of radial grid points, but is not capable of describing sharp
+    features.
 
 \begin{itemize}
 \item Density profile tabulated in the file {\tt collapse.dat}:
@@ -1097,7 +1104,8 @@ sharp features.
 \end{itemize}
 
 This file is supplied with \D\ and contains tabulation of the profile $\eta
-\propto y^{-3/2}$, corresponding to steady-state accretion to a central mass.
+\propto y^{-3/2}$, corresponding to steady-state accretion to a central
+mass.
 
 \end{enumerate}
 
@@ -1109,23 +1117,23 @@ pertinent for very steep density profiles, where the outer boundary should be
 chosen with care.
 
 \subsection{Optical Depth}
-\label{optical_depth}
-For a given set of the parameters specified above, \D\ will generate up to 999
-models with different overall optical depths.  The list of optical depths can
-be specified in two different ways.  \D\ can generate a grid of optical depths
-spaced either linearly or logarithmically between two end-points specified in
-the input.  Alternatively, an arbitrary list can be entered in a file.
+\label{optical_depth} For a given set of the parameters specified above, \D\
+will generate up to 999 models with different overall optical depths.  The list
+of optical depths can be specified in two different ways.  \D\ can generate a
+grid of optical depths spaced either linearly or logarithmically between two
+end-points specified in the input.  Alternatively, an arbitrary list can be
+entered in a file.
 
 \begin{enumerate}
 
-\item Optical depths covering a specified range in linear steps:  Following the
-option selection, the fiducial wavelength $\lambda_0$ (in \mic) of optical
-depth $\tau_0$ is entered.  The $\tau_0$ grid is then specified by its two ends
-and the number of points ($\le 999$).
+\item Optical depths covering a specified range in linear steps:  Following
+    the option selection, the fiducial wavelength $\lambda_0$ (in \mic) of
+    optical depth $\tau_0$ is entered.  The $\tau_0$ grid is then specified
+    by its two ends and the number of points ($\le 999$).
 
 \begin{itemize}
-\item Models with 2.2 \mic\ optical depths including all the integers from 1 to
-100:
+\item Models with 2.2 \mic\ optical depths including all the integers
+    from 1 to 100:
 
 \begin{verbatim}
        tau grid = LINEAR
@@ -1136,7 +1144,7 @@ and the number of points ($\le 999$).
 \end{itemize}
 
 \item Same as the previous option, only the $\tau_0$ range is covered in
-logarithmic steps:
+    logarithmic steps:
 
 \begin{itemize}
 \item Three models with visual optical depth $\tau_V$ =  0.1, 1 and 10:
@@ -1148,23 +1156,22 @@ logarithmic steps:
 \end{verbatim}
 \end{itemize}
 
-\item
-Optical depths list entered in a file: The file name is entered on a single
-line after the option selection. The (arbitrary) header text of the supplied
-file must end with the fiducial wavelength $\lambda_0$, preceded by the equal
-sign, `='. The list of optical depths, one per line up to a maximum of 999
-entries, is entered next in arbitrary order.  \D\ will sort and run it in
-increasing $\tau_0$.
+\item Optical depths list entered in a file: The file name is entered on a
+    single line after the option selection. The (arbitrary) header text of
+    the supplied file must end with the fiducial wavelength $\lambda_0$,
+    preceded by the equal sign, `='. The list of optical depths, one per
+    line up to a maximum of 999 entries, is entered next in arbitrary
+    order.  \D\ will sort and run it in increasing $\tau_0$.
 
 \begin{itemize}
-\item Optical depths from the file {\tt taugrid.txt}, supplied with the \D\
-distribution:
+\item Optical depths from the file {\tt taugrid.txt}, supplied with the
+    \D\ distribution:
 \begin{verbatim}
        tau grid = USER_SUPPLIED  % grid supplied in file:
        taugrid.dat
 \end{verbatim}
-The file {\tt taugrid.dat} is used in the sample input files {\tt slab2.inp}
-and {\tt sphere3.inp}.
+The file {\tt taugrid.dat} is used in the sample input files {\tt
+slab2.inp} and {\tt sphere3.inp}.
 \end{itemize}
 \end{enumerate}
 
@@ -1203,7 +1210,7 @@ described in \S\ref{Memory}. This is entered in the following way:
 \subsection{Starting Optical Depth and Increment in Optical Depth}
 \label{starting_opt_depth}
 
-The starting optical depth and increment in optical depth (described 
+The starting optical depth and increment in optical depth (described
 in~\ref{major_changes}) are entered in the following way:
 %
 \begin{verbatim}
@@ -1223,7 +1230,7 @@ are printed to the standard output device with the FORTRAN statement {\tt
 write(*)}.  If you suspect that your system may not handle this properly,
 choose {\tt verbose = 0}.
 
-All other output and its control is explained in the next section in 
+All other output and its control is explained in the next section in
 Section~\ref{output}.
 
 
@@ -1247,13 +1254,12 @@ the model with the fiducial optical depth {\tt tau0} listed in the next column.
 Subsequent columns list quantities calculated by \D\ for that {\tt tau0}:
 
 \begin{list}{$\diamond$}{}
-\item
-{\tt F1} -- the bolometric flux, in $\rm W\ m^{-2}$, at the inner radius $y =
-1$. Only the external source contributes to {\tt F1} since the diffuse flux
-vanishes there under the point-source assumption. Note that {\tt F1} is {\em
-independent} of overall luminosity, fully determined by the scaled solution
-(see \cite{IE97}). The bolometric flux emerging from the spherical distribution
-is {\tt F1/$Y^2$}.
+\item {\tt F1} -- the bolometric flux, in $\rm W\ m^{-2}$, at the inner radius
+    $y = 1$. Only the external source contributes to {\tt F1} since the diffuse
+    flux vanishes there under the point-source assumption. Note that {\tt F1}
+    is {\em independent} of overall luminosity, fully determined by the scaled
+    solution (see \cite{IE97}). The bolometric flux emerging from the spherical
+    distribution is {\tt F1/$Y^2$}.
 
 Any measure of the shell dimension is irrelevant to the radiative transfer
 problem and thus not part of \D's calculations.  Still, the shell size can be
@@ -1261,47 +1267,40 @@ of considerable interest in many applications. For convenience, the next three
 output items list different measures of the shell size expressed in terms of
 redundant quantities such as the luminosity:
 
-\item
-{\tt r1(cm)} -- the shell inner radius where the dust temperature is {\tt TSUB},
-specified in the input.  This radius scales in proportion to
-$L^{1/2}$, where $L$ is the luminosity. The tabulated value corresponds to $L =
-\E4\ \Lo$.
+\item {\tt r1(cm)} -- the shell inner radius where the dust temperature is {\tt
+    TSUB}, specified in the input.  This radius scales in proportion to
+    $L^{1/2}$, where $L$ is the luminosity. The tabulated value corresponds to
+    $L = \E4\ \Lo$.
 
-\item
-{\tt r1/rc} -- where {\tt rc} is the radius of the central source.  This
-quantity scales in proportion to $(T_e/T_1)^2$, where $T_e$ is the external
-radiation effective temperature.  The listed value is for $T_e = 10,000$ K with
-two exceptions: when the spectral shape of the external radiation is the Planck
-or Engelke-Marengo function, the arguments of those functions are used for
-$T_e$.
+\item {\tt r1/rc} -- where {\tt rc} is the radius of the central source.  This
+    quantity scales in proportion to $(T_e/T_1)^2$, where $T_e$ is the external
+    radiation effective temperature.  The listed value is for $T_e = 10,000$ K
+    with two exceptions: when the spectral shape of the external radiation is
+    the Planck or Engelke-Marengo function, the arguments of those functions
+    are used for $T_e$.
 
-\item
-{\tt theta1} -- the angular size, in arcsec, of the shell inner diameter. This
-angle depends on the observer's position and scales in proportion to $F_{\rm
-obs}^{1/2}$, where $F_{\rm obs}$ is the observed bolometric flux.  The
-tabulated value corresponds to $F_{\rm obs} = \E{-6}\ \rm W\ m^{-2}$.
+\item {\tt theta1} -- the angular size, in arcsec, of the shell inner diameter.
+    This angle depends on the observer's position and scales in proportion to
+    $F_{\rm obs}^{1/2}$, where $F_{\rm obs}$ is the observed bolometric flux.
+    The tabulated value corresponds to $F_{\rm obs} = \E{-6}\ \rm W\ m^{-2}$.
 
-\item
-{\tt Td(Y)} -- the dust temperature, in K, at the envelope's outer edge.
+\item {\tt Td(Y)} -- the dust temperature, in K, at the envelope's outer edge.
 
-\item
-{\tt err} -- the numerical accuracy, in {\tt \%}, achieved in the run. The 
-definition of {\tt err} is different for spherical and slab cases:
+\item {\tt err} -- the numerical accuracy, in {\tt \%}, achieved in the run.
+    The definition of {\tt err} is different for spherical and slab cases:
 %
 \begin{itemize}
 %
-\item
-{\bf Spherical Shell:} 
+\item {\bf Spherical Shell:}
 \begin{equation}
-\rm{err} = 
+\rm{err} =
  \left|\frac{{\rm{|computed}}\,F_{\rm{diff,bol}}(y)|}
       {{\rm{|calculated}}\,[F_{\rm{bol}}(y) - F_{\rm{tran, bol}}(y)]|}
        - 1 \right|
 \label{fluxconsvsphere2}
 \end{equation}
 %
-\item
-{\bf Slab:}
+\item {\bf Slab:}
 \begin{equation}
 \rm{err} = \left|\frac{\mbox{computed}|F_{\rm{diff}}(\tau) + F_{\mbox{\scriptsize
 diff},L}|}{\mbox{calculated}|F_{\rm{diff}} (\tau)+ F_{\rm{diff},L}|}
@@ -1310,9 +1309,10 @@ diff},L}|}{\mbox{calculated}|F_{\rm{diff}} (\tau)+ F_{\rm{diff},L}|}
 %
 \end{itemize}
 
-Generally, the numerical accuracy is set at {\tt 10\%} for {\tt TauMax} (Max. optical 
-depth among all wavelengths) less than {\tt 200}. For {\tt TauMax $>$ 200}, it is set at 
-{\tt 20\%}. In the {\tt .out} file, errors smaller than {\tt 1\%} are listed as zero.
+Generally, the numerical accuracy is set at {\tt 10\%} for {\tt TauMax} (Max.
+optical depth among all wavelengths) less than {\tt 200}. For {\tt TauMax $>$
+200}, it is set at {\tt 20\%}. In the {\tt .out} file, errors smaller than {\tt
+1\%} are listed as zero.
 \end{list}
 
 
@@ -1325,21 +1325,18 @@ grain bulk density $\rho_s$ \cite{IEprep}.  The tabulations are for $L = \E4\
 \Lo$, $r_{\rm gd} = 200$ and $\rho_s = 3\ \rm g~cm^{-3}$, and their scaling
 properties are:
 \begin{list}{$\diamond$}{}
-\item
-{\tt Mdot} -- the mass loss rate in \Mo\ $\rm yr^{-1}$, scales in proportion to
-$L^{3/4}(r_{\rm gd}\rho_s)^{1/2}$.  This quantity has \about\ 30\% inherent
-uncertainty because varying the gravitational correction from 0 up to 50\% has
-no discernible effect on the observed spectrum.
-\item
-{\tt Ve} -- the terminal outflow velocity in \kms, scales in proportion to
-$L^{1/4}(r_{\rm gd}\rho_s)^{-1/2}$. The provided solutions apply only if this
-velocity exceeds 5 \kms.  {\tt Ve} is subject to the same inherent uncertainty
-as {\tt Mdot}.
-\item
-{\tt M$>$} -- an upper limit in \Mo\ on the stellar mass $M$, scales in
-proportion to $L/(r_{\rm gd}\rho_s)$.  The effect of gravity is negligible as
-long as $M$ is less than 0.5{\tt *M$>$} and the density profile is then
-practically independent of $M$.
+\item {\tt Mdot} -- the mass loss rate in \Mo\ $\rm yr^{-1}$, scales in
+    proportion to $L^{3/4}(r_{\rm gd}\rho_s)^{1/2}$.  This quantity has \about\
+    30\% inherent uncertainty because varying the gravitational correction from
+    0 up to 50\% has no discernible effect on the observed spectrum.
+\item {\tt Ve} -- the terminal outflow velocity in \kms, scales in proportion
+    to $L^{1/4}(r_{\rm gd}\rho_s)^{-1/2}$. The provided solutions apply only if
+    this velocity exceeds 5 \kms.  {\tt Ve} is subject to the same inherent
+    uncertainty as {\tt Mdot}.
+\item {\tt M$>$} -- an upper limit in \Mo\ on the stellar mass $M$, scales in
+    proportion to $L/(r_{\rm gd}\rho_s)$.  The effect of gravity is negligible
+    as long as $M$ is less than 0.5{\tt *M$>$} and the density profile is then
+    practically independent of $M$.
 
 \end{list}
 There is a slight complication with these tabulations when the dust optical
@@ -1389,21 +1386,20 @@ temperature violates eq.\ \ref{Tmin}.
 In the default {\tt fname.out}. the first two columns are the same as in the
 spherical case (\S\ref{default_sph}) and are followed by:
 \begin{list}{$\diamond$}{}
-\item{\tt Fe1} --
-bolometric flux, in $\rm W\ m^{-2}$, of the left-side source at the slab left
-boundary.
-\item{\tt f1} $= F/F_{e1}$, where $F$ is the overall bolometric flux.
-Values at and below the internal accuracy of \D's flux computation, \E{-3} when
-$q_{\rm acc}$ = 0.05, are listed as zero.
-\item{\tt r1(cm)} -- the distance at which a point source with luminosity
-\E4 \Lo\ produces the bolometric flux $F_{e1}$.
+\item{\tt Fe1} -- bolometric flux, in $\rm W\ m^{-2}$, of the left-side source
+    at the slab left boundary.
+\item{\tt f1} $= F/F_{e1}$, where $F$ is the overall bolometric flux. Values at
+    and below the internal accuracy of \D's flux computation, \E{-3} when
+    $q_{\rm acc}$ = 0.05, are listed as zero.
+\item{\tt r1(cm)} -- the distance at which a point source with luminosity \E4
+    \Lo\ produces the bolometric flux $F_{e1}$.
 \item  {\tt Td(K)} -- the dust temperature at the slab right boundary.
-\item
-{\tt Te(L)} -- the effective temperature, in K, obtained from $F_{e1} =
-\sigma{\tt Te}^4$.  When the slab is illuminated also from the right, a column
-is added next for {\tt Te(R)}, the effective temperature obtained similarly for
-the right-side flux.
-\item{\tt err} -- the flux conservation error, defined as in the spherical case.
+\item {\tt Te(L)} -- the effective temperature, in K, obtained from $F_{e1} =
+    \sigma{\tt Te}^4$.  When the slab is illuminated also from the right, a
+    column is added next for {\tt Te(R)}, the effective temperature obtained
+    similarly for the right-side flux.
+\item{\tt err} -- the flux conservation error, defined as in the spherical
+    case.
 
 \end{list}
 
@@ -1438,17 +1434,16 @@ output files they trigger, and can be used for quick reference.
 
 Setting the first optional flag to 1 outputs a variety of spectral properties
 for all the model solutions to the file {\tt fname.spp}. The tabulation has
-four header lines and starts with the model sequential number {\tt \#\#\#}.
-The following columns list the corresponding {\tt tau0} and the scaling
-parameter $\Psi$ (see \cite{IE97}) for the model. The subsequent columns list
-fluxes $f(\lambda) = \lambda F_\lambda/F$, where $F = \int\!F_\lambda
-d\lambda$, for various wavelengths of interest:
+four header lines and starts with the model sequential number {\tt \#\#\#}. The
+following columns list the corresponding {\tt tau0} and the scaling parameter
+$\Psi$ (see \cite{IE97}) for the model. The subsequent columns list fluxes
+$f(\lambda) = \lambda F_\lambda/F$, where $F = \int\!F_\lambda d\lambda$, for
+various wavelengths of interest:
 \begin{list}{$\diamond$}{}
 \item {\tt fV} -- relative emerging flux at 0.55 \mic.
 \item {\tt fK} -- relative emerging flux at 2.2 \mic.
-\item
-{\tt f12} -- relative emerging flux at 12 \mic, convolved with the IRAS
-filter for this wavelength.
+\item {\tt f12} -- relative emerging flux at 12 \mic, convolved with the IRAS
+    filter for this wavelength.
 \end{list}
 Next are the IRAS colors, defined for wavelengths $\lambda_1$ and $\lambda_2$
 in \mic\ as:
@@ -1461,13 +1456,13 @@ Columns 5--7 list, in this order, {\tt C21} = $[25] - [12]$, {\tt C31} = $[60]
 - [12]$ and {\tt C43} = $[100] - [60]$. They are followed by tabulations of:
 
 \begin{list}{$\diamond$}{}
-\item{\tt b8-13} -- the IRAS-defined spectral slope $\beta_{8-13}$ between
-8 and 13 \mic:
+\item{\tt b8-13} -- the IRAS-defined spectral slope $\beta_{8-13}$ between 8
+    and 13 \mic:
 $$
     \beta_{8-13} = 4.74\log{f(13) \over f(8)} - 1.0
 $$
-\item{\tt b14-22} -- the IRAS-defined spectral slope $\beta_{14-22}$ between
-14 and 22 \mic:
+\item{\tt b14-22} -- the IRAS-defined spectral slope $\beta_{14-22}$ between 14
+    and 22 \mic:
 $$
     \beta_{14-22} = 5.09\log{f(22) \over f(14)} - 1.0
 $$
@@ -1476,11 +1471,10 @@ $$
     B_{9.8} = \ln{f(9.8) \over f_c(9.8)},
 $$
 where $f_c(9.8)$ is the continuum-interpolated flux across the feature.
-\item
-{\tt B11.3} -- the relative strength of the 11.3 \mic\ feature defined as
-above for {\tt B9.8}.
+\item {\tt B11.3} -- the relative strength of the 11.3 \mic\ feature defined as
+    above for {\tt B9.8}.
 \item{\tt R9.8-18} -- the ratio of the fluxes at 9.8 \mic\ and 18 \mic,
-$f(9.8)/f(18)$.
+    $f(9.8)/f(18)$.
 
 \end{list}
 
@@ -1500,14 +1494,13 @@ spectral shape of the input radiation, and the wavelength dependence of the
 total optical depth. The following quantities are tabulated:
 \begin{list}{$\diamond$}{}
 \item {\tt lambda} -- the wavelength in \mic
-\item
-{\tt fTot} -- the spectral shape of the total emerging flux $f(\lambda) =
-\lambda F_\lambda/\int\!F_\lambda d\lambda$.  Values smaller than \E{-20} are
-listed as 0.
-\item{\tt xAtt} -- fractional contribution of the attenuated input radiation
-to {\tt fTot}
-\item{\tt xDs} -- fractional contribution of the scattered radiation to
-{\tt fTot}
+\item {\tt fTot} -- the spectral shape of the total emerging flux $f(\lambda) =
+    \lambda F_\lambda/\int\!F_\lambda d\lambda$.  Values smaller than \E{-20}
+    are listed as 0.
+\item{\tt xAtt} -- fractional contribution of the attenuated input radiation to
+    {\tt fTot}
+\item{\tt xDs} -- fractional contribution of the scattered radiation to {\tt
+    fTot}
 \item{\tt xDe} -- fractional contribution of the dust emission to {\tt fTot}
 \item{\tt fInp} -- the spectral shape of the input (unattenuated) radiation
 \item{\tt tauT} -- overall optical depth at wavelength {\tt lambda}
@@ -1520,7 +1513,8 @@ to {\tt fTot}
 
 \begin{figure}[ht]
 \centering
-    \includegraphics[width=0.40\hsize]{figure1.eps}
+%    \includegraphics[width=0.40\hsize]{figure1.eps}
+    \includegraphics[width=0.40\hsize]{figure1}
 \caption{Notation for imaging output.}
 \label{impact parameter}
 \end{figure}
@@ -1528,19 +1522,19 @@ to {\tt fTot}
 The surface brightness is a luminosity-independent self-similar distribution
 \cite{IE96a} of $b/r_1$, the impact parameter scaled by the envelope inner
 radius (fig. \ref{impact parameter}); note that $r_1$ is listed in the default
-output file (\S\ref{default_sph}) for a source luminosity \E4~\Lo. \D\ can produce
-maps of the surface brightness at up to 20 wavelengths, specified in the input
-file. Setting the option flag to 1 produces imaging tabulations for all the
-models of the run in the single output file {\tt fname.itb}, setting the flag
-to 2 puts the table for model number {\tt \#\#\#} in its separate file {\tt
-fname.i\#\#\#}.
+output file (\S\ref{default_sph}) for a source luminosity \E4~\Lo. \D\ can
+produce maps of the surface brightness at up to 20 wavelengths, specified in
+the input file. Setting the option flag to 1 produces imaging tabulations for
+all the models of the run in the single output file {\tt fname.itb}, setting
+the flag to 2 puts the table for model number {\tt \#\#\#} in its separate file
+{\tt fname.i\#\#\#}.
 
 Following the option selection flag, the number ($\le 20$) of desired
 wavelengths is entered first, followed by a list of these wavelengths in \mic.
 
 \begin{itemize}
-\item Example of additional input data required in {\tt fname.inp} for imaging
-output:
+\item Example of additional input data required in {\tt fname.inp} for
+    imaging output:
 \begin{verbatim}
  imaging tables (all models in one file) = 1
  number of wavelengths = 8
@@ -1557,15 +1551,14 @@ specified for imaging should be part of the grid, modifying it if necessary
 Each map is tabulated with a single header line as follows:
 \begin{list}{$\diamond$}{}
 \item{\tt b} $= b/r_1$, where $b$ is the impact parameter.
-\item
-{\tt t(b)} = $\tau(\tt b)/\tau(0)$, where $\tau(\tt b)$ is the overall optical
-depth along a path with impact parameter {\tt b}.  Note that $\tau(0)$ is
-simply the overall radial optical depth {\tt tauT}, listed in the file {\tt
-fname.s\#\#\#} (\S \ref{fname.s}), and that {\tt t(b)} doubles its value across
-the shell once the impact parameter exceeds the stellar radius.
-\item
-The intensity, in Jy arcsec$^{-2}$, at each of the wavelengths listed in the
-header line.
+\item {\tt t(b)} = $\tau(\tt b)/\tau(0)$, where $\tau(\tt b)$ is the overall
+    optical depth along a path with impact parameter {\tt b}.  Note that
+    $\tau(0)$ is simply the overall radial optical depth {\tt tauT}, listed in
+    the file {\tt fname.s\#\#\#} (\S \ref{fname.s}), and that {\tt t(b)}
+    doubles its value across the shell once the impact parameter exceeds the
+    stellar radius.
+\item The intensity, in Jy arcsec$^{-2}$, at each of the wavelengths listed in
+    the header line.
 \end{list}
 
 A typical image contains a narrow central spike of width $b_c = 2r_c/r_1$,
@@ -1619,20 +1612,19 @@ are:
 \begin{list}{$\diamond$}{}
 \item{\tt y} -- dimensionless radius
 \item{\tt eta} -- the dimensionless, normalized radial density profile (\S
-\ref{density})
-\item
-{\tt t} -- radial profile of the optical depth variation.  At any wavelength
-$\lambda$, the optical depth at radius $y$ measured from the inner boundary is
-{\tt t*tauT}, where {\tt tauT} is the overall optical depth at that wavelength,
-tabulated in the file {\tt fname.s\#\#\#} (\S \ref{fname.s}).
+    \ref{density})
+\item {\tt t} -- radial profile of the optical depth variation.  At any
+    wavelength $\lambda$, the optical depth at radius $y$ measured from the
+    inner boundary is {\tt t*tauT}, where {\tt tauT} is the overall optical
+    depth at that wavelength, tabulated in the file {\tt fname.s\#\#\#} (\S
+    \ref{fname.s}).
 
 \item{\tt tauF} -- radial profile of the flux-averaged optical depth
-\item
-{\tt epsilon} -- the fraction of grain heating due to the contribution of the
-envelope to the radiation field (see \cite{IE97}).
+\item {\tt epsilon} -- the fraction of grain heating due to the contribution of
+    the envelope to the radiation field (see \cite{IE97}).
 \item{\tt Td} -- radial profile of the dust temperature
-\item{\tt rg} -- radial profile of the ratio of radiation pressure
-to gravitational force, where both forces are per unit volume:
+\item{\tt rg} -- radial profile of the ratio of radiation pressure to
+    gravitational force, where both forces are per unit volume:
 \eq{
     {\Frad\over\Fgrav} = {3L\over16\pi GMc r_{gd}}\,
     {\DS \sum_i n_{d,i} a_i^2\int\!Q_{i,\lambda} f_\lambda\,d\lambda \over
@@ -1661,14 +1653,12 @@ the case of dynamical calculation with {\tt density type = 3} for AGB stars
 (\S\ref{winds}), the following additional profiles are tabulated:
 
 \begin{list}{$\diamond$}{}
-\item
-{\tt u} -- the dimensionless radial velocity profile normalized to the terminal
-velocity {\tt Ve}, which is tabulated for the corresponding overall optical
-depth in file {\tt fname.out} (\S \ref{default_sph}).
-\item
-{\tt drift} -- the radial variation of $v_{\rm g}/v_{\rm d}$, the velocity
-ratio of the gas and dust components of the envelope.  This quantity measures
-the relative decrease in dust opacity due to dust drift.
+\item {\tt u} -- the dimensionless radial velocity profile normalized to the
+    terminal velocity {\tt Ve}, which is tabulated for the corresponding
+    overall optical depth in file {\tt fname.out} (\S \ref{default_sph}).
+\item {\tt drift} -- the radial variation of $v_{\rm g}/v_{\rm d}$, the
+    velocity ratio of the gas and dust components of the envelope.  This
+    quantity measures the relative decrease in dust opacity due to dust drift.
 
 \end{list}
 
@@ -1785,12 +1775,10 @@ The long wavelength end is to ensure adequate coverage at all wavelengths where
 dust emission is potentially significant. Wavelengths can be added and removed
 provided the following rules are obeyed:
 \begin{enumerate}
-\item
-Wavelengths are specified in \mic.
-\item
-The shortest wavelength must be 0.01 \mic, the longest $3.6\times10^{4}$ \mic.
-\item
-The ratio of each consecutive pair must be $\le$ 1.5.
+\item Wavelengths are specified in \mic.
+\item The shortest wavelength must be 0.01 \mic, the longest
+    $3.6\times10^{4}$ \mic.
+\item The ratio of each consecutive pair must be $\le$ 1.5.
 \end{enumerate}
 The order of entries is arbitrary, \D\ sorts them in increasing wavelength and
 the sorted list is used for all internal calculations and output.  This
@@ -1820,11 +1808,11 @@ on that same grid.
 \section{Output Summary}
 \label{summary}
 
-\D's default output is the file {\tt fname.out}, described in \S\ref{default_sph}
-and \S\ref{default_slb}.
-Additional output is optionally produced through selection flags, summarized in
-the following table.  The second column lists the section number where a
-detailed description of the corresponding output is provided.
+\D's default output is the file {\tt fname.out}, described in
+\S\ref{default_sph} and \S\ref{default_slb}. Additional output is optionally
+produced through selection flags, summarized in the following table.  The
+second column lists the section number where a detailed description of the
+corresponding output is provided.
 
 \begin{table}[htbp]
 \begin{center}
@@ -1882,17 +1870,16 @@ numerical problems. Some were already mentioned in the text and are repeated
 here for completeness.
 
 \begin{itemize}
-\item
-FORTRAN requires termination of input records with a carriage return. Make sure
-you press the ``Enter" key whenever you enter a filename in the last line of
-{\tt dusty.inp}.
+\item FORTRAN requires termination of input records with a carriage return.
+    Make sure you press the ``Enter" key whenever you enter a filename in
+    the last line of {\tt dusty.inp}.
 
-\item
-In preparing input files, the following two rules must be carefully observed:
-(1) all required input entries must be specified, and in the correct order; (2)
-the equal sign, `=', must be entered only as a flag to numerical input. When
-either rule is violated and \D\ reaches the end of the input file while looking
-for additional input, you will obtain the error message:
+\item In preparing input files, the following two rules must be carefully
+    observed: (1) all required input entries must be specified, and in the
+    correct order; (2) the equal sign, `=', must be entered only as a flag
+    to numerical input. When either rule is violated and \D\ reaches the
+    end of the input file while looking for additional input, you will
+    obtain the error message:
 \begin{verbatim}
      ****TERMINATED. EOF reached by RDINP while looking for input.
      *** Last line read:
@@ -2040,7 +2027,7 @@ following table lists all the files currently supplied.
 \caption{\hfil Optical Constants Library Supplied with Dusty} \centerline{}
 %\renewcommand{\arraystretch}{1.3}
 
-\begin{tabular}{llrr}     
+\begin{tabular}{llrr}
 \hline \hline
  \multicolumn{1}{c}{File Name}    &
  \multicolumn{1}{c}{Compound}     &
