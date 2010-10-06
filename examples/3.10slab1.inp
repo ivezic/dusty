@@ -82,8 +82,8 @@
            
         - grid type = logarithmic          % log grid
         - lambda0 = 0.55 micron            % optical depth specified 
-        - tau(min) = 1.0; tau(max) = 1000.0   % for the visual wavelength   
-        - number of models = 4
+        - tau(min) = 1.0; tau(max) = 100.0   % for the visual wavelength   
+        - number of models = 3
   ----------------------------------------------------------------------
                                                                        
   II NUMERICS                                                           
