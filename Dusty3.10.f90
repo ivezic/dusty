@@ -999,16 +999,21 @@ subroutine Kernel(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error,Lprint)
        initial = .false.
     end if
 
-    if (j.gt.1) tau0 = 5.*tau0
+!    if (j.gt.1) tau0 = 5.*tau0
 !!**    if (j.gt.1) tau0 = 10.*tau0
-
-    if (tau0.ge.tau(model)) then
-      tau0 = tau(model)
+!
+!    if (tau0.ge.tau(model)) then
+!      tau0 = tau(model)
 !     printing output only for taufid from .inp file.
-      Lprint = .true.
-      taufid = tau0
-    end if
+!      Lprint = .true.
+!      taufid = tau0
+!    end if
 !!**
+     
+     tau0 = tau(model)
+     Lprint = .true.
+     taufid = tau0
+
      print*, 'tau0=', tau0
      call GetTaumax(tau0,nG)
 
