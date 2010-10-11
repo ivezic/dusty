@@ -8,6 +8,9 @@ ZI = Zeljko Ivesic
 MS = Matthew Sirocky
 ME = Moshe Elitzur
 ----------------------------------------------------------
+2010-10-11 RN:
+- Make it configurable which lambda grid file will be used.
+
 2010-10-06 FH:
 - remove iPhys flag
 - add lambdaJ_lambda(r) to ouput 
