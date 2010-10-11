@@ -16,8 +16,8 @@
 !c     this parameter must be the same as the number of wavelength 
 !c     entries in file lambda_grid.dat
 !c      PARAMETER (npL=105)
-      PARAMETER (npL=118)
-!c      PARAMETER (npL=125)
+!c      PARAMETER (npL=118)
+      PARAMETER (npL=125)
       PARAMETER (npR=90)
 
 !c     spatial grids definitions:
