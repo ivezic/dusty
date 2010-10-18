@@ -4,7 +4,7 @@
 % messages are printed out; if set to 2 - more detailed screen output          
 % -------------------------------                                             
    verbose =  2
-   iPhys = 0
+   iPhys = 1
 % -------------------------------
 
 %examples/ivezic

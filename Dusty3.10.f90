@@ -7070,12 +7070,14 @@ subroutine PrOut(model,nG,delta)
 !----------------------------------------------------------------------
 
   allocate(Elems(npL,8))
-
+!FH 10/18/10 line Ji=Fi/(4*pi) added, because Ji not yet set
+  Ji = Fi / (4*pi)
   IF(iPhys.eq.1) THEN
      DO iY = 1, nY
        Jext(iY) = (Ji/Y(iY)**2.) + Jo
      END DO
   END IF
+
   res = 0.0d00
 ! this is the cut-off for printout of small values (in spectra)
   limval = 1.0d-20
@@ -7290,11 +7292,15 @@ subroutine PrOut(model,nG,delta)
      ftot(iL,nY) =  fsL(iL,nY) + fde(iL,nY) + fds(iL,nY)
      if (dabs(ftot(iL,nY)).LT.limval) ftot(iL,nY) = 0.0d0
     end if
-    faux(iL) = ftot(iL,nY)/lambda(iL)
+!    faux(iL) = ftot(iL,nY)/lambda(iL)
+! FH 10/18/10
+    faux(iL) = ftot(iL,nY)
    end do
-   call Simpson(npL,1,nL,lambda,faux,res)
+!   call Simpson(npL,1,nL,lambda,faux,res)
 ! normalization factor for output spectra
-   fnorm = res
+!   fnorm = res
+! FH 10/18/10
+   fnorm = sum(faux)
    call getOmega(nG,omega)
    do iL = 1, nL
     if (ftot(iL,nY).ne.0.0d0) then
@@ -7314,7 +7320,7 @@ subroutine PrOut(model,nG,delta)
 ! rescale ftot with the bolom flux
     ftot(iL,nY) = ftot(iL,nY)/fnorm
 ! if flag-selected, print ftot in [W/m2]
-    IF (iPhys.eq.1) ftot(iL,nY) = ftot(iL,nY)*Jext(nY)
+    IF (iPhys.eq.1) ftot(iL,nY) = ftot(iL,nY)*Jext(nY)*4*pi
     Elems(iL,1) = lambda(iL)
     Elems(iL,2) = ftot(iL,nY)
     Elems(iL,3) = xs
@@ -7361,7 +7367,8 @@ subroutine PrOut(model,nG,delta)
 !     if(ftot(iL,1).lt.limval) ftot(iL,1) = 0.0d0
 ! rescale ftot with the bolom flux for z-spectra
      ftot(iL,1) = dabs(ftot(iL,1))/fnorm
-     IF (iPhys.eq.1) ftot(iL,1) = ftot(iL,1)*Jext(1)
+!FH 10/18/10
+     IF (iPhys.eq.1) ftot(iL,1) = ftot(iL,1)*Jext(1)*4*pi
      Elems(iL,1) = lambda(iL)
      Elems(iL,2) = ftot(iL,1)
      Elems(iL,3) = xs
