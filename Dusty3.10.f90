@@ -7072,7 +7072,7 @@ subroutine PrOut(model,nG,delta)
   allocate(Elems(npL,8))
 !FH 10/18/10 line Ji=Fi/(4*pi) added, because Ji not yet set
   Ji = Fi / (4*pi)
-  IF(iPhys.eq.1) THEN
+  IF(iPhys.eq.1.and.sph) THEN
      DO iY = 1, nY
        Jext(iY) = (Ji/Y(iY)**2.) + Jo
      END DO
