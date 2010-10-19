@@ -7072,12 +7072,17 @@ subroutine PrOut(model,nG,delta)
   allocate(Elems(npL,8))
 !FH 10/18/10 line Ji=Fi/(4*pi) added, because Ji not yet set
   Ji = Fi / (4*pi)
-  IF(iPhys.eq.1.and.sph) THEN
+  IF(iPhys.eq.1) THEN
      DO iY = 1, nY
-       Jext(iY) = (Ji/Y(iY)**2.) + Jo
+        IF (sph) THEN
+           Jext(iY) = (Ji/Y(iY)**2.) + Jo
+        ELSE
+           Jext(iY) = Ji + Jo
+!           print*,Jext(iY)
+        ENDIF
      END DO
   END IF
-
+!  stop
   res = 0.0d00
 ! this is the cut-off for printout of small values (in spectra)
   limval = 1.0d-20
@@ -7282,7 +7287,9 @@ subroutine PrOut(model,nG,delta)
    do iL = 1, nL
     if(slb) then
 ! the right-side spectra for slab: fsL + fds + fde
-     ftot(iL,nY) = ftot(iL,nY) + ksi*fsR(iL,nY)
+!     ftot(iL,nY) = ftot(iL,nY) + ksi*fsR(iL,nY)
+! FH 10/18/10
+     ftot(iL,nY) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY) + ksi*fsR(iL,nY)
 !!**     if(ftot(iL,nY).LE.0.0) ftot(iL,nY) = dabs(ftot(iL,nY))
 !!**    flux can be negative if flowing "right-to-left"
     else

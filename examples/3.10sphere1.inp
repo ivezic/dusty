@@ -121,7 +121,7 @@
         FILE DESCRIPTION                               FLAG        
        ------------------------------------------------------------     
        - properties of emerging spectra;             fname.spp = 0    
-       - detailed spectra for each model;           fname.s### = 0   
+       - detailed spectra for each model;           fname.s### = 2   
        - images at specified wavelengths;           fname.i### = 0
        - radial profiles for each model;            fname.r### = 0   
        - detailed run-time messages;                fname.m### = 0
