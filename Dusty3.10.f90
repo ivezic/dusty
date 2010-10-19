@@ -93,8 +93,20 @@
   if (lambdaOK.eq.0) then
    goto 999
   end if
-! Open master input file dusty.inp
-  open(13,err=998,file='dusty.inp',status='old')
+
+! Open master input file; first determine whether user supplies custom
+! DUSTY input file as the 1st argument on the command line. If yes,
+! use it. Else revert to the default file ./dusty.inp
+  call getarg(1,dustyinpfile)
+  if (trim(dustyinpfile) == "") then
+     write(*,*) "No input file name found on command line. Proceeding with default file ./dusty.inp"
+     dustyinpfile = "dusty.inp"
+  else
+     write(*,*) "Found input file ", trim(dustyinpfile), " on on command line."
+  endif
+
+!  open(13,err=998,file='dusty.inp',status='old')
+  open(13,err=998,file=trim(dustyinpfile),status='old')
   io1 = 0
 ! read the verbose mode
   iVerb = RDINP(Equal,13)
