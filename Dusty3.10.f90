@@ -7078,11 +7078,10 @@ subroutine PrOut(model,nG,delta)
            Jext(iY) = (Ji/Y(iY)**2.) + Jo
         ELSE
            Jext(iY) = Ji + Jo
-!           print*,Jext(iY)
         ENDIF
      END DO
   END IF
-!  stop
+
   res = 0.0d00
 ! this is the cut-off for printout of small values (in spectra)
   limval = 1.0d-20
@@ -7289,7 +7288,7 @@ subroutine PrOut(model,nG,delta)
 ! the right-side spectra for slab: fsL + fds + fde
 !     ftot(iL,nY) = ftot(iL,nY) + ksi*fsR(iL,nY)
 ! FH 10/18/10
-     ftot(iL,nY) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY) + ksi*fsR(iL,nY)
+     ftot(iL,nY) = fde(iL,nY) + fds(iL,nY) + ksi*fsR(iL,nY)
 !!**     if(ftot(iL,nY).LE.0.0) ftot(iL,nY) = dabs(ftot(iL,nY))
 !!**    flux can be negative if flowing "right-to-left"
     else
@@ -7303,11 +7302,9 @@ subroutine PrOut(model,nG,delta)
 ! FH 10/18/10
     faux(iL) = ftot(iL,nY)
    end do
-!   call Simpson(npL,1,nL,lambda,faux,res)
+   call Simpson(npL,1,nL,lambda,faux,res)
 ! normalization factor for output spectra
-!   fnorm = res
-! FH 10/18/10
-   fnorm = sum(faux)
+   fnorm = res
    call getOmega(nG,omega)
    do iL = 1, nL
     if (ftot(iL,nY).ne.0.0d0) then
@@ -7351,8 +7348,11 @@ subroutine PrOut(model,nG,delta)
    if (slb) then
     do iL = 1, nL
 ! the left-side spectra are: |R*fsR + fm|=|fsL-ftot|
-     ftot(iL,1) = dabs(fsL(iL,1) - ftot(iL,1))
-     faux(iL) = ftot(iL,1)/lambda(iL)
+!     ftot(iL,1) = dabs(fsL(iL,1) - ftot(iL,1))
+! FH 10/19/10
+     ftot(iL,1) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY)
+!     faux(iL) = ftot(iL,1)/lambda(iL)
+     faux(iL) = ftot(iL,1)
     end do
     call Simpson(npL,1,nL,lambda,faux,res)
     fnorm = res
