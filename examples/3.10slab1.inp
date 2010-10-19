@@ -82,13 +82,13 @@
            
         - grid type = logarithmic          % log grid
         - lambda0 = 0.55 micron            % optical depth specified 
-        - tau(min) = 1.0; tau(max) = 100.0   % for the visual wavelength   
-        - number of models = 3
+        - tau(min) = 10.0; tau(max) = 10.0   % for the visual wavelength   
+        - number of models = 1
   ----------------------------------------------------------------------
                                                                        
   II NUMERICS                                                           
       
-     - accuracy for flux conservation = 0.10                                                                
+     - accuracy for flux conservation = 0.05                                                                
      - starting optical depth = 1.00
      - increment in optical depth = 2.0 
   ----------------------------------------------------------------------

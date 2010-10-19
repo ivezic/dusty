@@ -7300,7 +7300,7 @@ subroutine PrOut(model,nG,delta)
 ! the right-side spectra for slab: fsL + fds + fde
 !     ftot(iL,nY) = ftot(iL,nY) + ksi*fsR(iL,nY)
 ! FH 10/18/10
-     ftot(iL,nY) = fde(iL,nY) + fds(iL,nY) + ksi*fsR(iL,nY)
+     ftot(iL,nY) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY) + ksi*fsR(iL,nY)
 !!**     if(ftot(iL,nY).LE.0.0) ftot(iL,nY) = dabs(ftot(iL,nY))
 !!**    flux can be negative if flowing "right-to-left"
     else
@@ -7362,7 +7362,7 @@ subroutine PrOut(model,nG,delta)
 ! the left-side spectra are: |R*fsR + fm|=|fsL-ftot|
 !     ftot(iL,1) = dabs(fsL(iL,1) - ftot(iL,1))
 ! FH 10/19/10
-     ftot(iL,1) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY)
+     ftot(iL,1) =  dabs(fds(iL,1) - fde(iL,nY) - fds(iL,nY)) 
 !     faux(iL) = ftot(iL,1)/lambda(iL)
      faux(iL) = ftot(iL,1)
     end do
