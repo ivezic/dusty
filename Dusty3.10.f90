@@ -7310,9 +7310,7 @@ subroutine PrOut(model,nG,delta)
      ftot(iL,nY) =  fsL(iL,nY) + fde(iL,nY) + fds(iL,nY)
      if (dabs(ftot(iL,nY)).LT.limval) ftot(iL,nY) = 0.0d0
     end if
-!    faux(iL) = ftot(iL,nY)/lambda(iL)
-! FH 10/18/10
-    faux(iL) = ftot(iL,nY)
+    faux(iL) = ftot(iL,nY)/lambda(iL)
    end do
    call Simpson(npL,1,nL,lambda,faux,res)
 ! normalization factor for output spectra
@@ -7363,8 +7361,7 @@ subroutine PrOut(model,nG,delta)
 !     ftot(iL,1) = dabs(fsL(iL,1) - ftot(iL,1))
 ! FH 10/19/10
      ftot(iL,1) =  dabs(fds(iL,1) - fde(iL,nY) - fds(iL,nY)) 
-!     faux(iL) = ftot(iL,1)/lambda(iL)
-     faux(iL) = ftot(iL,1)
+     faux(iL) = ftot(iL,1)/lambda(iL)
     end do
     call Simpson(npL,1,nL,lambda,faux,res)
     fnorm = res

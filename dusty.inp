@@ -4,7 +4,7 @@
 % messages are printed out; if set to 2 - more detailed screen output          
 % -------------------------------                                             
    verbose =  2
-   iPhys = 1
+   iPhys = 0
 % -------------------------------
 
 %examples/ivezic
@@ -13,7 +13,7 @@ examples/3.10slab1
 %examples/3.10slab_bb_bath
 %examples/3.10sphere_bb_bath
 
-%examples/3.10sphere1
+examples/3.10sphere1
 %examples/3.10sphere2
 %examples/3.10sphere3
 
