@@ -88,7 +88,7 @@
                                                                        
   II NUMERICS                                                           
       
-     - accuracy for flux conservation = 0.05                                                                
+     - accuracy for flux conservation = 0.01                                                                
      - starting optical depth = 1.00
      - increment in optical depth = 2.0 
   ----------------------------------------------------------------------

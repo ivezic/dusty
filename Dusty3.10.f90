@@ -619,25 +619,29 @@ subroutine Flux_Consv(flux1,flux2,fbolOK,error,Lprint)
      deltaumax = 2.0d0*tautot(1)/nY
   end if
 
+!!**
 ! search for places to improve the grid
-  do  iY = 2, nY
-   if(sph) then
-     if(Y(iY).gt.1.5d0) then
-       if(left.eq.1) then
-         ratio(iY) = abs(abs(flux1(iY))-abs(flux2(iY)))/(abs(flux1(iY))+abs(flux2(iY)))
-       elseif(left.eq.0.and.right.eq.1.and.(flux1(iY).gt.0.05d0*pi)) then
-         ratio(iY) = abs(abs(flux1(iY))-abs(flux2(iY)))/(abs(flux1(iY))+abs(flux2(iY)))
-       end if
-     end if
-   elseif(slb) then
-     ratio(iY) = abs(abs(flux1(iY))-abs(flux2(iY)))/(abs(flux1(iY))+abs(flux2(iY)))
-   end if
-    if (ratio(iY).gt.maxrat) maxrat = abs(ratio(iY))
-  end do
+!  do  iY = 2, nY
+!   if(sph) then
+!     if(Y(iY).gt.1.5d0) then
+!       if(left.eq.1) then
+!         ratio(iY) = abs(abs(flux1(iY))-abs(flux2(iY)))/(abs(flux1(iY))+abs(flux2(iY)))
+!       elseif(left.eq.0.and.right.eq.1.and.(flux1(iY).gt.0.05d0*pi)) then
+!         ratio(iY) = abs(abs(flux1(iY))-abs(flux2(iY)))/(abs(flux1(iY))+abs(flux2(iY)))
+!       end if
+!     end if
+!   elseif(slb) then
+!     ratio(iY) = abs(abs(flux1(iY))-abs(flux2(iY)))/(abs(flux1(iY))+abs(flux2(iY)))
+!   end if
+!    if (ratio(iY).gt.maxrat) maxrat = abs(ratio(iY))
+!  end do
+!!** FH 10/25/2010
+!!** changed the above to old dusty criteria (fmax-fmin)/(fmax+fmin) < accuracy  
+  call FindErr(flux1,maxrat)
 
 ! For very high optical depth (taumax > 200), change the accuracy to 20% [Deka'09]
 !  if(taumax.ge.200.0d0) accuracy = 0.2d0
-  if (taumax.ge.200.0d0.and.(2*nY-1).gt.npY) accuracy = 0.2d0
+!  if (taumax.ge.200.0d0.and.(2*nY-1).gt.npY) accuracy = 0.2d0
 
 ! if any of these criteria is satisfied insert a point:
   DO WHILE (istop.ne.1)
@@ -1330,7 +1334,8 @@ subroutine Solve(model,Lprint,initial,nG,error,delta,iterfbol,fbolOK)
 ! check for flux conservation, and if there is no conservation
 ! increase number of grid points
 
-   call Flux_Consv(calc_fdiff,comp_fdiff_bol,fbolOK,error,Lprint)
+!   call Flux_Consv(calc_fdiff,comp_fdiff_bol,fbolOK,error,Lprint)
+   call Flux_Consv(fbol,fbol,fbolOK,error,Lprint)
 
    if (iVerb.eq.2) &
       write(*,'(a20,i3)') ' After Flux_Cons nY=', nY
