@@ -1060,7 +1060,8 @@ subroutine Rad_Transf(nG,Lprint,initial,pstar,y_incr,us,fs,em,omega, &
   enddo
 !=== the end of iterations over Td ===
 
-  if(iVerb.eq.2.and.Lprint) write(*,*) ' Done with finding dust temperature. '
+  if(iVerb.eq.2.and.Lprint) write(*,'(1p,AI4AE8.2)') &
+       '  Done with finding dust temperature. after ',iter,' iterations ERR :',maxerrT
   if (iX.ge.1) then
    if (Lprint.and.iter.le.itlim) then
     write(18,*)' Convergence achieved, number of'
@@ -5716,9 +5717,10 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
 ! accuracy for convergence (typical 0.0001)
 !!** this is accConv for dust temperature
 !!**  accConv = 10.0d-3  !! Too rough.
-  accConv = 1.0d-4  !tests on July,8,2010  1e-4 and 1e-6 give very close results
+!  accConv = 1.0d-4  !tests on July,8,2010  1e-4 and 1e-6 give very close results
 ! accuracy for flux conservation
   accuracy = RDINP(Equal,1)
+  accConv = RDINP(Equal,1)
   if (accuracy.le.0.0d0) accuracy = 0.02d0
 ! Protect against a very large value for accuracies
   if (accuracy.gt.0.25d0) accuracy = 0.25d0

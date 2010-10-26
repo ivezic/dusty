@@ -401,6 +401,7 @@
 	 parameter. The recommended values are:                          
       
      - accuracy for flux conservation = 0.05
+     - accuracy for Temperature fluctuation  = 1e-3
      - starting optical depth = 1.0
      - increment in optical depth = 2.0
 

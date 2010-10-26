@@ -98,6 +98,7 @@
   II NUMERICS                                                           
       
      - accuracy for flux conservation = 0.10
+     - accuracy for Temperature fluctuation  = 1e-3
      - starting optical depth = 1.0
      - increment in optical depth = 2.0                                                            
   ----------------------------------------------------------------------
