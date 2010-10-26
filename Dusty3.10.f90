@@ -381,7 +381,6 @@ subroutine Find_Tran(pstar,T_ext,us,fs)
 !-----------------------------------------------------------------------
 
   dyn2 = 1.0d-30
-
 ! intialise
   usL = 0.0d0
   usR = 0.0d0
@@ -392,7 +391,6 @@ subroutine Find_Tran(pstar,T_ext,us,fs)
   fsLbol = 0.0d0
   fsRbol = 0.0d0
   fsbol = 0.0d0
-
 ! left-side source is always present
   if(left.gt.0) then
      call getSpShape(shpL,1)
@@ -404,7 +402,6 @@ subroutine Find_Tran(pstar,T_ext,us,fs)
   else
      shpr = 0.0d0
   end if
-
 ! define T_external for typEntry(1).ne.5
   if (typEntry(1).ne.5) then
 ! for slab
@@ -509,7 +506,6 @@ subroutine Find_Tran(pstar,T_ext,us,fs)
         end if
      end do
   end do
-  
   if(sph.and.right.eq.1) then
      call SPH_ext_illum(m0,m1,m1p,m1m)
      do iY = 1, nY
@@ -521,7 +517,6 @@ subroutine Find_Tran(pstar,T_ext,us,fs)
         end do
      end do
   end if
-
 !scaling with energy density
   do iY = 1, nY
 ! loop over wavelengths
@@ -573,6 +568,7 @@ subroutine Find_Tran(pstar,T_ext,us,fs)
 999 return
 end subroutine Find_Tran
 !***********************************************************************
+
 !***********************************************************************
 subroutine Flux_Consv(flux1,flux2,fbolOK,error,Lprint)
 !=======================================================================
@@ -600,26 +596,23 @@ subroutine Flux_Consv(flux1,flux2,fbolOK,error,Lprint)
   istop = 0
   ratio = 0
   maxrat = 0.0d0
-
   if(sph) then
 ! save old grid and values of Eta (important for denstyp = 5 or 6)
 ! for spherical case
-   if (rdw) then
-    Yprev = y
-    etatemp = etadiscr
-    nYprev = nY
-   end if
-
-   do iY = 1, nY
-      tauaux(iY) = TAUtot(1)*ETAzp(1,iY)
-   end do
+     if (rdw) then
+        Yprev = y
+        etatemp = etadiscr
+        nYprev = nY
+     end if
+     do iY = 1, nY
+        tauaux(iY) = TAUtot(1)*ETAzp(1,iY)
+     end do
 !!** I am not sure if deltaumax has to be found as below: [MN]
 !  maximal deltau is no more than 2 times the average value
-   deltaumax = 2.0d0*tauaux(nY)/nY
+     deltaumax = 2.0d0*tauaux(nY)/nY
   elseif(slb) then
      deltaumax = 2.0d0*tautot(1)/nY
   end if
-
 !!**
 ! search for places to improve the grid
 !  do  iY = 2, nY
@@ -636,94 +629,84 @@ subroutine Flux_Consv(flux1,flux2,fbolOK,error,Lprint)
 !   end if
 !    if (ratio(iY).gt.maxrat) maxrat = abs(ratio(iY))
 !  end do
+! For very high optical depth (taumax > 200), change the accuracy to 20% [Deka'09]
+!  if(taumax.ge.200.0d0) accuracy = 0.2d0
+!  if (taumax.ge.200.0d0.and.(2*nY-1).gt.npY) accuracy = 0.2d0
+
 !!** FH 10/25/2010
 !!** changed the above to old dusty criteria (fmax-fmin)/(fmax+fmin) < accuracy  
   call FindErr(flux1,maxrat)
 !!** FH 10/25/2010
 !!** Handels condition where Flux is zero! If the computed Flux is better than dynrange the condition is valid and maxra = dynrange
   IF (maxval(flux1).lt.dynrange**2) maxrat = dynrange
-
-! For very high optical depth (taumax > 200), change the accuracy to 20% [Deka'09]
-!  if(taumax.ge.200.0d0) accuracy = 0.2d0
-!  if (taumax.ge.200.0d0.and.(2*nY-1).gt.npY) accuracy = 0.2d0
-
 ! if any of these criteria is satisfied insert a point:
   DO WHILE (istop.ne.1)
-    if (maxrat.gt.accuracy) flag=1
-    do iY = 2, nY
-     if(sph) then
+     if (maxrat.gt.accuracy) flag=1
+     do iY = 2, nY
+        if(sph) then
 ! if deltau is too large
-      if ((tauaux(iY)-tauaux(iY-1)).gt.deltaumax) flag = 1
-     elseif(slb) then
+           if ((tauaux(iY)-tauaux(iY-1)).gt.deltaumax) flag = 1
+        elseif(slb) then
 ! if deltau is too large at the left edge:
-      if(TAUslb(1,iY).lt.5.0d0) then
-       if ((TAUslb(1,iY)-TAUslb(1,iY-1)).gt.deltaumax) flag = 1
-      end if
+           if(TAUslb(1,iY).lt.5.0d0) then
+              if ((TAUslb(1,iY)-TAUslb(1,iY-1)).gt.deltaumax) flag = 1
+           end if
+        end if
+        if(flag.eq.1.and.maxrat.gt.accuracy) then
+           kins = kins + 1
+           Yins(kins) = Y(iY-1)+0.5d0*(Y(iY)-Y(iY-1))
+           iYins(kins) = iY-1
+        end if
+     enddo
+     if (maxrat.le.accuracy) then
+        istop = 1
+     else
+        if (kins.gt.0) istop = 1
      end if
-     if(flag.eq.1.and.maxrat.gt.accuracy) then
-      kins = kins + 1
-      Yins(kins) = Y(iY-1)+0.5d0*(Y(iY)-Y(iY-1))
-      iYins(kins) = iY-1
-     end if
-    enddo
-
-   if (maxrat.le.accuracy) then
-     istop = 1
-   else
-     if (kins.gt.0) istop = 1
-   end if
 ! end do over places to improve the grid
   END DO
-
   IF (kins.eq.0) THEN
-!!! why do we need the if statements for slb, sph, why not fbolOK=1
-   if(sph) then
      fbolOK = 1
-   elseif(slb) then
-     fbolOK = 1
-   end if
   ELSE
 ! add all new points to Y(nY). this gives the new Y(nY+kins).
 ! however, check if npY is large enough to insert all points:
-   if ((nY+kins).gt.npY) then
-    fbolOK = 1
-    if (iX.ge.1.AND.Lprint) then
-     write(18,*)' ****************     WARNING   ******************'
-     write(18,*)'  The new Y-grid can not accomodate more points!'
-     write(18,'(a,i5)')'   The specified accuracy would require',nY+kins
-     write(18,'(a,i5,a)')'   points, while npY =',npY,'.'
-     write(18,*)'  For the required accuracy npY must be increased,'
-     write(18,*)'  (see the manual s3.5 numerical accuracy).'
-     write(18,'(a37,F5.1,a2)')'   The currently achieved accuracy is ', maxrat*100.0, ' %'
-     write(18,*)' *************************************************'
-    end if
+     if ((nY+kins).gt.npY) then
+        fbolOK = 1
+        if (iX.ge.1.AND.Lprint) then
+           write(18,*)' ****************     WARNING   ******************'
+           write(18,*)'  The new Y-grid can not accomodate more points!'
+           write(18,'(a,i5)')'   The specified accuracy would require',nY+kins
+           write(18,'(a,i5,a)')'   points, while npY =',npY,'.'
+           write(18,*)'  For the required accuracy npY must be increased,'
+           write(18,*)'  (see the manual s3.5 numerical accuracy).'
+           write(18,'(a37,F5.1,a2)')'   The currently achieved accuracy is ', maxrat*100.0, ' %'
+           write(18,*)' *************************************************'
+        end if
 !!     kins = npY - nY     !!this is in the old code, but doesn't work here.
-     iWARNING = iWARNING + 1
+        iWARNING = iWARNING + 1
 !!     error = 2           !!this is in the old code, but doesn't work here.
-    go to 777
-   else
-     do k = 1, kins
-       call shift(Y,npY,nY+k-1,Yins(k),iYins(k)+k-1)
-     end do
-   end if
+        go to 777
+     else
+        do k = 1, kins
+           call shift(Y,npY,nY+k-1,Yins(k),iYins(k)+k-1)
+        end do
+     end if
   END IF
 ! new size of the y grid
   nY = nY + kins
-
 ! intepolate etadiscr to new y grid for denstyp = 5 or 6
   if(sph) then
-   do iY = 1, nY
-    Yloc = Y(iY)
-    if (itereta.gt.1) then
-     call lininter(npY,nYprev,Yprev,etatemp,Yloc,idm,ee)
-     etadiscr(iY) = ee
-    else
-     etadiscr(iY) = eta(Yloc)
-    end if
-   end do
+     do iY = 1, nY
+        Yloc = Y(iY)
+        if (itereta.gt.1) then
+           call lininter(npY,nYprev,Yprev,etatemp,Yloc,idm,ee)
+           etadiscr(iY) = ee
+        else
+           etadiscr(iY) = eta(Yloc)
+        end if
+     end do
   end if
 !--------------------------------------------------------------------------
-
 777 return
 end subroutine Flux_Consv
 !*********************************************************************
@@ -752,50 +735,47 @@ subroutine Init_Temp(nG,T_ext,us)
 
   if(typentry(1).eq.5) then
 !   this is if Tsub(1) given in input
-    if(sph) then
-      do iY = 1, nY
-        T_ext(iY) = Tsub(1)**4.0d0/Y(iY)**2.0d0   !eq.(4.1.22)
-      end do
-    else
+     if(sph) then
+        do iY = 1, nY
+           T_ext(iY) = Tsub(1)**4.0d0/Y(iY)**2.0d0   !eq.(4.1.22)
+        end do
+     else
 !     for slab
-      do iY = 1, nY
-        T_ext(iY) = Tsub(1)**4.0d0
-      end do
-    end if
+        do iY = 1, nY
+           T_ext(iY) = Tsub(1)**4.0d0
+        end do
+     end if
 !   first approximation for temperature
-    do iG = 1, nG
-      do iY = 1, nY
-	     Td(iG,iY) = Tsub(1)
-      end do
-    end do
-
+     do iG = 1, nG
+        do iY = 1, nY
+           Td(iG,iY) = Tsub(1)
+        end do
+     end do
   else !if flux Fe1 is given in input in some form - at this point
 !   T_ext(iY) is found in sub Find_Tran
-    do iG = 1, nG
-      do iY = 1, nY
-         Td(iG,iY) = T_ext(iY)**(1.0d0/4.0d0)
-      end do
-    end do
+     do iG = 1, nG
+        do iY = 1, nY
+           Td(iG,iY) = T_ext(iY)**(1.0d0/4.0d0)
+        end do
+     end do
   end if
-
- if(typentry(1).ne.5) then
-   do iG = 1, nG
+  if(typentry(1).ne.5) then
+     do iG = 1, nG
 !   loop over radial positions
-    do iY = 1, nY
+        do iY = 1, nY
 !     calculate fnum1 and qP integrals
-      do iL = 1, nL
-        fnum(iL) = sigmaA(iG,iL)*us(iL,iY)/lambda(iL)
-        xP = 14400.0d0/(lambda(iL)*Td(iG,iY))
-        ff(iL) = sigmaA(iG,iL)*Planck(xP)/lambda(iL)
-      end do
-      call Simpson(npL,1,nL,lambda,fnum,fnum1)
-      call Simpson(npL,1,nL,lambda,ff,qP)
+           do iL = 1, nL
+              fnum(iL) = sigmaA(iG,iL)*us(iL,iY)/lambda(iL)
+              xP = 14400.0d0/(lambda(iL)*Td(iG,iY))
+              ff(iL) = sigmaA(iG,iL)*Planck(xP)/lambda(iL)
+           end do
+           call Simpson(npL,1,nL,lambda,fnum,fnum1)
+           call Simpson(npL,1,nL,lambda,ff,qP)
 !     get initial temperature
-      Td(iG,iY) = (T_ext(iY)*fnum1/qP)**(1.0d0/4.0d0)
-    end do
-   end do
- end if
-
+           Td(iG,iY) = (T_ext(iY)*fnum1/qP)**(1.0d0/4.0d0)
+        end do
+     end do
+  end if
 !-----------------------------------------------------------------------
   return
 end subroutine Init_Temp
@@ -822,81 +802,61 @@ subroutine Kernel(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error,Lprint)
 ! intialize print and initial flag
   Lprint = .false.
   initial = .false.
-
   istop = 0
-!  init_tau = 1.0
   model = 1
   i = 1
   j = 0
-
 ! loop over optical depths
   do while (istop.eq.0)
 ! intialize print and initial flag
-    Lprint = .false.
-    initial = .false.
+     Lprint = .false.
+     initial = .false.
 !   j is to select the small initial optical depth (set by user in .inp file)
-    j = j + 1
-    if (j.eq.1) then
-       initial = .true.
-       call GetTau0(tau0,1)
-    else
-       initial = .false.
-    end if
-
-    tau0 = tau(model)
-    Lprint = .true.
-    taufid = tau0
-    
-    print*, 'tau0=', tau0
-    call GetTaumax(tau0,nG)
-
-    if (iVerb.gt.0.and.Lprint)  write(*,'(a9,i4)') ' model = ',model
-    if(tau0.eq.tau(model)) call OPPEN(model,path,lpath)
-    if (iVerb.eq.2.and.Lprint) write(*,*) ' going to Solve '
-
+!!++ FH 10/26/10
+!!++ GetTau0 from input parameter should be removed! it is obsulet
+     j = j + 1
+     if (j.eq.1) then
+        initial = .true.
+        call GetTau0(tau0,1)
+     else
+        initial = .false.
+     end if
+     tau0 = tau(model)
+     Lprint = .true.
+     taufid = tau0
+     print*, 'tau0=', tau0
+     call GetTaumax(tau0,nG)
+     if (iVerb.gt.0.and.Lprint)  write(*,'(a9,i4)') ' model = ',model
+     if(tau0.eq.tau(model)) call OPPEN(model,path,lpath)
+     if (iVerb.eq.2.and.Lprint) write(*,*) ' going to Solve '
 !   solve radiative transfer for this particular optical depth
-    call Solve(model,Lprint,initial,nG,error,delta,iterfbol,fbolOK)
-
+     call Solve(model,Lprint,initial,nG,error,delta,iterfbol,fbolOK)
 !  if flux is conserved, the solution is obtained. So write out the values
 !  to output files for specified models
-    if (fbolOK.eq.1) then
-      if(Lprint) then
-        if (error.eq.0) then
-          call Spectral(model)
-          if (iVerb.eq.2) write(*,*) 'Done with Spectral'
-          call PrOut(model,nG,delta)
-        else
-          go to 10
+     if (fbolOK.eq.1) then
+        if(Lprint) then
+           if (error.eq.0) then
+              call Spectral(model)
+              if (iVerb.eq.2) write(*,*) 'Done with Spectral'
+              call PrOut(model,nG,delta)
+           else
+              go to 10
+           end if
+           call CLLOSE(error,model,Nmodel)
+           if (iVerb.eq.2) write(*,*) ' ----------- '
+           if (iVerb.eq.2) write(*,*) '             '
+           model = model + 1
         end if
-        call CLLOSE(error,model,Nmodel)
-        if (iVerb.eq.2) write(*,*) ' ----------- '
-        if (iVerb.eq.2) write(*,*) '             '
-        model = model + 1
-      end if
-    end if
-!    15 is the file with spectra
-!     close(15)
-!    16 is the file with radial properties
-!     close(16)
-!    17 is the file for images
-!     close(17)
-!    25 is the file for slab z-spectra
-!     close(25)
-!    18 is the message file
-!     close(18)
-!  if the last model is solved, then stop
-   if ((model-1).eq.Nmodel.and.fbolOK.eq.1) then
-     istop = 1
-    end if
-
+     end if
+     if ((model-1).eq.Nmodel.and.fbolOK.eq.1) then
+        istop = 1
+     end if
 ! end of loop over tau
   END DO
 !-----------------------------------------------------------------------
-
 10  return
 end subroutine Kernel
 !***********************************************************************
-
 
 !***********************************************************************
 double precision function Planck(x)
@@ -909,13 +869,13 @@ double precision function Planck(x)
 ! -----------------------------------------------------------------------
 
   if (x.gt.100.0d0) then
-   Planck = 0.0d0
+     Planck = 0.0d0
   else
-   if (x.lt.0.00001d0) then
-    Planck = 0.155d0*x**3.0d0
-   else
-    Planck = 0.155d0*x**4.0d0/(dexp(x) - 1.0d0)
-   end if
+     if (x.lt.0.00001d0) then
+        Planck = 0.155d0*x**3.0d0
+     else
+        Planck = 0.155d0*x**4.0d0/(dexp(x) - 1.0d0)
+     end if
   end if
 ! -----------------------------------------------------------------------
   return
@@ -944,11 +904,10 @@ subroutine Rad_Transf(nG,Lprint,initial,pstar,y_incr,us,fs,em,omega, &
   error = 0
   if(sph) then
 !     generate spline coefficients for ETA as in old Dusty [MN'Aug,10]
-      CALL setupETA
+     CALL setupETA
 !     evaluate ETAzp (carried in common)
-      CALL getETAzp
+     CALL getETAzp
   end if
-
 ! the tau-profile at the fiducious lambda (needed in prout)
   if (slb) then
      do iY = 1, nY
@@ -956,10 +915,9 @@ subroutine Rad_Transf(nG,Lprint,initial,pstar,y_incr,us,fs,em,omega, &
      end do
   elseif(sph) then
      do iY = 1, nY
-       tr(iY) = ETAzp(1,iY)/ETAzp(1,nY)
+        tr(iY) = ETAzp(1,iY)/ETAzp(1,nY)
      end do
   end if
-
 ! generate albedo through the envelope
   call getOmega(nG,omega)
 ! generate stellar spectrum
@@ -968,102 +926,91 @@ subroutine Rad_Transf(nG,Lprint,initial,pstar,y_incr,us,fs,em,omega, &
 ! issue a message in fname.out about the condition for neglecting
 ! occultation only if T1 is given in input:
   if(typentry(1).eq.5.and.sph) then
-   if(iterfbol.eq.1.and.itereta.eq.1.and.right.eq.0) call OccltMSG(us)
+     if(iterfbol.eq.1.and.itereta.eq.1.and.right.eq.0) call OccltMSG(us)
   end if
 ! finish when file with the stellar spectrum is not available
   if (error.eq.3) goto 999
-
 ! in the case of first (lowest) optical depth,
 ! us is the intial approximation for utot(iL,iY) for the first iteration over Td
 ! Find initial approximation of Td for the case of first (lowest) optical depth.
   if (initial.and.iterfbol.eq.1) then
-   call Init_Temp(nG,T_ext,us)
-   if(iVerb.eq.2.and.Lprint) write(*,*)' Done with initial dust temperature.'
+     call Init_Temp(nG,T_ext,us)
+     if(iVerb.eq.2.and.Lprint) write(*,*)' Done with initial dust temperature.'
   end if
-
 !!**  added to check convergence, recorded in 'fname.err' (unit=38)[MN]
-    IF(iInn.eq.1.AND.Lprint) write(38,'(2(a8,f5.0))') 'taufid0=',taufid0
-    IF(iInn.eq.1.AND.Lprint) write(38,*)'iter    maxerrT    maxerrU'
+  IF(iInn.eq.1.AND.Lprint) write(38,'(2(a8,f5.0))') 'taufid0=',taufid0
+  IF(iInn.eq.1.AND.Lprint) write(38,*)'iter    maxerrT    maxerrU'
 !!**
-
   itlim = 50000
   conv = 0
   iter = 0
 !=== iterations over dust temperature =========
   do while (conv.eq.0.and.iter.le.itlim)
-   iter = iter + 1
+     iter = iter + 1
 !  if y-grid points are increased, linearly interpolate previous
 !  dust temperature for the new y-grid
-   if (y_incr.eq.1.and.iter.eq.1) then
-    T_old = Td
-    u_old = utot
-    do iY = 1, nY, 2
-     iY1 = int((iY + 1)/2)
-     do iG = 1, nG
-      Td(iG,iY) = T_old(iG,iY1)
-     end do
-     do iL = 1, nL
-      utot(iL,iY) = u_old(iL,iY1)
-     end do
-    end do
-    do  iY = 2, nY-1, 2
-     do iG = 1, nG
-      Td(iG,iY) = abs(Td(iG,iY+1) + Td(iG,iY-1))/2.0d0
-     end do
-     do iL = 1, nL
-      utot(iL,iY) =  abs(utot(iL,iY+1) + utot(iL,iY-1))/2.0d0
-     end do
-    end do
-   end if
+     if (y_incr.eq.1.and.iter.eq.1) then
+        T_old = Td
+        u_old = utot
+        do iY = 1, nY, 2
+           iY1 = int((iY + 1)/2)
+           do iG = 1, nG
+              Td(iG,iY) = T_old(iG,iY1)
+           end do
+           do iL = 1, nL
+              utot(iL,iY) = u_old(iL,iY1)
+           end do
+        end do
+        do  iY = 2, nY-1, 2
+           do iG = 1, nG
+              Td(iG,iY) = abs(Td(iG,iY+1) + Td(iG,iY-1))/2.0d0
+           end do
+           do iL = 1, nL
+              utot(iL,iY) =  abs(utot(iL,iY+1) + utot(iL,iY-1))/2.0d0
+           end do
+        end do
+     end if
 !  find T_external for the new y-grid if T(1) given in input
-   if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
-    call find_Text(nG,T_ext)
-   elseif (.not.initial.and.typentry(1).eq.5) then
-    call find_Text(nG,T_ext)
-   end if
+     if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
+        call find_Text(nG,T_ext)
+     elseif (.not.initial.and.typentry(1).eq.5) then
+        call find_Text(nG,T_ext)
+     end if
 !!** this is to check convergence on U [MN]
-   U_prev = Utot
-
+     U_prev = Utot
 !  find emission term
-   call Emission(nG,T_ext,em)
+     call Emission(nG,T_ext,em)
 !  moment = 1 is for finding total energy density only
-   moment = 1
-   call Find_Diffuse(initial,iter,iterfbol,T_ext,us,em,omega,error)
-
+     moment = 1
+     call Find_Diffuse(initial,iter,iterfbol,T_ext,us,em,omega,error)
 !  assign previus Td to T_old
-   T_old = Td
+     T_old = Td
 !  find Td
-   call Find_Temp(nG,T_ext)
+     call Find_Temp(nG,T_ext)
 !  check convergence for dust temperature
-   maxerrT = 0.0d0
-   aux1 = 0.0d0
-   do iG = 1,nG
-    do iY = 1,nY
-     aux1 = dabs(T_old(iG,iY) - Td(iG,iY))/Td(iG,iY)
-     if (aux1.gt.maxerrT) maxerrT = aux1
-    enddo
-   end do
-   if (maxerrT.le.accConv) conv = 1
-
-!!**
-   IF(iInn.eq.1 .AND. Lprint) THEN
-      CALL Bolom(utot,Ubol)
-      CALL Bolom(U_prev,Ubol_old)
-      maxerrU = 0.0d0  !just for info, iterations are over Td [MN]
-      do iY = 1,nY
-        aux1 = dabs(Ubol_old(iY) - Ubol(iY)) / Ubol(iY)
-        if (aux1.gt.maxerrU) maxerrU = aux1
-      enddo
-      write(38,'(i4,1p,2e12.3)') iter, maxerrT, maxerrU
-   END IF
-!!** -------------------------
-
+     maxerrT = 0.0d0
+     aux1 = 0.0d0
+     do iG = 1,nG
+        do iY = 1,nY
+           aux1 = dabs(T_old(iG,iY) - Td(iG,iY))/Td(iG,iY)
+           if (aux1.gt.maxerrT) maxerrT = aux1
+        enddo
+     end do
+     if (maxerrT.le.accConv) conv = 1
+     IF(iInn.eq.1 .AND. Lprint) THEN
+        CALL Bolom(utot,Ubol)
+        CALL Bolom(U_prev,Ubol_old)
+        maxerrU = 0.0d0  !just for info, iterations are over Td [MN]
+        do iY = 1,nY
+           aux1 = dabs(Ubol_old(iY) - Ubol(iY)) / Ubol(iY)
+           if (aux1.gt.maxerrU) maxerrU = aux1
+        enddo
+        write(38,'(i4,1p,2e12.3)') iter, maxerrT, maxerrU
+     END IF
   enddo
 !=== the end of iterations over Td ===
-
   if(iVerb.eq.2.and.Lprint) write(*,'(1p,AI4AE8.2)') &
        '  Done with finding dust temperature after ',iter,' iterations. ERR :',maxerrT
-
 ! find T_external for the converged dust temperature
   if (typentry(1).eq.5) call find_Text(nG,T_ext)  !if T1 is given in input
 ! calculate the emission term using the converged Td
@@ -1073,31 +1020,28 @@ subroutine Rad_Transf(nG,Lprint,initial,pstar,y_incr,us,fs,em,omega, &
   call Find_Diffuse(initial,iter,iterfbol,T_ext,us,em,omega,error)
   if(iVerb.eq.2.and.Lprint) write(*,*) ' Done with finding energy density and diffuse flux.'
 !-----------------------------------------------------------------
-
 !!** additional printout [MN] vvvvvv
   IF(iInn.eq.1 .AND. Lprint) THEN
-    write(18,'(a9,f5.0))') ' taufid0=',taufid0
-    write(18,'(2(a9,i4))') 'iterfbol=',iterfbol,'     nY =', nY
-
-    call Bolom(Utot,Ubol)
-    call Bolom(Us,Usbol)
-    call Bolom(Ude,Udebol)
-    call Bolom(Uds,Udsbol)
+     write(18,'(a9,f5.0))') ' taufid0=',taufid0
+     write(18,'(2(a9,i4))') 'iterfbol=',iterfbol,'     nY =', nY
+     call Bolom(Utot,Ubol)
+     call Bolom(Us,Usbol)
+     call Bolom(Ude,Udebol)
+     call Bolom(Uds,Udsbol)
 !   fbols are printed from Solve (because slab fluxes are found there)
-    IF (SLB) THEN
+     IF (SLB) THEN
         write(18,*)'      tr       Ubol      Usbol      Udsbol     Udebol'
         DO iY = 1, nY
-          write(18,'(1p,5E11.3)') tr(iY),Ubol(iY),Usbol(iY),Udsbol(iY),Udebol(iY)
+           write(18,'(1p,5E11.3)') tr(iY),Ubol(iY),Usbol(iY),Udsbol(iY),Udebol(iY)
         END DO
-    ELSE
+     ELSE
         write(18,*)'      Y       Ubol      Usbol      Udsbol     Udebol'
         DO iY = 1, nY
-          write(18,'(1p,5E11.3)') Y(iY),Ubol(iY),Usbol(iY),Udsbol(iY),Udebol(iY)
+           write(18,'(1p,5E11.3)') Y(iY),Ubol(iY),Usbol(iY),Udsbol(iY),Udebol(iY)
         END DO
-    END IF
+     END IF
   END IF
 !!** ^^^^^^^^^^^^^^^^^^^^^
-
 999 return
 end subroutine Rad_Transf
 !***********************************************************************
@@ -1526,19 +1470,19 @@ subroutine SPH_diff(flag1,initial,iter,iterfbol,T_ext,vec1,omega,vec2)
      nZ  = nY + 1 - iYfirst(iP)   !nZ is index for zmax=sqrt(Y**2-p**2) [MN]
 
      do iL = 1, nL
-	   do iYy = 1, nY
-         if (flag1.eq.1) then
+        do iYy = 1, nY
+           if (flag1.eq.1) then
 !          find the diffuse emission term, vec1=em
-           S_fun(iYy) = (1.0d0-omega(1,iL))*vec1(iL,iYy)*T_ext(iYy)
-         elseif (flag1.eq.2) then
+              S_fun(iYy) = (1.0d0-omega(1,iL))*vec1(iL,iYy)*T_ext(iYy)
+           elseif (flag1.eq.2) then
 !          find the scattering term, vec1=Us initially, or Utot afterwards
-           if (initial.and.iter.eq.1.and.iterfbol.eq.1) then
-             S_fun(iYy) = omega(1,iL)*vec1(iL,iYy)*T_ext(iYy)
-           else
-             S_fun(iYy) = omega(1,iL)*utot(iL,iYy)*T_ext(iYy)
+              if (initial.and.iter.eq.1.and.iterfbol.eq.1) then
+                 S_fun(iYy) = omega(1,iL)*vec1(iL,iYy)*T_ext(iYy)
+              else
+                 S_fun(iYy) = omega(1,iL)*utot(iL,iYy)*T_ext(iYy)
+              end if
            end if
-         end if
-       end do ! end do over dummy iYy
+        end do ! end do over dummy iYy
 
        if (P(iP).le.1.0d0) then
 !        inside the cavity
@@ -5741,7 +5685,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
 ! Internal flag for additional miscellaneous output  [MN]:
 ! if iInn=1: print err.vs.iter in unt=38 (fname.err) for all models
 ! and additionally list scaled fbol(y) and ubol(y) in m-files.
-  iInn = 1
+  iInn = 0
   iphys = 0
 ! spectral properties
   iSPP = RDINP(Equal,1)
