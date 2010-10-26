@@ -21,14 +21,15 @@
 !!
 !!  3) Fixed the intensities output. Before there were NaNs and 0.0s.
 !!     Done by implementing relevant subroutines from old Dusty.
+!! FH Oct 2010
+!!     Fixed some more NaNs and zeros in the slab case
 !!
-!!  4) Set accConv for T-iterations to 1e-4.
+!! FH 10/26/10
+!!  4) Set accConv as input parameter
 !!
 !!  5) Minor fixes:
-!!    = Restored flag iPhys in 'dusty.inp'; when it is set to 1 the output fluxes and intensities
-!!      are multiplied by the physical scale Jext(nY) in [W/m2] (see sub PrOut).
-!!    = limval in sub PrOut was changed to 1e-30 but not used.
-!!      Restored it to 1e-20, used as a lower limit (as in old Dusty).
+!! FH 10/26/10
+!!    = Removed iphys from dusty.inp still hardcoded to iphys = 0
 !!    = Fixed the RDW output
 !!
 !!   General comments:
@@ -42,7 +43,7 @@
 !!    - Compared to the old Dusty there is a 4pi factor in fs(iL,iY) in the new code
 !!      (see expressions in Table 5.1). This results in a 4pi factor difference in tauF and rg
 !!      produced by new and old Dusty.
-!!                                                         [Aug.2010, MN]
+!!                                                 [Aug.2010, MN] [Oct.2010, FH]
 
 
 !!===========================================================================
@@ -104,7 +105,7 @@
 ! read the verbose mode
   iVerb = RDINP(Equal,13)
 ! read flag for spectra in W/m^2
-  iPhys = RDINP(Equal,13)
+! iPhys = RDINP(Equal,13)
 ! loop over input files
   do while (io1.ge.0)
 ! read a line from master input file using
@@ -1061,13 +1062,8 @@ subroutine Rad_Transf(nG,Lprint,initial,pstar,y_incr,us,fs,em,omega, &
 !=== the end of iterations over Td ===
 
   if(iVerb.eq.2.and.Lprint) write(*,'(1p,AI4AE8.2)') &
-       '  Done with finding dust temperature. after ',iter,' iterations ERR :',maxerrT
-  if (iX.ge.1) then
-   if (Lprint.and.iter.le.itlim) then
-    write(18,*)' Convergence achieved, number of'
-    write(18,'(a36,i4)') '  iterations over dust temperature: ',iter
-   end if
-  end if
+       '  Done with finding dust temperature after ',iter,' iterations. ERR :',maxerrT
+
 ! find T_external for the converged dust temperature
   if (typentry(1).eq.5) call find_Text(nG,T_ext)  !if T1 is given in input
 ! calculate the emission term using the converged Td
@@ -5746,6 +5742,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
 ! if iInn=1: print err.vs.iter in unt=38 (fname.err) for all models
 ! and additionally list scaled fbol(y) and ubol(y) in m-files.
   iInn = 1
+  iphys = 0
 ! spectral properties
   iSPP = RDINP(Equal,1)
 !  spectra
