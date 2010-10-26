@@ -1831,162 +1831,159 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
   nL = npL
   Nprop = 7
 !----------------------------------------------------------------
-
   er = 0
 ! first check that the user supplied wavelength grid is
 ! monotonously increasing
   if (top.lt.3) then
 ! calculate efficiencies from n and k by mie theory
 ! generate the size array
-   if (szds.gt.2) then
-    amax = 5.0d0*a2
-   else
-    amax = a2
-   end if
-   if (dabs(a1-a2).le.1.0d-03) then
-    nA = 1
-   else
-    nA =50
-   end if
+     if (szds.gt.2) then
+        amax = 5.0d0*a2
+     else
+        amax = a2
+     end if
+     if (dabs(a1-a2).le.1.0d-03) then
+        nA = 1
+     else
+        nA =50
+     end if
 ! build-up the array of sizes a(nA)
-   call getSizes(npA,nA,a1,amax,a)
+     call getSizes(npA,nA,a1,amax,a)
 ! evaluate the normalization constant for the size
 ! distribution nsd(nA)
-   do iiA = 1, nA
-    nsd(iiA) = sizedist(qsd,a(iiA),szds,a2)
-   end do
-   call powerint(npA,1,nA,a,nsd,Cnorm)
+     do iiA = 1, nA
+        nsd(iiA) = sizedist(qsd,a(iiA),szds,a2)
+     end do
+     call powerint(npA,1,nA,a,nsd,Cnorm)
 ! find the average grain volume aveV and average grain  eff.
 ! area aveA (needed in dynamics)
-   if(dabs(a1-a2).le.1.d-3) then
-    aveV = 4.0d0/3.0d0*pi*a1**3
-    aveA = pi*a1**2.0d0
-   else
-    do iiA = 1, nA
-     faux1(iiA)=nsd(iiA)*a(iiA)**3.0d0
-    end do
-    call powerint(npA,1,nA,a,faux1,a3ave)
-    aveV = 4.0d0/3.0d0*pi*a3ave/Cnorm
-    do iiA = 1, nA
-     faux1(iiA)=nsd(iiA)*a(iiA)**2.0d0
-    end do
-    call powerint(npA,1,nA,a,faux1,a2ave)
-    aveA = pi*a2ave/Cnorm
-   end if
+     if(dabs(a1-a2).le.1.d-3) then
+        aveV = 4.0d0/3.0d0*pi*a1**3
+        aveA = pi*a1**2.0d0
+     else
+        do iiA = 1, nA
+           faux1(iiA)=nsd(iiA)*a(iiA)**3.0d0
+        end do
+        call powerint(npA,1,nA,a,faux1,a3ave)
+        aveV = 4.0d0/3.0d0*pi*a3ave/Cnorm
+        do iiA = 1, nA
+           faux1(iiA)=nsd(iiA)*a(iiA)**2.0d0
+        end do
+        call powerint(npA,1,nA,a,faux1,a2ave)
+        aveA = pi*a2ave/Cnorm
+     end if
 !--  loop over supported components --
-   do iiC= 1, Nprop
-    f(iiC) = xC(iiC)
-    fname = stdf(iiC)
-    call getprop(npL,lambda,nL,fname,n,k,er)
-    if (er.eq.3) goto 999
+     do iiC= 1, Nprop
+        f(iiC) = xC(iiC)
+        fname = stdf(iiC)
+        call getprop(npL,lambda,nL,fname,n,k,er)
+        if (er.eq.3) goto 999
 ! calculate qabs and qsca for supported grains
-    call mie(npL,nL,lambda,n,k,npA,nA,a,1,aQabs,aQsca)
+        call mie(npL,nL,lambda,n,k,npA,nA,a,1,aQabs,aQsca)
 ! for each lambda integrate pi*a^2*qext with n(a)da
-    do iL = 1, nL
-     do iiA = 1, nA
-      faux1(iiA)=nsd(iiA)*aQabs(iiA,iL)*pi*a(iiA)**2.0d0
-      faux2(iiA)=nsd(iiA)*aQsca(iiA,iL)*pi*a(iiA)**2.0d0
+        do iL = 1, nL
+           do iiA = 1, nA
+              faux1(iiA)=nsd(iiA)*aQabs(iiA,iL)*pi*a(iiA)**2.0d0
+              faux2(iiA)=nsd(iiA)*aQsca(iiA,iL)*pi*a(iiA)**2.0d0
+           end do
+           call powerint(npA,1,nA,a,faux1,int)
+           sigAbs(iiC,iL) = int/Cnorm
+           call powerint(npA,1,nA,a,faux2,int)
+           sigSca(iiC,iL) = int/Cnorm
+        end do
      end do
-     call powerint(npA,1,nA,a,faux1,int)
-     sigAbs(iiC,iL) = int/Cnorm
-     call powerint(npA,1,nA,a,faux2,int)
-     sigSca(iiC,iL) = int/Cnorm
-    end do
-   end do
-   if (top.eq.2) then
+     if (top.eq.2) then
 !--  loop over user supplied components --
-    do iCuser = 1, nfiles
-     iiC = Nprop + iCuser
-     f(iiC) = xCuser(iCuser)
+        do iCuser = 1, nfiles
+           iiC = Nprop + iCuser
+           f(iiC) = xCuser(iCuser)
 ! read in optical properties
-     fname = nameNK(iCuser)
-     call getprop(npL,lambda,nL,fname,n,k,er)
-     if (er.eq.3) goto 999
+           fname = nameNK(iCuser)
+           call getprop(npL,lambda,nL,fname,n,k,er)
+           if (er.eq.3) goto 999
 ! calculate qabs and qsca
-     call mie(npL,nL,lambda,n,k,npA,nA,a,1,aQabs,aQsca)
+           call mie(npL,nL,lambda,n,k,npA,nA,a,1,aQabs,aQsca)
 ! for each lambda integrate pi*a^2*qext with n(a)da
-     do iL = 1, nL
-      do iiA = 1, nA
-       faux1(iiA)=nsd(iiA)*aQabs(iiA,iL)*pi*a(iiA)**2.0d0
-       faux2(iiA)=nsd(iiA)*aQsca(iiA,iL)*pi*a(iiA)**2.0d0
-      end do
-      call powerint(npA,1,nA,a,faux1,int)
-      sigAbs(iiC,iL) = int/Cnorm
-      call powerint(npA,1,nA,a,faux2,int)
-      sigSca(iiC,iL) = int/Cnorm
-     end do
-    end do
-   else
-    nfiles = 0
-   end if
+           do iL = 1, nL
+              do iiA = 1, nA
+                 faux1(iiA)=nsd(iiA)*aQabs(iiA,iL)*pi*a(iiA)**2.0d0
+                 faux2(iiA)=nsd(iiA)*aQsca(iiA,iL)*pi*a(iiA)**2.0d0
+              end do
+              call powerint(npA,1,nA,a,faux1,int)
+              sigAbs(iiC,iL) = int/Cnorm
+              call powerint(npA,1,nA,a,faux2,int)
+              sigSca(iiC,iL) = int/Cnorm
+           end do
+        end do
+     else
+        nfiles = 0
+     end if
 ! mix them together (syntetic grain model)
-   do iL = 1, nL
-    sigmaA(1,iL) = 0.0d0
-    sigmaS(1,iL) = 0.0d0
-    do iiC= 1, Nprop+nfiles
-     sigmaA(1,iL) = sigmaA(1,iL) + f(iiC) * sigAbs(iiC,iL)
-     sigmaS(1,iL) = sigmaS(1,iL) + f(iiC) * sigSca(iiC,iL)
-    end do
-   end do
-
+     do iL = 1, nL
+        sigmaA(1,iL) = 0.0d0
+        sigmaS(1,iL) = 0.0d0
+        do iiC= 1, Nprop+nfiles
+           sigmaA(1,iL) = sigmaA(1,iL) + f(iiC) * sigAbs(iiC,iL)
+           sigmaS(1,iL) = sigmaS(1,iL) + f(iiC) * sigSca(iiC,iL)
+        end do
+     end do
   else
 ! this is for top.ge.3 - [Sigma/V] from a file
 ! initialize aveV and aveA for this case
-   aveV = 1.0d0
-   aveA = 1.0d0
+     aveV = 1.0d0
+     aveA = 1.0d0
 ! read in lambda grid and optical properties
-   do iG = 1, nG
-    open(1,err=998,file=nameQ(iG),status='old')
-    read(1,'(a)',err=998)dummy
-    read(1,'(a)',err=998)dummy
-    read(1,'(a)',err=998)dummy
-    iL = 0
-    io1 = 0
-    do while (io1.ge.0)
-     read(1,*,end=900,err=998,iostat=io1) aa, bb, cc
-     if (io1.ge.0) then
-      iL = iL + 1
-      lambdain(iL) = aa
-      Qain(iL) = bb
-      Qsin(iL) = cc
-     end if
-    end do
-900 close(1)
-    if (iL.lt.2) goto 998
-    nLin = iL
+     do iG = 1, nG
+        open(1,err=998,file=nameQ(iG),status='old')
+        read(1,'(a)',err=998)dummy
+        read(1,'(a)',err=998)dummy
+        read(1,'(a)',err=998)dummy
+        iL = 0
+        io1 = 0
+        do while (io1.ge.0)
+           read(1,*,end=900,err=998,iostat=io1) aa, bb, cc
+           if (io1.ge.0) then
+              iL = iL + 1
+              lambdain(iL) = aa
+              Qain(iL) = bb
+              Qsin(iL) = cc
+           end if
+        end do
+900     close(1)
+        if (iL.lt.2) goto 998
+        nLin = iL
 ! if input wavelengths in descending order turn them around
-    if (lambdain(1).gt.lambdain(2)) then
-     do iL = 1, nLin
-      ala(iL) = lambdain(iL)
-      aQa(iL) = Qain(iL)
-      aQs(iL) = Qsin(iL)
-     end do
-     do iL = 1, nLin
-      lambdain(iL) = ala(nLin+1-iL)
-      Qain(iL) = aQa(nLin+1-iL)
-      Qsin(iL) = aQs(nLin+1-iL)
-     end do
-    end if
+        if (lambdain(1).gt.lambdain(2)) then
+           do iL = 1, nLin
+              ala(iL) = lambdain(iL)
+              aQa(iL) = Qain(iL)
+              aQs(iL) = Qsin(iL)
+           end do
+           do iL = 1, nLin
+              lambdain(iL) = ala(nLin+1-iL)
+              Qain(iL) = aQa(nLin+1-iL)
+              Qsin(iL) = aQs(nLin+1-iL)
+           end do
+        end if
 ! interpolate to dusty's wavelength grid
-    do iL = 1, nL
-     call powerinter(Nmax,nLin,lambdain,Qain,lambda(iL),iiLaux,aa)
-     sigmaA(iG,iL) = aa
+        do iL = 1, nL
+           call powerinter(Nmax,nLin,lambdain,Qain,lambda(iL),iiLaux,aa)
+           sigmaA(iG,iL) = aa
 ! call lininter(Nmax,nLin,lambdain,Qsin,lambda(iL),iiLaux,aa)
-     call powerinter(Nmax,nLin,lambdain,Qsin,lambda(iL),iiLaux,aa)
-     sigmaS(iG,iL) = aa
-    end do
-   end do
+           call powerinter(Nmax,nLin,lambdain,Qsin,lambda(iL),iiLaux,aa)
+           sigmaS(iG,iL) = aa
+        end do
+     end do
   end if
   goto 999
 998 write(12,*)' ***  FATAL ERROR IN DUSTY ***********'
-    write(12,*)' The file with optical properties:'
-    write(12,'(a2,a70)')'  ',nameQ(iG)
-    write(12,*)' is missing or not properly formatted?!'
-    write(12,*)' **************************************'
+  write(12,*)' The file with optical properties:'
+  write(12,'(a2,a70)')'  ',nameQ(iG)
+  write(12,*)' is missing or not properly formatted?!'
+  write(12,*)' **************************************'
 ! close(12)
   er = 3
 !-----------------------------------------------------------------------
-
 999 return
 end subroutine getOptPr
 !***********************************************************************
@@ -2014,39 +2011,39 @@ subroutine GetProp(npL,lambda,nL,fname,en,ek,error)
   open(2,err=998,file=fname,status='old')
 ! read in a header from the input file
   do i = 1, 7
-   read(2,'(a)',err=998)line
+     read(2,'(a)',err=998)line
   end do
 ! read in input data
   iL = 0
   io1 = 0
   do while (io1.ge.0)
-   read(2,*,end=900,err=998,iostat=io1) aa, bb, cc
-   if (io1.ge.0) then
-    iL = iL + 1
-    pw(iL) = aa
-    pren(iL) = bb
-    pimn(iL) = cc
-   end if
+     read(2,*,end=900,err=998,iostat=io1) aa, bb, cc
+     if (io1.ge.0) then
+        iL = iL + 1
+        pw(iL) = aa
+        pren(iL) = bb
+        pimn(iL) = cc
+     end if
   end do
 900 close(2)
 ! if input wavelengths in descending order turn them around
   if (iL.lt.2) goto 998
   if (pw(1).gt.pw(2)) then
-   do i = 1, iL
-    a(i) = pw(i)
-    b(i) = pren(i)
-    c(i) = pimn(i)
-   end do
-   do i = 1, iL
-    pw(i) = a(iL+1-i)
-    pren(i) = b(iL+1-i)
-    pimn(i) = c(iL+1-i)
-   end do
+     do i = 1, iL
+        a(i) = pw(i)
+        b(i) = pren(i)
+        c(i) = pimn(i)
+     end do
+     do i = 1, iL
+        pw(i) = a(iL+1-i)
+        pren(i) = b(iL+1-i)
+        pimn(i) = c(iL+1-i)
+     end do
   end if
 ! interpolate
   do i = 1, nL
-   call lininter(Nmax,iL,pw,pren,lambda(i),iLoc,en(i))
-   call lininter(Nmax,iL,pw,pimn,lambda(i),iLoc,ek(i))
+     call lininter(Nmax,iL,pw,pren,lambda(i),iLoc,en(i))
+     call lininter(Nmax,iL,pw,pimn,lambda(i),iLoc,ek(i))
   end do
   goto 999
 998 write(12,*)' ***  fatal error in dusty  ***********'
@@ -2054,7 +2051,6 @@ subroutine GetProp(npL,lambda,nL,fname,en,ek,error)
   write(12,'(a2,a70)')'  ',fname
   write(12,*)' is missing or not properly formatted?!'
   write(12,*)' **************************************'
-! close(12)
   error = 3
 !-----------------------------------------------------------------------
 999 return
@@ -2073,19 +2069,17 @@ subroutine getSizes(nn,n,x1,x2,x)
   integer nn, n, i
   double precision x(nn), x1, x2, fac, pw1, pw2
 !-----------------------------------------------------------------------
-
   if (n.gt.1) then
-   pw1 = 1.0d0/(n-1)
-   fac = (x2/x1)**pw1
-   do i = 1, n
-    pw2 = 1.0d0*(i-1)
-    x(i) = x1*fac **pw2
-   end do
+     pw1 = 1.0d0/(n-1)
+     fac = (x2/x1)**pw1
+     do i = 1, n
+        pw2 = 1.0d0*(i-1)
+        x(i) = x1*fac **pw2
+     end do
   else
-   x(1) = x1
+     x(1) = x1
   end if
 !-----------------------------------------------------------------------
-
   return
 end subroutine getSizes
 !***********************************************************************
@@ -2105,37 +2099,33 @@ subroutine GetTau(nG,tau1,tau2,tauIn,Nrec,GridType,Nmodel,tau)
 !-----------------------------------------------------------------------
 
   if (ng.gt.1) then
-   write(18,*)'fix GetTau, ng>1 !'
-   stop
+     write(18,*)'fix GetTau, ng>1 !'
+     stop
   end if
-
   taumax = 0.0d0
-
   do model = 1, Nmodel
-   if(GridType.eq.3) then
-    tau(model) = tauIn(model)
-   else
-! Calculate taufid for given model
-    if (model.eq.1) then
-     tau(model) = tau1
-    else
-     if (model.eq.Nmodel) then
-      tau(model) = tau2
+     if(GridType.eq.3) then
+        tau(model) = tauIn(model)
      else
-      if(GridType.eq.1) then
-      q =  (tau2 - tau1)/(Nmodel-1.0d0)
-       tau(model) = tau1 + q*(model-1.0d0)
-      else
-       q = dexp(dlog(tau2/tau1)/(Nmodel-1.0d0))
-       tau(model) = tau1*q**(model-1.0d0)
-      end if
+! Calculate taufid for given model
+        if (model.eq.1) then
+           tau(model) = tau1
+        else
+           if (model.eq.Nmodel) then
+              tau(model) = tau2
+           else
+              if(GridType.eq.1) then
+                 q =  (tau2 - tau1)/(Nmodel-1.0d0)
+                 tau(model) = tau1 + q*(model-1.0d0)
+              else
+                 q = dexp(dlog(tau2/tau1)/(Nmodel-1.0d0))
+                 tau(model) = tau1*q**(model-1.0d0)
+              end if
+           end if
+        end if
      end if
-    end if
-   end if
-
   end do
 !-----------------------------------------------------------------------
-
   return
 end subroutine GetTau
 !***********************************************************************
@@ -2155,21 +2145,15 @@ subroutine GetTau0(tau0,i)
   double precision tau0, tauaux(npY), deltaumax
 !-----------------------------------------------------------------------
 !   find tau0 for each loop over increasing optical
-    if (i.eq.1) then
+  if (i.eq.1) then
 !     for initial grid generation
-      if(sph) tau0 = init_tau
-      if(slb) tau0 = abs(init_tau*mu1)
-!!!    else
-!     for smaller tau-steps if solution not obtained
-!!!      if(sph) tau0 = dabs(init_tau)*2.0d0**(1.0d0/dfloat(i))
-!!!      if(slb) tau0 = dabs(init_tau*mu1)*2.0d0**(1.0d0/dfloat(i))
-    end if
+     if(sph) tau0 = init_tau
+     if(slb) tau0 = abs(init_tau*mu1)
+  end if
 !-----------------------------------------------------------------------
-
   return
 end subroutine GetTau0
 !***********************************************************************
-
 
 !***********************************************************************
 subroutine GetTauMax(tau0,nG)
@@ -2184,40 +2168,36 @@ subroutine GetTauMax(tau0,nG)
   integer iL, nG
   double precision faux1(npL), faux2(npL), tau0, sigAfid, sigSfid
 !-----------------------------------------------------------------------
-   if (nG.gt.1) then
+  if (nG.gt.1) then
      write(18,*)'nG>1 is not implemented yet!'
      stop
-   end if
-
-   taumax = 0.0d0
-   taufid0 = tau0
-   do iL = 1, nL
-    faux1(iL) = sigmaA(nG,iL)
-    faux2(iL) = sigmaS(nG,iL)
-   end do
-   if (lamfid.lt.lambda(1)) then
-    write(12,*)' fiducial wavelength was too small.'
-    write(12,'(a8,e9.3,a17)')' using ',lambda(1),' micron instead.'
-   end if
-   if (lamfid.gt.lambda(nL)) then
-    write(12,*)' fiducial wavelength was too large.'
-    write(12,'(a8,e9.3,a17)')' using ',lambda(nL),' micron instead.'
-   end if
-   call lininter(npL,nL,lambda,faux1,lamfid,iLfid,sigAfid)
-   call lininter(npL,nL,lambda,faux2,lamfid,iLfid,sigSfid)
-
+  end if
+  taumax = 0.0d0
+  taufid0 = tau0
+  do iL = 1, nL
+     faux1(iL) = sigmaA(nG,iL)
+     faux2(iL) = sigmaS(nG,iL)
+  end do
+  if (lamfid.lt.lambda(1)) then
+     write(12,*)' fiducial wavelength was too small.'
+     write(12,'(a8,e9.3,a17)')' using ',lambda(1),' micron instead.'
+  end if
+  if (lamfid.gt.lambda(nL)) then
+     write(12,*)' fiducial wavelength was too large.'
+     write(12,'(a8,e9.3,a17)')' using ',lambda(nL),' micron instead.'
+  end if
+  call lininter(npL,nL,lambda,faux1,lamfid,iLfid,sigAfid)
+  call lininter(npL,nL,lambda,faux2,lamfid,iLfid,sigSfid)
 ! Extinction efficiency at fiducial wavelength
-   sigexfid = sigAfid + sigSfid
-   do iL = 1, nL
-    tautot(iL) = taufid0*(SigmaA(nG,iL) + SigmaS(nG,iL))/SigExfid
-    if (tautot(iL).ge.taumax) taumax = tautot(iL)
-   end do
+  sigexfid = sigAfid + sigSfid
+  do iL = 1, nL
+     tautot(iL) = taufid0*(SigmaA(nG,iL) + SigmaS(nG,iL))/SigExfid
+     if (tautot(iL).ge.taumax) taumax = tautot(iL)
+  end do
 !-----------------------------------------------------------------------
-
   return
 end subroutine GetTauMax
 !***********************************************************************
-
 
 !***********************************************************************
 double precision function SizeDist(q,aa,sdtype,a0)
@@ -2234,12 +2214,11 @@ double precision function SizeDist(q,aa,sdtype,a0)
 !-----------------------------------------------------------------------
 
   if (sdtype.le.2) then
-   sizedist = 1.0d0/aa**q
+     sizedist = 1.0d0/aa**q
   else
-   sizedist = dexp(-aa/a0)/aa**q
+     sizedist = dexp(-aa/a0)/aa**q
   end if
 !-----------------------------------------------------------------------
-
   return
 end function SizeDist
 !***********************************************************************
@@ -2260,38 +2239,37 @@ subroutine Insert(pstar,iP,iPstar)
   double precision pstar
 ! -----------------------------------------------------------------------
   if (pstar.ge.0.999999d0) then
-   pstar = 0.999999d0
-   iP = nPcav + 1
-   iPstar = nPcav + 1
-   P(iP) = pstar
+     pstar = 0.999999d0
+     iP = nPcav + 1
+     iPstar = nPcav + 1
+     P(iP) = pstar
   else
-   if (pstar.ge.P(nPcav)) then
-    if (pstar.eq.P(nPcav)) pstar = 1.00001d0*P(nPcav)
-    P(nPcav+1) = pstar
-    iPstar = nPcav + 1
-    P(nPcav+2) = 1.00001d0*pstar
-    iP = nPcav + 2
-   else
-    iPstar = 0
-    iP = 0
-    do while (iPstar.eq.0)
-     iP = iP + 1
-     if (P(iP).gt.pstar.and.iPstar.eq.0) iPstar = iP
-    end do
-    do iP = 1, nPcav-iPstar+1
-     P(nPcav+3-iP) = P(nPcav+1-iP)
-    end do
-    if (pstar.eq.P(iPstar-1)) pstar = 1.00001d0*P(iPstar-1)
-    P(iPstar) = pstar
-    P(iPstar+1) = 1.00001d0*pstar
-    iP = nPcav + 1
-   end if
+     if (pstar.ge.P(nPcav)) then
+        if (pstar.eq.P(nPcav)) pstar = 1.00001d0*P(nPcav)
+        P(nPcav+1) = pstar
+        iPstar = nPcav + 1
+        P(nPcav+2) = 1.00001d0*pstar
+        iP = nPcav + 2
+     else
+        iPstar = 0
+        iP = 0
+        do while (iPstar.eq.0)
+           iP = iP + 1
+           if (P(iP).gt.pstar.and.iPstar.eq.0) iPstar = iP
+        end do
+        do iP = 1, nPcav-iPstar+1
+           P(nPcav+3-iP) = P(nPcav+1-iP)
+        end do
+        if (pstar.eq.P(iPstar-1)) pstar = 1.00001d0*P(iPstar-1)
+        P(iPstar) = pstar
+        P(iPstar+1) = 1.00001d0*pstar
+        iP = nPcav + 1
+     end if
   end if
 ! -----------------------------------------------------------------------
   return
 end subroutine Insert
 !***********************************************************************
-
 
 !***********************************************************************
 subroutine SetGrids(Lprint,pstar,iPstar,error,initial,iterfbol)
@@ -2321,18 +2299,16 @@ subroutine SetGrids(Lprint,pstar,iPstar,error,initial,iterfbol)
      call SLBtau(initial,iterfbol,tautot,y,nL,nY,TAUslb)
   end if
   if (Lprint.and.iX.ge.1) then
-   if (slb) then
-!!     write(18,'(a21)')'  Tau grid generated.'
-     write(18,'(a25,i4)')'  Tau grid generated, nY=', nY
-   elseif (sph) then
-    write(18,'(a24,i3)')' y grid generated, nY = ',nY
-    write(18,'(a24,i3)')'                   nP = ',nP
-    write(18,'(a24,i3)')'                 Nins = ',Nins
-    write(18,'(a24,i3)')'                 Ncav = ',Ncav
-   end if
+     if (slb) then
+        write(18,'(a25,i4)')'  Tau grid generated, nY=', nY
+     elseif (sph) then
+        write(18,'(a24,i3)')' y grid generated, nY = ',nY
+        write(18,'(a24,i3)')'                   nP = ',nP
+        write(18,'(a24,i3)')'                 Nins = ',Nins
+        write(18,'(a24,i3)')'                 Ncav = ',Ncav
+     end if
   end if
 !-----------------------------------------------------------------------
-
   return
 end subroutine setGrids
 !***********************************************************************
@@ -2357,56 +2333,54 @@ subroutine Ygrid(pstar,iPstar,error)
   external eta
 !-----------------------------------------------------------------------
 !!** these are initialized as in old Dusty's sub Input. [MN]
-    delTAUsc = 0.3
-    facc = 2.0
-    EtaRat = 4.0
+  delTAUsc = 0.3
+  facc = 2.0
+  EtaRat = 4.0
 !!**
-
   if(.not.fild) then
 ! save old grid and values of eta (important for denstyp = 5 or 6)
-  if (nY.gt.0.and.(rdw)) then
-   Yprev  = Y
-   etatemp = etadiscr
-   nYprev = nY
-  end if
-
+     if (nY.gt.0.and.(rdw)) then
+        Yprev  = Y
+        etatemp = etadiscr
+        nYprev = nY
+     end if
 !     max number iter. over improving ratio of two Eta's
-      irmax = 20
+     irmax = 20
 !     save old grid and values of Eta (important for denstyp = 5 or 6)
-      IF (nY.GT.0.AND.(RDW)) THEN
+     IF (nY.GT.0.AND.(RDW)) THEN
         DO iY = 1, nY
-          Yprev(iY) = Y(iY)
-          EtaTemp(iY) = ETAdiscr(iY)
+           Yprev(iY) = Y(iY)
+           EtaTemp(iY) = ETAdiscr(iY)
         END DO
         nYprev = nY
-      END IF
-      pstar = pstar
-      iPstar = iPstar
-      y1 = 1.0
-      iter = 0
-101   error = 0
-      iter = iter + 1
+     END IF
+     pstar = pstar
+     iPstar = iPstar
+     y1 = 1.0
+     iter = 0
+101  error = 0
+     iter = iter + 1
 !     resolve inner boundary in tau space
 !     from requiring TAU(2) = TAUmax*ETA(1)*(Y(2)-1) =~ 1
-      Y(1) = y1
-      IF (TAUmax*ETA(y1).GT.2000.0) THEN
+     Y(1) = y1
+     IF (TAUmax*ETA(y1).GT.2000.0) THEN
         delY1 = 2.0 / TAUmax / ETA(y1)
-      ELSE
+     ELSE
         delY1 = 1.0 / TAUmax / ETA(y1)
-      END IF
+     END IF
 !     if very thin generate at least about 10-15 pts.
-      IF (delY1.GT.0.01/ETA(y1)) delY1 = 0.01/ETA(y1)
+     IF (delY1.GT.0.01/ETA(y1)) delY1 = 0.01/ETA(y1)
 !     do not push it over the limit of spline stability
-      IF (delY1.LT.0.00005) delY1 = 0.00005
-      i = 1
-      istop = 0
-      DO WHILE (istop.NE.1)
+     IF (delY1.LT.0.00005) delY1 = 0.00005
+     i = 1
+     istop = 0
+     DO WHILE (istop.NE.1)
         i = i + 1
         Y(i) = Y(i-1) + delY1
         IF (Y(i).GT.facc*Y(i-1)) THEN
-          Y(i) = facc * Y(i-1)
+           Y(i) = facc * Y(i-1)
         ELSE
-          delY1 = 2. * delY1
+           delY1 = 2. * delY1
         END IF
         Ymid = dsqrt(Y(i)*Y(i-1))
         TAUloc = TAUmax * (Y(i)-1.0) * ETA(Ymid)
@@ -2415,46 +2389,46 @@ subroutine Ygrid(pstar,iPstar,error)
 !       uncomment the next line, unless it is a case of RDW at high TauV.
 !       These require more points near the origin and 1.01 is a better limit.
 !       IF (Y(i).GE.1.0001.OR.TAUloc.GT.10.0) istop = 1
-      END DO
-      Ynew = Y(i)
+     END DO
+     Ynew = Y(i)
 !     some rule of thumb estimates for factor nh
-      IF (TAUmax.GT.10000.0) THEN
+     IF (TAUmax.GT.10000.0) THEN
 !       extreme taus
         nh = 15.0
         Ncav = 80
-      ELSE IF (TAUmax.GT.2000.0) THEN
+     ELSE IF (TAUmax.GT.2000.0) THEN
 !         huge taus
-          nh = 10.0
-          Ncav = 40
-      ELSE IF (TAUmax.GT.400.0) THEN
+        nh = 10.0
+        Ncav = 40
+     ELSE IF (TAUmax.GT.400.0) THEN
 !         large taus
-          nh = 8.0
-          Ncav = 20
-      ELSE
+        nh = 8.0
+        Ncav = 20
+     ELSE
 !         normal' taus
-          nh = 5.0
-          Ncav = 10
-      END IF
+        nh = 5.0
+        Ncav = 10
+     END IF
 !     very small taus
-      IF (TAUmax.LT.10.0) nh = nh / 2.0
-      IF (TAUmax.LT.1.0) nh = nh / 2.0
+     IF (TAUmax.LT.10.0) nh = nh / 2.0
+     IF (TAUmax.LT.1.0) nh = nh / 2.0
 !     empirically: ~1/r needs more points for small y:
-      IF ((pow-1.4)*(pow-0.6).LE.0.0) nh = nh * 1.5
+     IF ((pow-1.4)*(pow-0.6).LE.0.0) nh = nh * 1.5
 !     same for for steep density distributions:
-      IF (RDWA.OR.RDW) nh = nh * 1.5
-      tausc = ETA(Y(i))+ETA(Y(i-1))
-      tausc = (Y(i)-Y(i-1)) * 0.5 * tausc
-      fac = dexp(-dlog(tausc) / nh)
-      istop = 0
+     IF (RDWA.OR.RDW) nh = nh * 1.5
+     tausc = ETA(Y(i))+ETA(Y(i-1))
+     tausc = (Y(i)-Y(i-1)) * 0.5 * tausc
+     fac = dexp(-dlog(tausc) / nh)
+     istop = 0
 !     for broken power-laws
-      IF (Ntr.GE.1) THEN
+     IF (Ntr.GE.1) THEN
         itr = 1
         DO j = 1, i
-          IF (Y(j).GE.Ytr(itr)) itr = itr + 1
+           IF (Y(j).GE.Ytr(itr)) itr = itr + 1
         END DO
-      END IF
+     END IF
 !     generate the rest of Y grid points
-      DO WHILE (istop.NE.1)
+     DO WHILE (istop.NE.1)
         i = i + 1
         Yold = Ynew
 !       find maximal increase in Y allowed by the ratio facc
@@ -2470,120 +2444,112 @@ subroutine Ygrid(pstar,iPstar,error)
 !       and insert additional y-pts. where necessary. This prevents sharp
 !       drops in Utot(npL,npY) in case of steep Eta's [MN'99].
         DO ir = 1 , irmax
-          Ynew = Yold + dY
-          rat = ETA(Yold)/ETA(Ynew)
-          IF(rat.GE.1./EtaRat .AND. rat.LE.EtaRat) goto 10
-          dY = 0.5*dY
+           Ynew = Yold + dY
+           rat = ETA(Yold)/ETA(Ynew)
+           IF(rat.GE.1./EtaRat .AND. rat.LE.EtaRat) goto 10
+           dY = 0.5*dY
         END DO
         CALL MSG(16)
 10      continue
         Y(i) = Ynew
 !       make sure that all transition points are included in the grid
         IF (Ntr.GE.1) THEN
-         IF (Y(i).GE.Ytr(itr)) THEN
-           Y(i) = Ytr(itr)
-           Ynew = Y(i)
-           itr = itr + 1
-         END IF
+           IF (Y(i).GE.Ytr(itr)) THEN
+              Y(i) = Ytr(itr)
+              Ynew = Y(i)
+              itr = itr + 1
+           END IF
         END IF
         aux = ETA(Ynew)+ETA(Yold)
         aux = (Ynew-Yold) * 0.5 * aux
         tausc = tausc + aux
 !       finish when Yout is reached
         IF (Ynew.GE.Yout) istop = 1
-      END DO
-      Y(i) = Yout
-      nY = i
+     END DO
+     Y(i) = Yout
+     nY = i
 !     insert additional penultimate point to avoid spline oscillations
-      Y(nY+1) = Yout
-      Y(nY) = dsqrt(Y(nY)*Y(nY-1))
-      nY = nY + 1
+     Y(nY+1) = Yout
+     Y(nY) = dsqrt(Y(nY)*Y(nY-1))
+     nY = nY + 1
 !     check that outer edge is well resolved in tau space
 !     (important for flat ETAs)
-      istop = 0
-      DO WHILE (istop.NE.1)
+     istop = 0
+     DO WHILE (istop.NE.1)
         IF ((Yout-Y(nY-1))*TAUmax*ETA(Yout).GT.1.0) THEN
-          Y(nY+1) = Yout
-          Y(nY) = dsqrt(Y(nY)*Y(nY-1))
-          nY = nY + 1
+           Y(nY+1) = Yout
+           Y(nY) = dsqrt(Y(nY)*Y(nY-1))
+           nY = nY + 1
         ELSE
-          istop = 1
+           istop = 1
         END IF
-      END DO
+     END DO
 !     check dynamical range of Eta to avoid nonphysical results or code errors [
-      Etamax = 0.
-      Etamin = 1.e+20
-      DO iY = 1, nY
-       IF(ETA(Y(iY)).lt.Etamin) Etamin = ETA(Y(iY))
-       IF(ETA(Y(iY)).gt.Etamax) Etamax = ETA(Y(iY))
-       IF (ETA(Y(iY)).LT.1.e-12) THEN
-        IF (iX.GT.0) THEN
-         write(18,*)'      Y          ETA  '
-         DO jY = 1, nY
-           write(18,'(1p,2e12.3)') Y(jY),ETA(Y(jY))
-         END DO
+     Etamax = 0.
+     Etamin = 1.e+20
+     DO iY = 1, nY
+        IF(ETA(Y(iY)).lt.Etamin) Etamin = ETA(Y(iY))
+        IF(ETA(Y(iY)).gt.Etamax) Etamax = ETA(Y(iY))
+        IF (ETA(Y(iY)).LT.1.e-12) THEN
+           IF (iX.GT.0) THEN
+              write(18,*)'      Y          ETA  '
+              DO jY = 1, nY
+                 write(18,'(1p,2e12.3)') Y(jY),ETA(Y(jY))
+              END DO
+           END IF
+           CALL MSG(17)
+           error = 6
+           iERROR = iERROR + 1
+           goto 102
         END IF
-        CALL MSG(17)
+     END DO
+     IF ((Etamin/Etamax).LT.1.e-12) THEN
+        CALL MSG(18)
         error = 6
         iERROR = iERROR + 1
         goto 102
-       END IF
-      END DO
-      IF ((Etamin/Etamax).LT.1.e-12) THEN
-       CALL MSG(18)
-       error = 6
-       iERROR = iERROR + 1
-       goto 102
-      END IF
+     END IF
 !     check that the Y grid is not too large
-      IF (nY.GT.npY) THEN
+     IF (nY.GT.npY) THEN
         delTAUsc = delTAUsc * 1.5
         iWARNING = iWARNING + 1
         IF (iX.NE.0) THEN
-        IF (iter.EQ.1) call line(0,2,18)
-        write(18,'(a)') ' ************   WARNING   *******************'
-        write(18,'(a46,i3)')   &
-                  ' Initial delTAUsc resulted in too many points:',nY
-        write(18,'(a,i3,a)')' You need to increase npY in userpar.inc'
-        write(18,*)'Multiplying delTAUsc by 1.5 and trying again'
-        write(18,'(a14,1p,e10.3)')' New delTAUsc:',delTAUsc
+           IF (iter.EQ.1) call line(0,2,18)
+           write(18,'(a)') ' ************   WARNING   *******************'
+           write(18,'(a46,i3)')   &
+                ' Initial delTAUsc resulted in too many points:',nY
+           write(18,'(a,i3,a)')' You need to increase npY in userpar.inc'
+           write(18,*)'Multiplying delTAUsc by 1.5 and trying again'
+           write(18,'(a14,1p,e10.3)')' New delTAUsc:',delTAUsc
         END IF
         IF (iter.LT.5) THEN
-          goto 101
+           goto 101
         ELSE
-          IF (iX.NE.0) THEN
-            write(18,'(a)') ' **********  GIVING UP  ******************'
-            call line(0,2,18)
-          END IF
-          error = 2
-          goto 102
+           IF (iX.NE.0) THEN
+              write(18,'(a)') ' **********  GIVING UP  ******************'
+              call line(0,2,18)
+           END IF
+           error = 2
+           goto 102
         END IF
-      END IF
-!     intepolate ETAdiscr to new Y grid (for RDW (denstyp=5 or 6))
-!      write(18,*)' ***** From Ygrid *****'
-!      write(18,*)'      Y      ETAdiscr      '
-      DO iY = 1, nY
+     END IF
+     DO iY = 1, nY
         Yloc = Y(iY)
         IF (iterETA.GT.1) THEN
-          CALL LinInter(npY,nYprev,Yprev,EtaTemp,Yloc,iYdummy,ee)
-          ETAdiscr(iY) = ee
+           CALL LinInter(npY,nYprev,Yprev,EtaTemp,Yloc,iYdummy,ee)
+           ETAdiscr(iY) = ee
         ELSE
-          ETAdiscr(iY) = ETA(Yloc)
+           ETAdiscr(iY) = ETA(Yloc)
         END IF
-!        write(18,'(1p,2e12.4)')Y(iY), ETAdiscr(iY)
       END DO
-!      write(18,*)' *************************'
-
-
- elseif(fild) then
+   elseif(fild) then
 ! take the radial grid as in density profile file [MN,Apr'02]
-  nY = nYEtaf
-  do iY = 1, nY
-   Y(iY) = yEtaf(iY)
-  end do
- end if
+      nY = nYEtaf
+      do iY = 1, nY
+         Y(iY) = yEtaf(iY)
+      end do
+   end if
 !-----------------------------------------------------------------------
-
 102 return
 end subroutine ygrid
 !***********************************************************************
@@ -2606,7 +2572,6 @@ subroutine Pgrid(pstar,iPstar,error)
   error  = 0
 ! Ncav = # rays in cavitiy
   Ncav = 30
-
   p(1) = 0.0d0
   Naux = 1
   iYfirst(Naux) = 1
@@ -2614,51 +2579,50 @@ subroutine Pgrid(pstar,iPstar,error)
 ! grid within the cavity (points concentrated towards p=1, sqrt!)
   nPcav = Ncav + Naux
   do iP = Naux+1, nPcav
-   P(iP) = dble(iP-1)/dble(nPcav)
-   iYfirst(iP) = 1
-   YPequal(iP) = 1
+     P(iP) = dble(iP-1)/dble(nPcav)
+     iYfirst(iP) = 1
+     YPequal(iP) = 1
   end do
 ! insert two rays if the stellar disk size is finite
   if (pstar.gt.0.0d0) then
-   call insert(pstar,iP,iPstar)
-   do i = nPcav+1, iP
-    iYfirst(i) = 1
-    YPequal(i) = 1
-   end do
-   nPcav = iP
+     call insert(pstar,iP,iPstar)
+     do i = nPcav+1, iP
+        iYfirst(i) = 1
+        YPequal(i) = 1
+     end do
+     nPcav = iP
   else
-   iP  = nPcav
-   iPstar = 0
+     iP  = nPcav
+     iPstar = 0
   endif
-
   do i = 1, nY-1
 ! Nins = # of rays per radial step
-   if((Y(i+1) - Y(i)).gt.20.0d0) then
-    Nins = 2 !20
-   elseif((Y(i+1) - Y(i)).gt.10.0d0.and.(Y(i+1) - Y(i)).le.20.d0) then
-    Nins = 2 !15
-   elseif ((Y(i+1) - Y(i)).gt.1.5d0.and.(Y(i+1) - Y(i)).le.10.d0) then
-    Nins = 2 !10
-   elseif ((Y(i+1) - Y(i)).gt.1.0d0.and.(Y(i+1) - Y(i)).le.1.5d0) then
-    Nins = 3
-   elseif ((Y(i+1) - Y(i)).gt.0.5d0.and.(Y(i+1) - Y(i)).le.1.0d0) then
-    Nins = 7
-   else
-    Nins = 10
-   end if
-   k = Nins
-   Plast(i) = iP + 1
-   delP = (Y(i+1) - Y(i))/dble(k)
-   do j = 1, k
-    iP = iP + 1
-    iYfirst(iP) = i
-    if (j.eq.1) then
-     YPequal(iP) = 1
-    else
-     YPequal(iP) = 0
-    end if
-    P(iP) = Y(i) + (j-1)*delP
-   end do
+     if((Y(i+1) - Y(i)).gt.20.0d0) then
+        Nins = 2 !20
+     elseif((Y(i+1) - Y(i)).gt.10.0d0.and.(Y(i+1) - Y(i)).le.20.d0) then
+        Nins = 2 !15
+     elseif ((Y(i+1) - Y(i)).gt.1.5d0.and.(Y(i+1) - Y(i)).le.10.d0) then
+        Nins = 2 !10
+     elseif ((Y(i+1) - Y(i)).gt.1.0d0.and.(Y(i+1) - Y(i)).le.1.5d0) then
+        Nins = 3
+     elseif ((Y(i+1) - Y(i)).gt.0.5d0.and.(Y(i+1) - Y(i)).le.1.0d0) then
+        Nins = 7
+     else
+        Nins = 10
+     end if
+     k = Nins
+     Plast(i) = iP + 1
+     delP = (Y(i+1) - Y(i))/dble(k)
+     do j = 1, k
+        iP = iP + 1
+        iYfirst(iP) = i
+        if (j.eq.1) then
+           YPequal(iP) = 1
+        else
+           YPequal(iP) = 0
+        end if
+        P(iP) = Y(i) + (j-1)*delP
+     end do
   end do
 ! number of points for the p grid
   nP = iP + 1
@@ -2669,20 +2633,18 @@ subroutine Pgrid(pstar,iPstar,error)
   Nins = nP - nPcav + 1
 ! check that the p grid is not too large
   if (nP.gt.npP) then
-   error = 2
-   call line(0,2,12)
-   write(12,'(a)')' this model terminated because needed accuracy'
-   write(12,'(a,i6)')' results in too many points in p grid:',nP
-   write(12,'(a,i4,a)')'          (see userpar.inc, npP =',npP,')'
-   call line(0,2,12)
-   iError = iError + 1
+     error = 2
+     call line(0,2,12)
+     write(12,'(a)')' this model terminated because needed accuracy'
+     write(12,'(a,i6)')' results in too many points in p grid:',nP
+     write(12,'(a,i4,a)')'          (see userpar.inc, npP =',npP,')'
+     call line(0,2,12)
+     iError = iError + 1
   end if
 !-----------------------------------------------------------------------
-
   return
 end subroutine pgrid
 !***********************************************************************
-
 
 ! **********************************************************************
   subroutine SLBtau(initial,iterfbol,tautot,Y,nL,nY,TAUslb)
@@ -2702,17 +2664,6 @@ end subroutine pgrid
 ! ----------------------------------------------------------------------
 
   if (initial.and.iterfbol.eq.1) then
-!!   nY = 6
-!!   do iY = 1, nY
-!!    if(iY.le.3) then
-!!     Y(iY) = 0.5d0*(dexp(0.5d0*iY)-dexp(0.5d0))
-!!    else if(iY.gt.3.and.iY.le.5) then
-!!     Y(iY) = Y(iY-1)
-!!    else
-!!     Y(iY) = Y(2+nY-iY)
-!!    end if
-!!   end do
-!  Use more points initially. [MN]
     nY = 15
     DO iY = 1, nY
       IF(iY.LE.5) THEN
@@ -2723,29 +2674,17 @@ end subroutine pgrid
         Y(iY) = Y(2+nY-iY)
       END IF
     END DO
-!     nY = 30
-!     DO iY = 1, nY
-!        IF(iY.LE.10) THEN
-!           Y(iY) = 0.5*(exp(0.5*iY)-exp(0.5))
-!        ELSE IF(iY.GT.10.and.iY.LE.22) THEN
-!           Y(iY) = Y(iY-1)
-!        ELSE
-!           Y(iY) = Y(2+nY-iY)
-!        END IF
-!     END DO
   end if
-
   tau(1) = 0.0d0
   do iY = 2, nY
-   tau(iY) = tau(iY-1) + Y(iY)
+     tau(iY) = tau(iY-1) + Y(iY)
   end do
   do iL = 1, nL
-   do iY = 1, nY
-    TAUslb(iL,iY) = tautot(iL)*tau(iY)/tau(nY)
-   end do
+     do iY = 1, nY
+        TAUslb(iL,iY) = tautot(iL)*tau(iY)/tau(nY)
+     end do
   end do
 !----------------------------------------------------------------------
-
   return
 end subroutine SLBtau
 !***********************************************************************
@@ -2899,92 +2838,90 @@ END SUBROUTINE setupETA
        eps1, aux, C1, C2, C3, theta1_loc, ugas_out, s4, mx,     &
        tauV, Gie2000, K1(npY), K2(npY), tauaux(npL,npY),       &
        delta, us(npL,npY), x1, x2, result1, T_ext(npY), maxFerr
-!!**  double precision, dimension(:), allocatable:: xg, wg
   external eta
 !-----------------------------------------------------------------------
 
 ! spectrum (flux at the outer edge as a function of wavelength)
   do iL = 1, nL
-   spectrum(iL) = dabs(ftot(iL,nY))
+     spectrum(iL) = dabs(ftot(iL,nY))
 ! to prevent taking log from zero in spectral [MN]:
-   if (spectrum(iL).le.1.0d-20) spectrum(iL) = 1.0d-20
+     if (spectrum(iL).le.1.0d-20) spectrum(iL) = 1.0d-20
   end do
 !-------------
 ! analyze bolometric flux error (1/2 of the max spread of fbol)
   CALL FindErr(fbol,maxFerr)
-
 ! find the flux averaged optical depth, tauF(y)
   if (sph) then
 !   for spherical shell
-    tauF(1) = 0.0
-    DO iY = 2, nY
+     tauF(1) = 0.0
+     DO iY = 2, nY
 !    generate auxiliary function for integration:
 !    loop over iL (wavelength)
 !    N.B. the definition: ETAzp(1,y) = taur(y)/tauT so that
 !    tau(iL,iY) = TAUtot(iL)*ETAzp(1,iY)
-     DO iL = 1, nL
-        qaux(iL)=TAUtot(iL)*ETAzp(1,iY)*dabs(ftot(iL,iY))/lambda(iL)
-     END DO
-     CALL Simpson(npL,1,nL,lambda,qaux,resaux)
+        DO iL = 1, nL
+           qaux(iL)=TAUtot(iL)*ETAzp(1,iY)*dabs(ftot(iL,iY))/lambda(iL)
+        END DO
+        CALL Simpson(npL,1,nL,lambda,qaux,resaux)
 !    tauF(iY) = <tau(iL,iY)*ftot(iL,iY)>
-     tauF(iY) = resaux
-    END DO
+        tauF(iY) = resaux
+     END DO
 !   for full RDW calculation redo tauF to be consistent with CalcEta
-    IF (RDW) THEN
+     IF (RDW) THEN
 !     generate ETA and its integral (normalization constant)
-      DO iY = 1, nY
-         K1(iY) = vrat(1,iY)/ugas(iY)/Y(iY)/Y(iY)
-      END DO
-      CALL SIMPSON(npY,1,nY,Y,K1,resaux)
+        DO iY = 1, nY
+           K1(iY) = vrat(1,iY)/ugas(iY)/Y(iY)/Y(iY)
+        END DO
+        CALL SIMPSON(npY,1,nY,Y,K1,resaux)
 !     find tauF
-      DO iY = 1, nY
-         K2(iY) = qF(iY)*K1(iY)/resaux
-         CALL SIMPSON(npY,1,iY,Y,K2,aux)
-         tauF(iY) = TAUfid*aux
-      END DO
-    END IF
+        DO iY = 1, nY
+           K2(iY) = qF(iY)*K1(iY)/resaux
+           CALL SIMPSON(npY,1,iY,Y,K2,aux)
+           tauF(iY) = TAUfid*aux
+        END DO
+     END IF
   elseif(slb) then
 !  for slab
-   tauF(1) = 0.0d0
-   do iY = 1, nY
+     tauF(1) = 0.0d0
+     do iY = 1, nY
 !  generate auxiliary function for integration:
-   do iL = 1, nL
-       qaux(iL) = TAUslb(iL,iY)*dabs(ftot(iL,iY))/(fsLbol(1)*lambda(iL))
-       call Simpson(npL,1,nL,lambda,qaux,resaux)
-       tauF(iY) = resaux
+        do iL = 1, nL
+           qaux(iL) = TAUslb(iL,iY)*dabs(ftot(iL,iY))/(fsLbol(1)*lambda(iL))
+           call Simpson(npL,1,nL,lambda,qaux,resaux)
+           tauF(iY) = resaux
+        end do
      end do
-   end do
   end if
 ! ------------
 ! ratio of gravitational to radiation pressure force (isotropic scattering) per unit volume
 ! s4 = (L4sol/Msol)/(4*Pi*G*c*rho_s)/1e-6;
 ! rho_s=3000 kg.m-3, grain radius 'a' is in microns, aveV=4/3*Pi*<a^3>
   IF(sph) THEN
-    s4 = 1.925 / (4.0*Pi*Gconst*3.0d08*3000.0*1.0D-06)
+     s4 = 1.925 / (4.0*Pi*Gconst*3.0d08*3000.0*1.0D-06)
 !   in case of sigma's from a file aveV=1 (initialized in GetOptPr)
-    DO iY = 1, nY
-      DO iL = 1, nL
-       qaux(iL)=(SigmaA(1,iL)+SigmaS(1,iL))/aveV*dabs(ftot(iL,iY))/lambda(iL)
-      END DO
-      CALL Simpson(npL,1,nL,lambda,qaux,resaux)
-      rg(1,iY) = s4 * resaux / r_gd
+     DO iY = 1, nY
+        DO iL = 1, nL
+           qaux(iL)=(SigmaA(1,iL)+SigmaS(1,iL))/aveV*dabs(ftot(iL,iY))/lambda(iL)
+        END DO
+        CALL Simpson(npL,1,nL,lambda,qaux,resaux)
+        rg(1,iY) = s4 * resaux / r_gd
 !     If dust drift (dynamics case):
-      IF (RDW) rg(1,iY) = rg(1,iY)*vrat(1,iY)
-       IF (iY.EQ.1) THEN
+        IF (RDW) rg(1,iY) = rg(1,iY)*vrat(1,iY)
+        IF (iY.EQ.1) THEN
            Phi = resaux
-       END IF
-    END DO
+        END IF
+     END DO
 !   the terminal value of the reddening profile, normalized to y=1
-    Phi = resaux / Phi
+     Phi = resaux / Phi
   END IF
 !-------------
 ! Find the Planck averaged absorption efficiencies
   DO iY = 1, nY
 !    generate auxiliary function for integration over wavelengths:
      DO iL = 1, nL
-       qaux(iL) = SigmaA(1,iL) * Us(iL,iY) / lambda(iL)
-       xP = 14400.0 / Td(1,iY) / lambda(iL)
-       qaux2(iL) = SigmaA(1,iL) * Planck(xP) / lambda (iL)
+        qaux(iL) = SigmaA(1,iL) * Us(iL,iY) / lambda(iL)
+        xP = 14400.0 / Td(1,iY) / lambda(iL)
+        qaux2(iL) = SigmaA(1,iL) * Planck(xP) / lambda (iL)
      END DO
      CALL Simpson(npL,1,nL,lambda,qaux,resaux)
      QpStar(iY) = resaux
@@ -2995,143 +2932,134 @@ END SUBROUTINE setupETA
 !     find parameter Psi (see Ivezic & Elitzur, 1996)
 !     generate auxiliary function for integration:
 !     loop over iL (wavelength)
-      DO iL = 1, nL
-        qaux(iL) = SigmaA(1,iL) * Utot(iL,1) / lambda (iL)
-      END DO
-      CALL Simpson(npL,1,nL,lambda,qaux,resaux)
-      QUtot1 = resaux
-      Psi = QUtot1 / QpTd(1,1)
+  DO iL = 1, nL
+     qaux(iL) = SigmaA(1,iL) * Utot(iL,1) / lambda (iL)
+  END DO
+  CALL Simpson(npL,1,nL,lambda,qaux,resaux)
+  QUtot1 = resaux
+  Psi = QUtot1 / QpTd(1,1)
 !     for slab Psi is defined by the flux at normal ill.
-      IF (SLB) Psi = dabs(mu1)*QUtot1 / QpTd(1,1)
+  IF (SLB) Psi = dabs(mu1)*QUtot1 / QpTd(1,1)
 ! -------------
-      IF(sph) THEN
+  IF(sph) THEN
 !      ratio r1/r* (see Ivezic & Elitzur, 1996, eq. 27)
-       r1rs = 0.5 * dsqrt(Psi) * (Tstar(1) / Td(1,1))**2.0
-       IF(Left.eq.0) r1rs = 1.0
-      END IF
+     r1rs = 0.5 * dsqrt(Psi) * (Tstar(1) / Td(1,1))**2.0
+     IF(Left.eq.0) r1rs = 1.0
+  END IF
 !-------------
 !     Find epsilon - the relative contribution of the diffuse radiation
-      DO iY = 1, nY
-       aux = QpStar(iY)/QpTd(1,iY)/Psi*(Td(1,1)/Td(1,iY))**4.
-       IF (SLB) THEN
-         aux = aux*dabs(mu1)
-       ELSE
-         aux = aux/ Y(iY)/Y(iY)
-       END IF
-       Eps(iY) = 1. - aux
-      END DO
-      Eps1 = 1.0 - QpStar(1) / QUtot1
+  DO iY = 1, nY
+     aux = QpStar(iY)/QpTd(1,iY)/Psi*(Td(1,1)/Td(1,iY))**4.
+     IF (SLB) THEN
+        aux = aux*dabs(mu1)
+     ELSE
+        aux = aux/ Y(iY)/Y(iY)
+     END IF
+     Eps(iY) = 1. - aux
+  END DO
+  Eps1 = 1.0 - QpStar(1) / QUtot1
 !     store these parameters in the storage array
-      SmC(1,model) = Psi
-      SmC(2,model) = Eps1
-      SmC(3,model) = QpStar(1)
-      SmC(4,model) = QpTd(1,1)
-!!**      SmC(5,model) = maxFerr  !maxFerr is the asymmetry of fbol
-      SmC(5,model) = maxrat  !maxrat is the max err of calculated diffuse flux as in Blueprint.
+  SmC(1,model) = Psi
+  SmC(2,model) = Eps1
+  SmC(3,model) = QpStar(1)
+  SmC(4,model) = QpTd(1,1)
+  SmC(5,model) = maxrat  !maxrat is the max err of calculated diffuse flux as in old Dusty.
 !-------------
 ! additional output quantities
 ! bolometric flux at r1 (in W/m2)
   if (typentry(1).eq.5) then
-   Fi = 4.0d0*sigma*T_ext(1)
+     Fi = 4.0d0*sigma*T_ext(1)
   else
-   if(left.eq.0) then
-    Fi = 10.0d-20
-   elseif(left.eq.1.and.typentry(1).ne.5) then
-    Fi = Fint
-   end if
+     if(left.eq.0) then
+        Fi = 10.0d-20
+     elseif(left.eq.1.and.typentry(1).ne.5) then
+        Fi = Fint
+     end if
   end if
-
 ! inner radius (in cm) in case it is not an input
 ! 5.53e16 = sqrt(10^4*Lo/4/pi)
   if (typentry(1).ne.2) then
-   if(slb) then
+     if(slb) then
 ! r1 is found from Fi = L/(4*pi*r1^2). since in sub input
 ! Fi=Fi*mu1, here the mu1 dependence has to be removed
-    Cr1 =  5.53d+16 / dsqrt(Fi/abs(mu1))
-   else
-    Cr1 = 5.53d+16 / dsqrt(Fi)
-   end if
+        Cr1 =  5.53d+16 / dsqrt(Fi/abs(mu1))
+     else
+        Cr1 = 5.53d+16 / dsqrt(Fi)
+     end if
   end if
-
   if (sph) then
 !  angular diameter of inner cavity if Fbol=1d-6 W/m2
-   theta1_loc = 412.6d0 / dsqrt(Fi)
+     theta1_loc = 412.6d0 / dsqrt(Fi)
 !  check if the pt.source assumption is still obeyed
 ! (This is only for BB-type spectrum including Engelke-Marengo function)
-   if(startyp(1).eq.1.or.startyp(1).eq.2) then
-    mx = sqrt(sqrt(Fi/sigma))
-    Te_min = 2.0d0 * dmax1(Td(1,1), mx)
-   end if
+     if(startyp(1).eq.1.or.startyp(1).eq.2) then
+        mx = sqrt(sqrt(Fi/sigma))
+        Te_min = 2.0d0 * dmax1(Td(1,1), mx)
+     end if
   end if
   if (slb) then
 ! Teff for the left illuminating source in slab geometry
 ! Teff = (Fi/sigma)^0.25d0
-   SmC(7,model) = (Fi/sigma)**0.25d0
-   if (ksi.gt.0.) then
+     SmC(7,model) = (Fi/sigma)**0.25d0
+     if (ksi.gt.0.) then
 !  Teff for the right illuminating source in slab geometry
-    SmC(8,model) = SmC(7,model)*sqrt(sqrt(ksi))
-   else
-    SmC(8,model) = 0.0d0
-   end if
+        SmC(8,model) = SmC(7,model)*sqrt(sqrt(ksi))
+     else
+        SmC(8,model) = 0.0d0
+     end if
   end if
 ! calculate conversion constants for dynamics
 !!  check the output, not tested for rdw case [mn, 08]
   if (rdwa.or.rdw) then
 ! for analytical approximation
 ! (otherwise i1,2,3 are found in gammafun)
-!!**   if (rdwa) then
-!!** we need these for both RDW and RDWA output! [MN]
-    I1 = 2.0d0 * (1.0d0-pow)/(1.0d0+pow)/tauF(nY)
-    I2 = I1
-    I3 = I1 * tauF(nY) / taufid
-    gamma(nY) = 0.5d0
-!!**   end if
-
+!!**needed for both RDW and RDWA output! [MN]
+     I1 = 2.0d0 * (1.0d0-pow)/(1.0d0+pow)/tauF(nY)
+     I2 = I1
+     I3 = I1 * tauF(nY) / taufid
+     gamma(nY) = 0.5d0
 ! terminal expansion velocity, full formula:
-   ugas_out = tauF(nY) * (1.0d0-gamma(nY)) / (1.0d0-pow)
+     ugas_out = tauF(nY) * (1.0d0-gamma(nY)) / (1.0d0-pow)
 ! the coefficients come from the units conversion
-   C1 = 0.2845d0*taufid*sqrt(psi)/I2/(sigexfid/aveV)*1.0d06/Td(1,1)/Td(1,1)
-   C2 = 2.040d0*ugas_out
-   C3 = 6.628d0*I3*sigexfid/aveV*gamma(nY)/I1
-
+     C1 = 0.2845d0*taufid*sqrt(psi)/I2/(sigexfid/aveV)*1.0d06/Td(1,1)/Td(1,1)
+     C2 = 2.040d0*ugas_out
+     C3 = 6.628d0*I3*sigexfid/aveV*gamma(nY)/I1
 ! from version 2.0 stellar mass is defined as the maximal stellar
 ! mass which does not quench the wind; the calculation is done
 ! with half that mass since any smaller mass will have no effect
 ! on the radial velocity and density profile (see IE2000)
 ! N.B. erroneous gamma(nY) is removed
-   CM = 6.628d0*I3*sigExfid/aveV/I1
+     CM = 6.628d0*I3*sigExfid/aveV/I1
 !  new definitions for output
 !  mass-loss rate in Msol/yr Td(iG,iY) = Td(iG,1)
-   CMdot = 1.0d-05 * sqrt(C1)
+     CMdot = 1.0d-05 * sqrt(C1)
 ! terminal expansion velocity in km/s
-   Cve = 10.0d0* C2 / sqrt(C1)
+     Cve = 10.0d0* C2 / sqrt(C1)
 !*** this is conversion to the nomenclature as in IE2001
-  if (rdwpr) then
+     if (rdwpr) then
 ! if (rdw) then
 ! size averaged extinction efficiency
-   QV = sigexfid / aveA
-   tauV = taufid
-   q_star = qF(1)
-   zeta1 = vrat(1,1)
-   G1 = gamma(1)
-   Ginf = gamma(nY)
-   if (g1.gt.0.0d0) then
-    Gie2000 = 1.0d0 / zeta1 / G1
-    delta = 1.0d0 / (Gie2000 - 1.0d0)
-   else
-    delta = 0.0d0
-   end if
-   PIrdw = tauV / QV
-   Prdw = dsqrt(2.d0*PIrdw/I2/QV/q_star)
-   winf = ugas_out / QV / q_star
+        QV = sigexfid / aveA
+        tauV = taufid
+        q_star = qF(1)
+        zeta1 = vrat(1,1)
+        G1 = gamma(1)
+        Ginf = gamma(nY)
+        if (g1.gt.0.0d0) then
+           Gie2000 = 1.0d0 / zeta1 / G1
+           delta = 1.0d0 / (Gie2000 - 1.0d0)
+        else
+           delta = 0.0d0
+        end if
+        PIrdw = tauV / QV
+        Prdw = dsqrt(2.d0*PIrdw/I2/QV/q_star)
+        winf = ugas_out / QV / q_star
+     end if
   end if
- end if
 !-----------------------------------------------------------------------
-
- return
+  return
 end subroutine Analysis
 !***********************************************************************
-
 
 ! ***********************************************************************
       SUBROUTINE Convolve
@@ -3280,26 +3208,26 @@ end subroutine Analysis
 !     Start integrations
 !     loop over output positions
       DO iXout = 1, Nout
-        Cxout = Xout(iXout)
+         Cxout = Xout(iXout)
 !       loop over angular wedges (phi integration)
-        DO iPhi = 1, Nphi
-          phi_loc(iPhi) = dphi*1.0D+00*(iPhi-1)
-          Cphi = phi_loc(iPhi)
-          fphi(iPhi) = 0.0D+00
+         DO iPhi = 1, Nphi
+            phi_loc(iPhi) = dphi*1.0D+00*(iPhi-1)
+            Cphi = phi_loc(iPhi)
+            fphi(iPhi) = 0.0D+00
 !         loop over input radial positions (radial integration)
-          DO iXin = 1, Nin-1
-            Ckn = 1.0D+00
-            CALL ROMBY(imagfn,Xin(iXin),Xin(iXin+1),int1)
-            Ckn = 2.0D+00
-            CALL ROMBY(imagfn,Xin(iXin),Xin(iXin+1),int2)
+            DO iXin = 1, Nin-1
+               Ckn = 1.0D+00
+               CALL ROMBY(imagfn,Xin(iXin),Xin(iXin+1),int1)
+               Ckn = 2.0D+00
+               CALL ROMBY(imagfn,Xin(iXin),Xin(iXin+1),int2)
 !           contribution from this annulus (lin. approx. for intensity)
-            A = Xin(iXin+1)*Yin(iXin) - Xin(iXin)*Yin(iXin+1)
-            A = A / (Xin(iXin+1)-Xin(iXin))
-            B = (Yin(iXin+1)-Yin(iXin)) / (Xin(iXin+1)-Xin(iXin))
-            fphi(iPhi) = fphi(iPhi) + A*int1 + B*int2
-          END DO
-        END DO
-        CALL Simpson(1000,1,Nphi,phi,fphi,Yout_loc(iXout))
+               A = Xin(iXin+1)*Yin(iXin) - Xin(iXin)*Yin(iXin+1)
+               A = A / (Xin(iXin+1)-Xin(iXin))
+               B = (Yin(iXin+1)-Yin(iXin)) / (Xin(iXin+1)-Xin(iXin))
+               fphi(iPhi) = fphi(iPhi) + A*int1 + B*int2
+            END DO
+         END DO
+         CALL Simpson(1000,1,Nphi,phi,fphi,Yout_loc(iXout))
       END DO
 ! -----------------------------------------------------------------------
       RETURN
@@ -3319,30 +3247,30 @@ end subroutine Analysis
       INTEGER iY
       DOUBLE PRECISION flux(npY), maxFerr, fmin, fmax, aux, accFbol
 ! -----------------------------------------------------------------------
-     accFbol = 1.0d-04
+      accFbol = 1.0d-04
 
 !     Find the min and max of fbol values
 !     The abs and lower limit on fbol are protection for the case
 !     of completely symmetri! slab illumination. The lower limit
 !     is bound by the numerical accuracy of the flux calculation
-        fmin = 1.e5
-        fmax = 0.
-        DO iY = 1, nY
-           aux = flux(iY)
-           IF (ksi.eq.1.0) aux = dabs(aux)
-           IF (dabs(aux).LE.accFbol) aux = accFbol
-           IF(aux.LT.fmin) fmin = aux
-           IF(aux.GT.fmax) fmax = aux
-        END DO
-        if (fmax.LT.0.) then
+      fmin = 1.e5
+      fmax = 0.
+      DO iY = 1, nY
+         aux = flux(iY)
+         IF (ksi.eq.1.0) aux = dabs(aux)
+         IF (dabs(aux).LE.accFbol) aux = accFbol
+         IF(aux.LT.fmin) fmin = aux
+         IF(aux.GT.fmax) fmax = aux
+      END DO
+      if (fmax.LT.0.) then
 !     bad solution; overall flux cannot be negative
-            maxFerr = 1
-        else
-            maxFerr = (fmax - fmin)/(fmax + dabs(fmin))
-        end if
+         maxFerr = 1
+      else
+         maxFerr = (fmax - fmin)/(fmax + dabs(fmin))
+      end if
 ! -----------------------------------------------------------------------
       RETURN
-      END
+      END SUBROUTINE FindErr
 ! *************************************************************************
 
 !***********************************************************************
@@ -3359,22 +3287,22 @@ end subroutine Analysis
       k = 0
       kstop = 0
       DO WHILE (kstop.NE.1)
-        k = k + 1
-        bOut(k) = P(k)
-        IF (1.001D+00*pstar.LE.P(k).OR.k.EQ.nP) kstop = 1
+         k = k + 1
+         bOut(k) = P(k)
+         IF (1.001D+00*pstar.LE.P(k).OR.k.EQ.nP) kstop = 1
       END DO
       IF (0.999D+00*pstar.GT.P(k-1)) THEN
-        bOut(k) = 0.999D+00*pstar
-        ELSE
-        bOut(k) = 0.5D+00*(P(k-1)+1.001D+00*pstar)
+         bOut(k) = 0.999D+00*pstar
+      ELSE
+         bOut(k) = 0.5D+00*(P(k-1)+1.001D+00*pstar)
       END IF
       IF (1.001D+00*pstar.LT.P(k)) THEN
-        bOut(k+1) = 1.001D+00*pstar
-        ELSE
-        bOut(k+1) = 0.5D+00*(P(k)+0.999D+00*pstar)
+         bOut(k+1) = 1.001D+00*pstar
+      ELSE
+         bOut(k+1) = 0.5D+00*(P(k)+0.999D+00*pstar)
       END IF
       DO i = k, nP
-        bOut(i+2) = P(i)
+         bOut(i+2) = P(i)
       END DO
 ! -----------------------------------------------------------------------
       RETURN
@@ -3396,18 +3324,18 @@ end subroutine Analysis
 ! -----------------------------------------------------------------------
       IF (ftype.EQ.1) THEN
 !       this part is for convolution
-        x = dsqrt(dabs(Cxout*Cxout+Yy*Yy-2.0D+00*Cxout*Yy*dcos(Cphi)))
-        imagfn = PSFN(x) * Yy**Ckn
+         x = dsqrt(dabs(Cxout*Cxout+Yy*Yy-2.0D+00*Cxout*Yy*dcos(Cphi)))
+         imagfn = PSFN(x) * Yy**Ckn
       ELSE
 !       this part is for visibility
 !       argument is Pi*q*Yy (not 2*Pi*q*Yy) to account for the fact that
 !       theta1 is diameter rather than radius (so V is function of
 !       q*theta1, like in IE, '96, MNRAS 279, 1019)
-        imagfn = Bessel(2.0D+00*dSIN(1.0D+00)*Cqtheta*Yy) * Yy**Ckn
+         imagfn = Bessel(2.0D+00*dSIN(1.0D+00)*Cqtheta*Yy) * Yy**Ckn
       END IF
 ! -----------------------------------------------------------------------
       RETURN
-      END
+      END FUNCTION IMAGFN
 ! ***********************************************************************
 
 !***********************************************************************
