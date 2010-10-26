@@ -3358,20 +3358,19 @@ subroutine OccltMSG(us)
   write(18,*) 'Tsub(1)=', Tsub(1)
 ! write(18,*) '  lambda(iL)  SigmaA(1,iL) Planck(xP)   xP'
   do iL = 1, nL
-   qaux(iL) = sigmaA(1,iL)*us(iL,1)/lambda(iL)
-   xP = 14400.0d0/Tsub(1)/lambda(iL)
-   qaux2(iL) = sigmaA(1,iL)*Planck(xP)/lambda (iL)
+     qaux(iL) = sigmaA(1,iL)*us(iL,1)/lambda(iL)
+     xP = 14400.0d0/Tsub(1)/lambda(iL)
+     qaux2(iL) = sigmaA(1,iL)*Planck(xP)/lambda (iL)
   end do
-
   call Simpson(npL,1,nL,lambda,qaux,res1)
   call Simpson(npL,1,nL,lambda,qaux2,res2)
 ! approximate psi for opt.thin case:
   psitn = res1/res2
   mx = Tsub(1)*sqrt(sqrt(4.0d0/psitn))
   if(Tsub(1).lt.mx) then
-   Te_min_loc = 2.0d0*mx
+     Te_min_loc = 2.0d0*mx
   else
-   Te_min_loc = 2.0d0*Tsub(1)
+     Te_min_loc = 2.0d0*Tsub(1)
   end if
   call getfs(Te_min_loc,0,1,tstrg)
   write(12,*) ' ====================================================  '
@@ -3380,11 +3379,9 @@ subroutine OccltMSG(us)
   write(12,'(a37,a5,a3)') '  whose effective temperature exceeds ',Tstrg, ' K.'
   write(12,*) ' ===================================================='
 !-----------------------------------------------------------------------
-
   return
 end subroutine OccltMSG
 !***********************************************************************
-
 
 ! *******************************************************************
   subroutine philam(alam,f,al,phi_loc)
@@ -3397,19 +3394,19 @@ end subroutine OccltMSG
 ! -----------------------------------------------
 
   do i = 1, 4
-   f(i) = 0.0d0
-   im = 0
-   istop = 0
-   do while (istop.ne.1)
-    im = im + 1
-    if ( (alam-al(i,im))*(alam-al(i,im+1)).le.0.0d0) then
-     a = (phi_loc(i,im+1)-phi_loc(i,im))/dlog10(al(i,im+1)/al(i,im))
-     b = phi_loc(i,im) - a*log10(al(i,im))
-     f(i) = a*dlog10(alam) + b
-     if ( f(i).gt.1.0d0 ) f(i) = 1.0d0
-    end if
-    if (im.eq.6) istop = 1
-   end do
+     f(i) = 0.0d0
+     im = 0
+     istop = 0
+     do while (istop.ne.1)
+        im = im + 1
+        if ( (alam-al(i,im))*(alam-al(i,im+1)).le.0.0d0) then
+           a = (phi_loc(i,im+1)-phi_loc(i,im))/dlog10(al(i,im+1)/al(i,im))
+           b = phi_loc(i,im) - a*log10(al(i,im))
+           f(i) = a*dlog10(alam) + b
+           if ( f(i).gt.1.0d0 ) f(i) = 1.0d0
+        end if
+        if (im.eq.6) istop = 1
+     end do
   end do
 ! ------------------------------------------------------
   return
@@ -3449,37 +3446,37 @@ end subroutine OccltMSG
 ! ------------------------------------------------------------
 ! initialization
   do i = 1, 4
-   tinf(i) = 0.0d0
-   cl(i) = 0.0d0
+     tinf(i) = 0.0d0
+     cl(i) = 0.0d0
   end do
   do j = 1, 7
-   al(1,j) = w1_loc(j)
-   phi_loc(1,j) = ff1(j)
-   al(2,j) = w2(j)
-   phi_loc(2,j) = ff2(j)
-   al(3,j) = w3(j)
-   phi_loc(3,j) = f3(j)
-   al(4,j) = w4(j)
-   phi_loc(4,j) = f4(j)
+     al(1,j) = w1_loc(j)
+     phi_loc(1,j) = ff1(j)
+     al(2,j) = w2(j)
+     phi_loc(2,j) = ff2(j)
+     al(3,j) = w3(j)
+     phi_loc(3,j) = f3(j)
+     al(4,j) = w4(j)
+     phi_loc(4,j) = f4(j)
   end do
 ! ------------------------------------------------------------------------
 ! first find IRAS colors
   do j = 2, nL
 ! middle wavelength
-   wmid = 0.5d0*(lambda(j-1)+lambda(j))
+     wmid = 0.5d0*(lambda(j-1)+lambda(j))
 ! interpolate filters for wmid
-   call philam(wmid,prz,al,phi_loc)
+     call philam(wmid,prz,al,phi_loc)
 ! convert spectrum to flambda
-   flx1 = spectr(j-1) / lambda(j-1)
-   flx2 = spectr(j) / lambda(j)
+     flx1 = spectr(j-1) / lambda(j-1)
+     flx2 = spectr(j) / lambda(j)
 ! add contribution to the integral (index is over filters)
-   do i = 1, 4
-    tinf(i) = tinf(i) + prz(i)*0.5d0*(flx2+flx1)*(lambda(j)-lambda(j-1))
-    cl(i) = cl(i) + prz(i) * (lambda(j)-lambda(j-1))
-   end do
+     do i = 1, 4
+        tinf(i) = tinf(i) + prz(i)*0.5d0*(flx2+flx1)*(lambda(j)-lambda(j-1))
+        cl(i) = cl(i) + prz(i) * (lambda(j)-lambda(j-1))
+     end do
   end do
   do i = 1, 4
-   tinf(i) = tinf(i) / cl(i)
+     tinf(i) = tinf(i) / cl(i)
   end do
 ! spectrum corrected for IRAS filters
   f12 = tinf(1)*12.0d0
@@ -3490,37 +3487,37 @@ end subroutine OccltMSG
 ! find fluxes at all needed wavelengths (energy increases with index)
   data wwav/2.2, 8.0, 9.8, 11.3, 13.0, 14.0, 18.0, 22.0, 0.55/
   do j = 1, 9
-   call lininter(npL,nL,lambda,spectr,wwav(j),iaux,faux)
-   flxy(j) = faux
+     call lininter(npL,nL,lambda,spectr,wwav(j),iaux,faux)
+     flxy(j) = faux
   end do
 ! the feature strength at 9.8 and 11.4 microns
   if((flxy(2)*flxy(5)*flxy(3)*flxy(4)).gt.0.0d0) then
-   an98 = log(flxy(5)/flxy(2))/log(wwav(5)/wwav(2))
-   f98c = flxy(2)*(wwav(3)/wwav(2))**an98
-   B98 = log(flxy(3)/f98c)
-   an11 = log(flxy(5)/flxy(3))/log(wwav(5)/wwav(3))
-   f11c = flxy(3)*(wwav(4)/wwav(3))**an11
-   B11 = log(flxy(4)/f11c)
+     an98 = log(flxy(5)/flxy(2))/log(wwav(5)/wwav(2))
+     f98c = flxy(2)*(wwav(3)/wwav(2))**an98
+     B98 = log(flxy(3)/f98c)
+     an11 = log(flxy(5)/flxy(3))/log(wwav(5)/wwav(3))
+     f11c = flxy(3)*(wwav(4)/wwav(3))**an11
+     B11 = log(flxy(4)/f11c)
   else
-   B98 = 0.0d0
-   B11 = 0.0d0
-   if(iX.ge.1) write(18,*) ' no 10 micron feature strength, fluxes are 0.'
+     B98 = 0.0d0
+     B11 = 0.0d0
+     if(iX.ge.1) write(18,*) ' no 10 micron feature strength, fluxes are 0.'
   end if
 ! ratio f9.8/f18
   if((flxy(2)*flxy(5)*flxy(7)).gt.0.0d0) then
-   rat9818 = flxy(3)/flxy(7)*wwav(7)/wwav(3)
+     rat9818 = flxy(3)/flxy(7)*wwav(7)/wwav(3)
 ! beta 8-13 and beta 14-22 (see neugebauer)
-   beta813 = dlog(flxy(5)/flxy(2))/dlog(13.0d0/8.0d0) - 1.0d0
+     beta813 = dlog(flxy(5)/flxy(2))/dlog(13.0d0/8.0d0) - 1.0d0
   else
-   rat9818 = 0.0d0
-   beta813 = 0.0d0
-   if(iX.ge.1) write(18,*) ' no 8-13 microns slope, fluxes are 0.'
+     rat9818 = 0.0d0
+     beta813 = 0.0d0
+     if(iX.ge.1) write(18,*) ' no 8-13 microns slope, fluxes are 0.'
   end if
   if((flxy(6)*flxy(8)).gt.0.0d0) then
-   beta1422 = dlog(flxy(8)/flxy(6))/dlog(22.0d0/14.0d0)-1.0d0
+     beta1422 = dlog(flxy(8)/flxy(6))/dlog(22.0d0/14.0d0)-1.0d0
   else
-   beta1422 = 0.0d0
-   if(iX.ge.1) write(18,*) ' no 14-22 microns slope, fluxes are 0.'
+     beta1422 = 0.0d0
+     if(iX.ge.1) write(18,*) ' no 14-22 microns slope, fluxes are 0.'
   end if
 ! store specchar to output array specchar
   charac(1) = B98
@@ -3532,19 +3529,19 @@ end subroutine OccltMSG
   charac(7) = flxy(1)
   charac(8) = f12
   if((f12*f25).gt.0.0d0) then
-   charac(9) = dlog10(25.0d0*f25/f12/12.0d0)
+     charac(9) = dlog10(25.0d0*f25/f12/12.0d0)
   else
-   charac(9) = 0.0d0
+     charac(9) = 0.0d0
   end if
   if((f12*f60).gt.0.0d0) then
-   charac(10) = dlog10(60.0d0*f60/f12/12.0d0)
+     charac(10) = dlog10(60.0d0*f60/f12/12.0d0)
   else
-   charac(10) = 0.0d0
+     charac(10) = 0.0d0
   end if
   if((f60*f100).gt.0.0d0) then
-   charac(11) = dlog10(f100*100.0d0/f60/60.0d0)
+     charac(11) = dlog10(f100*100.0d0/f60/60.0d0)
   else
-   charac(11) = 0.0d0
+     charac(11) = 0.0d0
   end if
 ! ------------------------------------------------------------------
   return
@@ -3568,28 +3565,28 @@ end subroutine OccltMSG
 
 ! find features for *.spp file
   if (slb) then
-   do iL = 1, nL
-    spectr(iL) = ftot(iL,nY) + ksi*fsR(iL,nY)
-   end do
+     do iL = 1, nL
+        spectr(iL) = ftot(iL,nY) + ksi*fsR(iL,nY)
+     end do
   else
-   do iL = 1, nL
+     do iL = 1, nL
 !  only the shell emission, external contribution not added
-    spectr(iL) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY)
-   end do
+        spectr(iL) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY)
+     end do
   end if
   call spfeatur(model,spectr,charac)
   do i = 1, nchar
-   SpecChar(i,model) = charac(i)
+     SpecChar(i,model) = charac(i)
   end do
 ! find features for *.zpp file for slab
   if (slb) then
-   do iL = 1, nL
-    spectr(iL) = dabs(ftot(iL,1) - fsL(iL,1))
-   end do
-   call spfeatur(model,spectr,charac)
-   do i = 1, nchar
-    SpecChar(i+11,model) = charac(i)
-   end do
+     do iL = 1, nL
+        spectr(iL) = dabs(ftot(iL,1) - fsL(iL,1))
+     end do
+     call spfeatur(model,spectr,charac)
+     do i = 1, nchar
+        SpecChar(i+11,model) = charac(i)
+     end do
   end if
 ! -----------------------------------------------------------------------
   return
@@ -3609,44 +3606,42 @@ end subroutine OccltMSG
 
 ! Loop over wavelengths
   do iL = 1, nL
-   taut = TAUslb(iL,nY)
+     taut = TAUslb(iL,nY)
 ! loop over angles (i.e. muobs), read in input from 'slb_mugrid.dat'
-   do imu = 1, nmu
-    muobs = dcos(theta(imu))
-    if(dabs(mu1-muobs).lt.1.0d-4) then
-     kron = 1.0d0
-    else
-     kron = 0.0d0
-    end if
+     do imu = 1, nmu
+        muobs = dcos(theta(imu))
+        if(dabs(mu1-muobs).lt.1.0d-4) then
+           kron = 1.0d0
+        else
+           kron = 0.0d0
+        end if
 ! scaled diffuse intensity:
-    idifm = 0.0d0
-    idifp = 0.0d0
-    tau1(1) = 0.0d0
-    do iY = 2, nY
-     tau1(iY) = TAUslb(iL,iY)
-     Sfn=(1.0d0-omega(1,iL))*em(iL,iY)+omega(1,iL)*utot(iL,iY)
+        idifm = 0.0d0
+        idifp = 0.0d0
+        tau1(1) = 0.0d0
+        do iY = 2, nY
+           tau1(iY) = TAUslb(iL,iY)
+           Sfn=(1.0d0-omega(1,iL))*em(iL,iY)+omega(1,iL)*utot(iL,iY)
 ! transmit=1 for tau < t, transmit=0 for tau > t
-     transmit = 1
-     call romby(Sexp,tau1(iY-1),tau1(iY),res)
-     idifm = idifm + res
-     transmit = 0
-     call romby(Sexp,tau1(iY-1),tau1(iY),res)
-     idifp = idifp + res
-    end do
-    if(idifm.lt.1.d-20) idifm = 0.0d0
-    if(idifp.lt.1.d-20) idifp = 0.0d0
-    SLBintm(imu,iL) = idifm
-    SLBintp(imu,iL) = idifp
+           transmit = 1
+           call romby(Sexp,tau1(iY-1),tau1(iY),res)
+           idifm = idifm + res
+           transmit = 0
+           call romby(Sexp,tau1(iY-1),tau1(iY),res)
+           idifp = idifp + res
+        end do
+        if(idifm.lt.1.d-20) idifm = 0.0d0
+        if(idifp.lt.1.d-20) idifp = 0.0d0
+        SLBintm(imu,iL) = idifm
+        SLBintp(imu,iL) = idifp
 ! enddo over angles
-   end do
+     end do
 ! enddo over lambda
   end do
 ! -----------------------------------------------------------------
-
   return
   end subroutine SLBintensity
 ! ***********************************************************************
-
 
 !***********************************************************************
 SUBROUTINE SPH_Int(nG,omega,fs)
@@ -3691,15 +3686,15 @@ EXTERNAL IntETA
 ! -----------------------------------------------------------------------
 !     temporary
       IF (nG.GT.1.AND.iX.GE.1) THEN
-        write(18,*)' FindInt should be fixed, nG>1 !'
-        stop
+         write(18,*)' FindInt should be fixed, nG>1 !'
+         stop
       END IF
 !     find impact parameter tangential to the stellar disk
 !     first find the Planck averaged absorption efficiencies at Y=1
       DO iL = 1, nL
-        qaux(iL) = SigmaA(1,iL) * Utot(iL,1) / lambda (iL)
-        xP = 14400.0 / Td(1,1) / lambda(iL)
-        qaux2(iL) = SigmaA(1,iL) * Planck(xP) / lambda (iL)
+         qaux(iL) = SigmaA(1,iL) * Utot(iL,1) / lambda (iL)
+         xP = 14400.0 / Td(1,1) / lambda(iL)
+         qaux2(iL) = SigmaA(1,iL) * Planck(xP) / lambda (iL)
       END DO
       CALL Simpson(npL,1,nL,lambda,qaux,resaux)
       QUtot1 = resaux
@@ -3711,17 +3706,17 @@ EXTERNAL IntETA
 ! ***alpha is a local array, to match the changes with Zeljko's old expressions
       DO iY = 2, nY
 !       calculate f1 and f2
-        DO iL = 1, nL
-          fnum(iL) = SigmaA(1,iL) * Utot(iL,iY) / lambda(iL)
-        END DO
-        CALL Simpson(npL,1,nL,lambda,fnum,res)
+         DO iL = 1, nL
+            fnum(iL) = SigmaA(1,iL) * Utot(iL,iY) / lambda(iL)
+         END DO
+         CALL Simpson(npL,1,nL,lambda,fnum,res)
 !        calculate alpha
-        DO iL = 1, nL
-           xP = 14400.0 / lambda(iL) / Td(1,iY)
-           fdenum(iL) = SigmaA(1,iL) * Planck(xP) / lambda(iL)
-        END DO
-        CALL Simpson(npL,1,nL,lambda,fdenum,denum)
-        alpha(1,iY) = res /  denum
+         DO iL = 1, nL
+            xP = 14400.0 / lambda(iL) / Td(1,iY)
+            fdenum(iL) = SigmaA(1,iL) * Planck(xP) / lambda(iL)
+         END DO
+         CALL Simpson(npL,1,nL,lambda,fdenum,denum)
+         alpha(1,iY) = res /  denum
       END DO
 ! *********
 !     ratio pst = rstar/rsub (see Ivezic & Elitzur, 1996, eq. 27)
@@ -3731,7 +3726,6 @@ EXTERNAL IntETA
       ELSE
          pst = 2.0 / dsqrt(Psi) * (Td(1,1) / Tstar(1))**2.0
       END IF
-!      IF (pst.GE.0.5) THEN
 !     this is if only central source is present
       IF (pst.GE.0.5.AND.Right.eq.0) THEN
          IF (iX.GE.1) THEN
@@ -3757,205 +3751,204 @@ EXTERNAL IntETA
 !        total optical depth along a line of sight
          tauOut(iL) = numcorr*TAUtot(iL)
       END DO
-
 !     generate diffuse intensities, Ide (emission) and Ids (scat)
 !     loop over wavelengths
       DO iL = 1, nL
-        DO iP = 1, nP
-!         maximal number of points along tangential position, z
-          nZ = nY + 1 - iYfirst(iP)
-!         starting value for local radius
-          IF (P(iP).GE.1.0) THEN
-            w2 = P(iP)
-          ELSE
-            w2 = 1.0
-          END IF
-!         initialize intensities
-          Ide(iL,iP) = 0.0
-          Ids(iL,iP) = 0.0
-          IF (iP.LE.k+1) THEN
-            Istem(iL,iP) = 0.0
-            Istsc(iL,iP) = 0.0
-          END IF
-!         total optical depth along this impact parameter
-           ep1 = ETAzp(iP,nZ)*TAUtot(iL)
-!         loop over z, i.e. steps over points crossing the y grid
-          DO iZ = 2, nZ
-!          index for the ending local radius
-            iW = iYfirst(iP) + iZ - 1
-!          local boundary radii
-            w1 = w2
-            w2 = Y(iW)
-!           corresponding displacements along a line of sight
-            z1 = sqrt(abs(w1**2.-P(iP)**2.))
-            z2 = sqrt(abs(w2**2.-P(iP)**2.))
-!           # of pts. for z integration, should increase with deltaTau
-!           it is messy because INT function which would do the job is
-!           not in F77 standard set
-            Nzpt = 5
-            delTau = (ETAzp(iP,iW)-ETAzp(iP,iW-1))*TAUtot(iL)
-            IF (delTau.GT.1) Nzpt = 10
-            IF (delTau.GT.5) Nzpt = 20
-            IF (delTau.GT.10) Nzpt = 30
-            IF (delTau.GT.20) Nzpt = 40
-            IF (delTau.GT.50) Nzpt = 50
-            delz = (z2-z1) / (Nzpt-1)
-!           powers for power-law interpolations between 2 y pts.
-            lw12 = dlog(Y(iW-1)/Y(iW))
-!           for T
-            pT = dlog(Td(1,iW)/Td(1,iW-1)) / lw12
-!           for albedo
-            IF (omega(iL,iW-1).GT.0.0.AND.omega(iL,iW).GT.0.0) THEN
-              palb = dlog(omega(iL,iW)/omega(iL,iW-1)) / lw12
+         DO iP = 1, nP
+!           maximal number of points along tangential position, z
+            nZ = nY + 1 - iYfirst(iP)
+!           starting value for local radius
+            IF (P(iP).GE.1.0) THEN
+               w2 = P(iP)
             ELSE
-              palb = 0.0
+               w2 = 1.0
             END IF
-!           for Utot
-            UtotL = Utot(iL,iW-1)
-            UtotR = Utot(iL,iW)
-            CALL ChkRange(dynrange,UtotL)
-            CALL ChkRange(dynrange,UtotR)
-            IF (UtotL.GT.0.0.AND.UtotR.GT.0) THEN
-              pUtot = dlog(UtotR/UtotL) / lw12
-            ELSE
-              pUtot = 0.0
-            END IF
-!           for alpha
-            palf = dlog(alpha(1,iW)/alpha(1,iW-1)) / lw12
-!           tauzp between z=0 and z=z1
-            tauzp1 = ETAzp(iP,iZ-1)*TAUtot(iL)
-!           integrate between adjacent grid points
-            DO izloc = 1, Nzpt
-              zloc = z1 + (izloc-1)*delz
-              wloc = sqrt(zloc**2 + P(iP)**2)
-!             find local TAUzp(w(z))-TAUzp(w1=w(z1))
-              tzp(izloc) = IntETA(P(iP),iW-1,w1,wloc)*TAUtot(iL)
-!             find Tz = T(zloc) = T(wloc), this works for single
-!             size grains only; for multigrain case one needs to
-!             get Semis by summation over all Td
-              Tz = Td(1,iW-1) * (Y(iW-1)/wloc)**pT
-              xP = 14400/lambda(iL)/Tz
-!             power-law interpolation for albedo
-              alb = omega(iL,iW-1) * (Y(iW-1)/wloc)**palb
-!             power-law interpolation for Utot
-              IF (UtotL.GT.0) THEN
-                UtotLoc = UtotL * (Y(iW-1)/wloc)**pUtot
-              ELSE
-                UtotLoc = 0.0
-              END IF
-              CALL ChkRange(dynrange,UtotLoc)
-!             power-law interpolation for alpha
-              alfa = alpha(1,iW-1) * (Y(iW-1)/wloc)**palf
-!             source functions (wloc**2 because D uses scaled quant.)
-              factaux = 1 / wloc**2 / (4. * Pi)
-              Semis(izloc) = (1-alb) * alfa * Planck(xP) * factaux
-              Sscat(izloc) = alb * UtotLoc * factaux
-!             check for the dynamic range
-              CALL ChkRange(dynrange,Semis(izloc))
-              CALL ChkRange(dynrange,Sscat(izloc))
-!             optical depth from infinity along the line of sight
-              tauInf = ep1 - tauzp1 - tzp(izloc)
-!             for a line of sight terminating on the star find
-!             contribution only from the front part of the envelope
-              IF (iP.LE.k+1) THEN
-                 IF (tauInf.LT.50) THEN
-                   exterm = dexp(-tauInf)
-                 ELSE
-                   exterm = 0.0
-                 END IF
-                 Sstem(izloc) = Semis(izloc) * exterm
-                 Sstsc(izloc) = Sscat(izloc) * exterm
-              END IF
-!             otherwise take both the front and back contributions
-              IF (tauInf.LT.50) THEN
-                 exterm = dexp(-tauInf)+dexp(-tauInf-ep1)
-              ELSE
-                 exterm = 0.0
-              END IF
-              Semis(izloc) = Semis(izloc) * exterm
-              Sscat(izloc) = Sscat(izloc) * exterm
-!             end of local loop over z
-            END DO
-!           integrate and add contribution from this step
-            CALL SIMPSON(100,1,Nzpt,tzp,Semis,resint)
-            CALL ChkRange(dynrange,resint)
-            Ide(iL,iP) = Ide(iL,iP) + resint
-            CALL SIMPSON(100,1,Nzpt,tzp,Sscat,resint)
-            CALL ChkRange(dynrange,resint)
-            Ids(iL,iP) = Ids(iL,iP) + resint
+!           initialize intensities
+            Ide(iL,iP) = 0.0
+            Ids(iL,iP) = 0.0
             IF (iP.LE.k+1) THEN
-              CALL SIMPSON(100,1,Nzpt,tzp,Sstem,resint)
-              CALL ChkRange(dynrange,resint)
-              Istem(iL,iP) = Istem(iL,iP) + resint
-              CALL SIMPSON(100,1,Nzpt,tzp,Sstsc,resint)
-              CALL ChkRange(dynrange,resint)
-              Istsc(iL,iP) = Istsc(iL,iP) + resint
+               Istem(iL,iP) = 0.0
+               Istsc(iL,iP) = 0.0
             END IF
-!         end of loop over z
-          END DO
-!       end of loop over impact parameter, iP
-        END DO
+!           total optical depth along this impact parameter
+            ep1 = ETAzp(iP,nZ)*TAUtot(iL)
+!           loop over z, i.e. steps over points crossing the y grid
+            DO iZ = 2, nZ
+!             index for the ending local radius
+               iW = iYfirst(iP) + iZ - 1
+!             local boundary radii
+               w1 = w2
+               w2 = Y(iW)
+!              corresponding displacements along a line of sight
+               z1 = sqrt(abs(w1**2.-P(iP)**2.))
+               z2 = sqrt(abs(w2**2.-P(iP)**2.))
+!              # of pts. for z integration, should increase with deltaTau
+!              it is messy because INT function which would do the job is
+!              not in F77 standard set
+               Nzpt = 5
+               delTau = (ETAzp(iP,iW)-ETAzp(iP,iW-1))*TAUtot(iL)
+               IF (delTau.GT.1) Nzpt = 10
+               IF (delTau.GT.5) Nzpt = 20
+               IF (delTau.GT.10) Nzpt = 30
+               IF (delTau.GT.20) Nzpt = 40
+               IF (delTau.GT.50) Nzpt = 50
+               delz = (z2-z1) / (Nzpt-1)
+!              powers for power-law interpolations between 2 y pts.
+               lw12 = dlog(Y(iW-1)/Y(iW))
+!              for T
+               pT = dlog(Td(1,iW)/Td(1,iW-1)) / lw12
+!              for albedo
+               IF (omega(iL,iW-1).GT.0.0.AND.omega(iL,iW).GT.0.0) THEN
+                  palb = dlog(omega(iL,iW)/omega(iL,iW-1)) / lw12
+               ELSE
+                  palb = 0.0
+               END IF
+!              for Utot
+               UtotL = Utot(iL,iW-1)
+               UtotR = Utot(iL,iW)
+               CALL ChkRange(dynrange,UtotL)
+               CALL ChkRange(dynrange,UtotR)
+               IF (UtotL.GT.0.0.AND.UtotR.GT.0) THEN
+                  pUtot = dlog(UtotR/UtotL) / lw12
+               ELSE
+                  pUtot = 0.0
+               END IF
+!              for alpha
+               palf = dlog(alpha(1,iW)/alpha(1,iW-1)) / lw12
+!              tauzp between z=0 and z=z1
+               tauzp1 = ETAzp(iP,iZ-1)*TAUtot(iL)
+!              integrate between adjacent grid points
+               DO izloc = 1, Nzpt
+                  zloc = z1 + (izloc-1)*delz
+                  wloc = sqrt(zloc**2 + P(iP)**2)
+!                 find local TAUzp(w(z))-TAUzp(w1=w(z1))
+                  tzp(izloc) = IntETA(P(iP),iW-1,w1,wloc)*TAUtot(iL)
+!                 find Tz = T(zloc) = T(wloc), this works for single
+!                 size grains only; for multigrain case one needs to
+!                 get Semis by summation over all Td
+                  Tz = Td(1,iW-1) * (Y(iW-1)/wloc)**pT
+                  xP = 14400/lambda(iL)/Tz
+!                 power-law interpolation for albedo
+                  alb = omega(iL,iW-1) * (Y(iW-1)/wloc)**palb
+!                 power-law interpolation for Utot
+                  IF (UtotL.GT.0) THEN
+                     UtotLoc = UtotL * (Y(iW-1)/wloc)**pUtot
+                  ELSE
+                     UtotLoc = 0.0
+                  END IF
+                  CALL ChkRange(dynrange,UtotLoc)
+!                 power-law interpolation for alpha
+                  alfa = alpha(1,iW-1) * (Y(iW-1)/wloc)**palf
+!                 source functions (wloc**2 because D uses scaled quant.)
+                  factaux = 1 / wloc**2 / (4. * Pi)
+                  Semis(izloc) = (1-alb) * alfa * Planck(xP) * factaux
+                  Sscat(izloc) = alb * UtotLoc * factaux
+!                 check for the dynamic range
+                  CALL ChkRange(dynrange,Semis(izloc))
+                  CALL ChkRange(dynrange,Sscat(izloc))
+!                 optical depth from infinity along the line of sight
+                  tauInf = ep1 - tauzp1 - tzp(izloc)
+!                 for a line of sight terminating on the star find
+!                 contribution only from the front part of the envelope
+                  IF (iP.LE.k+1) THEN
+                     IF (tauInf.LT.50) THEN
+                        exterm = dexp(-tauInf)
+                     ELSE
+                        exterm = 0.0
+                     END IF
+                     Sstem(izloc) = Semis(izloc) * exterm
+                     Sstsc(izloc) = Sscat(izloc) * exterm
+                  END IF
+!                 otherwise take both the front and back contributions
+                  IF (tauInf.LT.50) THEN
+                     exterm = dexp(-tauInf)+dexp(-tauInf-ep1)
+                  ELSE
+                     exterm = 0.0
+                  END IF
+                  Semis(izloc) = Semis(izloc) * exterm
+                  Sscat(izloc) = Sscat(izloc) * exterm
+!              end of local loop over z
+               END DO
+!              integrate and add contribution from this step
+               CALL SIMPSON(100,1,Nzpt,tzp,Semis,resint)
+               CALL ChkRange(dynrange,resint)
+               Ide(iL,iP) = Ide(iL,iP) + resint
+               CALL SIMPSON(100,1,Nzpt,tzp,Sscat,resint)
+               CALL ChkRange(dynrange,resint)
+               Ids(iL,iP) = Ids(iL,iP) + resint
+               IF (iP.LE.k+1) THEN
+                  CALL SIMPSON(100,1,Nzpt,tzp,Sstem,resint)
+                  CALL ChkRange(dynrange,resint)
+                  Istem(iL,iP) = Istem(iL,iP) + resint
+                  CALL SIMPSON(100,1,Nzpt,tzp,Sstsc,resint)
+                  CALL ChkRange(dynrange,resint)
+                  Istsc(iL,iP) = Istsc(iL,iP) + resint
+               END IF
+!           end of loop over z
+            END DO
+!        end of loop over impact parameter, iP
+         END DO
 !     end of loop over wavelengths, iL
       END DO
 !     add all intensities, Istell, Ide, Ids
       DO iL = 1, nL
-!       interpolate optical depth  at pstar
-        IF (iL.EQ.iLfid) THEN
-          ETAzpStar = (ETAzp(k,nY) - ETAzp(k-1,nY))
-          ETAzpStar = ETAzpStar * (pst-P(k-1)) / (P(k)-P(k-1))
-          ETAzpStar = ETAzp(k-1,nY) + ETAzpStar
-        END IF
-!       find diffuse contribution at pstar (by linear interpolation)
-        Idfront = Istsc(iL,k)+Istem(iL,k)-Istsc(iL,k-1)-Istem(iL,k-1)
-        Idfront = Idfront * (pst-P(k-1)) / (P(k) - P(k-1))
-        Idfront = Idfront + Istsc(iL,k-1) + Istem(iL,k-1)
-        Idboth = Ids(iL,k) + Ide(iL,k) - Ids(iL,k-1) - Ide(iL,k-1)
-        Idboth = Idboth * (pst-P(k-1)) / (P(k) - P(k-1))
-        Idboth = Idboth + Ids(iL,k-1) + Ide(iL,k-1)
-!       first for p<pstar, all three contributions
-        DO i = 1, k-1
-          Intens(iL,i) = Istell(iL) + Istsc(iL,i) + Istem(iL,i)
-          IF (iL.EQ.iLfid) tauZout(i) = ETAzp(i,nY)/ETAzp(1,nY)
-        END DO
-!       barely on the stellar disk
-        Intens(iL,k) = Istell(iL) + Idfront
-        tauZout(k) = ETAzpStar/ETAzp(1,nY)
-!       barely off the stellar disk
-        Intens(iL,k+1) = Idboth
-        tauZout(k+1) = 2. * tauZout(k)
-!       all other p>pstar
-        DO i = k, nP
-          Intens(iL,i+2) = Ids(iL,i)+Ide(iL,i)
-          IF (iL.EQ.iLfid) THEN
-            nZ = nY + 1 - iYfirst(i)
-            tauZout(i+2) = 2. * ETAzp(i,nZ)/ETAzp(1,nY)
-          END IF
-        END DO
+!        interpolate optical depth  at pstar
+         IF (iL.EQ.iLfid) THEN
+            ETAzpStar = (ETAzp(k,nY) - ETAzp(k-1,nY))
+            ETAzpStar = ETAzpStar * (pst-P(k-1)) / (P(k)-P(k-1))
+            ETAzpStar = ETAzp(k-1,nY) + ETAzpStar
+         END IF
+!        find diffuse contribution at pstar (by linear interpolation)
+         Idfront = Istsc(iL,k)+Istem(iL,k)-Istsc(iL,k-1)-Istem(iL,k-1)
+         Idfront = Idfront * (pst-P(k-1)) / (P(k) - P(k-1))
+         Idfront = Idfront + Istsc(iL,k-1) + Istem(iL,k-1)
+         Idboth = Ids(iL,k) + Ide(iL,k) - Ids(iL,k-1) - Ide(iL,k-1)
+         Idboth = Idboth * (pst-P(k-1)) / (P(k) - P(k-1))
+         Idboth = Idboth + Ids(iL,k-1) + Ide(iL,k-1)
+!        first for p<pstar, all three contributions
+         DO i = 1, k-1
+            Intens(iL,i) = Istell(iL) + Istsc(iL,i) + Istem(iL,i)
+            IF (iL.EQ.iLfid) tauZout(i) = ETAzp(i,nY)/ETAzp(1,nY)
+         END DO
+!        barely on the stellar disk
+         Intens(iL,k) = Istell(iL) + Idfront
+         tauZout(k) = ETAzpStar/ETAzp(1,nY)
+!        barely off the stellar disk
+         Intens(iL,k+1) = Idboth
+         tauZout(k+1) = 2. * tauZout(k)
+!        all other p>pstar
+         DO i = k, nP
+            Intens(iL,i+2) = Ids(iL,i)+Ide(iL,i)
+            IF (iL.EQ.iLfid) THEN
+               nZ = nY + 1 - iYfirst(i)
+               tauZout(i+2) = 2. * ETAzp(i,nZ)/ETAzp(1,nY)
+            END IF
+         END DO
       END DO
 !     check dynamic range
       DO iL = 1, nL
-        DO i = 1, nP+2
-          CALL ChkRange(dynrange,Intens(iL,i))
-        END DO
+         DO i = 1, nP+2
+            CALL ChkRange(dynrange,Intens(iL,i))
+         END DO
       END DO
 !     now interpolate Intens(lambda) to lamOut
       DO iLout = 1, NlambdaOut
-!       bracket the needed wavelength
-        iLstop = 0
-        iL = 0
-        DO WHILE (iLstop.EQ.0)
-          iL = iL + 1
-          IF (lambda(iL).GT.LambdaOut(iLout)) iLstop = 1
-          IF (iL.EQ.nL) iLstop = 1
-        END DO
-!       interpolate intensity
-        xx = (LambdaOut(iLout)-lambda(iL-1))/(lambda(iL)-lambda(iL-1))
-        DO i = 1, nP+2
-          IntL = Intens(iL-1,i)
-          IntR = Intens(iL,i)
-          IntOut(iLout,i) = IntL + xx*(IntR - IntL)
-          CALL ChkRange(dynrange,IntOut(iLout,i))
-        END DO
+!        bracket the needed wavelength
+         iLstop = 0
+         iL = 0
+         DO WHILE (iLstop.EQ.0)
+            iL = iL + 1
+            IF (lambda(iL).GT.LambdaOut(iLout)) iLstop = 1
+            IF (iL.EQ.nL) iLstop = 1
+         END DO
+!        interpolate intensity
+         xx = (LambdaOut(iLout)-lambda(iL-1))/(lambda(iL)-lambda(iL-1))
+         DO i = 1, nP+2
+            IntL = Intens(iL-1,i)
+            IntR = Intens(iL,i)
+            IntOut(iLout,i) = IntL + xx*(IntR - IntL)
+            CALL ChkRange(dynrange,IntOut(iLout,i))
+         END DO
       END DO
 ! -----------------------------------------------------------------------
 999   RETURN
@@ -4269,9 +4262,6 @@ end subroutine SPH_Int
 end function eta
 !***********************************************************************
 
-
-
-
 !!=====================================================================
 ! Below are INPUT/OUTPUT related subroutines and functions
 ! arranged in alphabetical order.                       [MN, Aug,2010]
@@ -4288,7 +4278,7 @@ subroutine attach(root,length,ext,fname)
 ! -----------------------------------------------------------------------
 
   do i = 1, len(fname)
-   fname(i:i) = ' '
+     fname(i:i) = ' '
   end do
   fname(:length) = root(:length)
   fname(length + 1:) = ext
@@ -4313,20 +4303,20 @@ subroutine clean(strin, strout, length)
 !-----------------------------------------------------------------------
 
   do i = 1, len(strout)
-   strout(i:i) = ' '
+     strout(i:i) = ' '
   end do
   first = 1
   last = len(strin)
   if (first.gt.last) return
 ! Find end of leading junk:
   do while (strin(first:first).le.' ')
-   first = first + 1
-   if (first.gt.last) return
+     first = first + 1
+     if (first.gt.last) return
   end do
 ! Find start of trailing junk:
   do while (strin(last:last).le.' ')
-   last = last - 1
-   if (last.lt.first) return
+     last = last - 1
+     if (last.lt.first) return
   end do
 ! Now trim all junk:
   strout = strin(first:last)
@@ -4390,46 +4380,46 @@ subroutine ChkLambda(lambdaOK)
   open(4, file='lambda_grid.dat', status = 'old')
   nLam = RDINP(Equal,4)
   if (nLam.ne.npL) then
-   write(*,*)' *************** a big error !! ***************** '
-   write(*,*)'  the number of wavelengths in lambda_grid.dat is  '
-   write(*,*)'  not equal to the specified npL in userpar.inc    '
-   write(*,*)'  make sure the numbers are the same, recompile    '
-   write(*,*)'  and try again.                                   '
-   write(*,*)' ************************************************* '
-   goto 999
+     write(*,*)' *************** a big error !! ***************** '
+     write(*,*)'  the number of wavelengths in lambda_grid.dat is  '
+     write(*,*)'  not equal to the specified npL in userpar.inc    '
+     write(*,*)'  make sure the numbers are the same, recompile    '
+     write(*,*)'  and try again.                                   '
+     write(*,*)' ************************************************* '
+     goto 999
   end if
 ! initialize lambda array
   do iL = 1, npL
-   read(4,*,end=99) lambda(iL)
+     read(4,*,end=99) lambda(iL)
   end do
 99 close(4)
   call sort(lambda,npL)
 ! check the ends of the lambda grid :
   if(lambda(1).gt.0.01d0) then
-   write(*,*)' *************** WARNING! ********************** '
-   write(*,*)'  the shortest wavelength in lambda_grid.dat has '
-   write(*,*)'  to be 0.01 microns. correct this and try again!'
-   write(*,*)' *********************************************** '
-   goto 999
+     write(*,*)' *************** WARNING! ********************** '
+     write(*,*)'  the shortest wavelength in lambda_grid.dat has '
+     write(*,*)'  to be 0.01 microns. correct this and try again!'
+     write(*,*)' *********************************************** '
+     goto 999
   end if
   if(lambda(npL).lt.36000.0d0) then
-   write(*,*)' *************** WARNING! ******************* '
-   write(*,*)'  the longest wavelength in lambda_grid.dat   '
-   write(*,*)'  has to be 3.6e4 um. correct this and try again!'
-   write(*,*)' ******************************************** '
-   goto 999
+     write(*,*)' *************** WARNING! ******************* '
+     write(*,*)'  the longest wavelength in lambda_grid.dat   '
+     write(*,*)'  has to be 3.6e4 um. correct this and try again!'
+     write(*,*)' ******************************************** '
+     goto 999
   end if
 ! check the resolution:
   do iL = 2, npL
-   if (lambda(iL)/lambda(iL-1).gt.1.51d0) then
-    write(*,*)' ***************** WARNING!  *******************'
-    write(*,*)' the ratio of two consecutive wavelengths in the'
-    write(*,*)' grid has to be no bigger than 1.5. you have    '
-    write(*,'(2(a4,1p,e8.2))') '    ',lambda(iL)/lambda(iL-1),' at ', lambda(iL)
-    write(*,*)' correct this and try again!                    '
-    write(*,*)' ***********************************************'
-    goto 999
-   end if
+     if (lambda(iL)/lambda(iL-1).gt.1.51d0) then
+        write(*,*)' ***************** WARNING!  *******************'
+        write(*,*)' the ratio of two consecutive wavelengths in the'
+        write(*,*)' grid has to be no bigger than 1.5. you have    '
+        write(*,'(2(a4,1p,e8.2))') '    ',lambda(iL)/lambda(iL-1),' at ', lambda(iL)
+        write(*,*)' correct this and try again!                    '
+        write(*,*)' ***********************************************'
+        goto 999
+     end if
   end do
 ! everything is fine
   lambdaOK = 1
@@ -4437,7 +4427,6 @@ subroutine ChkLambda(lambdaOK)
 ! something is wrong
 999 lambdaOK = 0
 !-----------------------------------------------------------------------
-
 111 return
 end subroutine ChkLambda
 !***********************************************************************
