@@ -638,6 +638,9 @@ subroutine Flux_Consv(flux1,flux2,fbolOK,error,Lprint)
 !!** FH 10/25/2010
 !!** changed the above to old dusty criteria (fmax-fmin)/(fmax+fmin) < accuracy  
   call FindErr(flux1,maxrat)
+!!** FH 10/25/2010
+!!** Handels condition where Flux is zero! If the computed Flux is better than dynrange the condition is valid and maxra = dynrange
+  IF (maxval(flux1).lt.dynrange**2) maxrat = dynrange
 
 ! For very high optical depth (taumax > 200), change the accuracy to 20% [Deka'09]
 !  if(taumax.ge.200.0d0) accuracy = 0.2d0
