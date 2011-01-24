@@ -12,7 +12,7 @@ examples/3.10slab1
 %examples/3.10slab_bb_bath
 %examples/3.10sphere_bb_bath
 
-examples/3.10sphere1
+%examples/3.10sphere1
 %examples/3.10sphere2
 %examples/3.10sphere3
 
