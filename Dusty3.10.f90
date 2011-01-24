@@ -6783,7 +6783,7 @@ subroutine PrOut(model,nG,delta)
 ! the left-side spectra are: |R*fsR + fm|=|fsL-ftot|
 !     ftot(iL,1) = dabs(fsL(iL,1) - ftot(iL,1))
 ! FH 01/24/11
-     ftot(iL,1) =  dabs(-fds(iL,1) - fde(iL,1)) 
+     ftot(iL,1) =  dabs(-fds(iL,1) - fde(iL,1) - ksi*fsR(iL,1)) 
      faux(iL) = ftot(iL,1)/lambda(iL)
     end do
     call Simpson(npL,1,nL,lambda,faux,res)
