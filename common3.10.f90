@@ -204,8 +204,8 @@ module common
   
   integer ver
   double precision ugas(npY), qF(npY), vrat(npG,npY), Gamma(npY),  &
-       I1, I2, I3, CMdot, Cve, CM, Cr1, G1, Ginf, Prdw,          &
-       winf, Phi, PIrdw, QV, q_star, zeta1, tauFdyn(npY)
+       I1, I2, I3, CMdot, Cve, CM, Cr1, G1, Ginf, Prdw, gmax,      &
+       winf, Phi, PIrdw, QV, Qstar, zeta1, tauFdyn(npY)
 ! =============================================================================
 
 ! =============================================================================
@@ -228,12 +228,11 @@ module common
 ! -----------------------------------------------------------------------------  
 ! tauOut(npL) - total optical depth along a line of sight, used in sph_int
   integer nYok, nPok, moment_loc,moment
-  double precision fde(npL,npY), fds(npL,npY), Utot(npL,npY), ftot(npL,npY), &
-       Td(npG,npY), Ubol(npY), fbol(npY), Spectrum(npL), SpecChar(30,99), &
-       tauF(npY), Intens(npL,npP+2), IntOut(20,npP+2), SmC(30,99), &
-       tauZout(npP+2), tr(npY), rg(npG,npY), fsL(npL,npY), fsR(npL,npY), &
-       Eps(npY), Fint, Fi, Fo, Ji, Jo, fsLbol(npY), fsRbol(npY),fsbol(npY), &
-       tauOut(npL), Ude(npL,npY), Uds(npL,npY), ETAzp(npP,npY)
+  double precision fde(npL,npY), fds(npL,npY), Utot(npL,npY), ftot(npL,npY), Td(npG,npY), &
+       Ubol(npY), fbol(npY), Spectrum(npL), SmC(30,99), tauF(npY), tr(npY), rg(npG,npY), &
+       Intens(npL,npP+2), IntOut(20,npP+2), tauZout(npP+2), tauOut(npL), Eps(npY), &
+       fsL(npL,npY), fsR(npL,npY), fsLbol(npY), fsRbol(npY),fsbol(npY), RPr(npY), Jext(npY), &
+       Ude(npL,npY), Uds(npL,npY), ETAzp(npP,npY), Fint, Fi, Fo, Ji, Jo, Psi, Psi0
   
 ! =============================================================================
 
@@ -246,13 +245,13 @@ module common
 ! =============================================================================
 !  Flags set in the master 'dusty.inp':
 !   iVerb - for additional screen printout
-!   iPhys - for printout of flux fTot in [W/m2] in files with spectra.
 !  Flags set by the user in each 'fname.inp':
 !   iOUT  - used in Cllose, now is obsolete ;
 !    see if iOut can be removed from the code.
 !  iSPP  - for spectral properites file production
-!  iA - for spectra; iB - for radial profiles; i! - for images,
+!  iA - for spectra; iB - for radial profiles; iC - for images,
 !  iV - for visibility files; iPSF - for convolved images (private option);
+!  iJ - for energy density profiles at user-selected radii
 !  iX - for message files;
 !  iInn - private option, set from inside Sub Input, it is for additional
 !         printout in file 'fname.err'. Good for checking convergence.
@@ -262,17 +261,19 @@ module common
 !!
 !! see if Te_min can be removed.from common
 !!
-! The following variables are used in imaging subroutines:
+!  The following variables are used in imaging subroutines:
 !  NlambdaOut - number of user required wavelengths (up to 20)
 !  LambdaOut(20) - their wavelengths;  Visib(20,1000) - visibility results found
 !  in subroutine Visibili; Offset(Nconv) - used for convolved images;
 !  ConvInt(20,1000) - convolved intensity
+!  nJOut - user-selected number of radii for J-output
+!  YJOut(10) - the Y(iY) radii for J-output
 ! -----------------------------------------------------------------------------
  
-  integer iVerb,iPhys, iSPP,iA,iB,iC,iX,iInn,iPSF,iV, NlambdaOut,Nconv,Nvisi,iD
+  integer iVerb,iPhys,iA,iB,iC,iX,iInn,iPSF,iV,NlambdaOut,Nconv,Nvisi,iD,iJ,nJOut
   character*100 zline(999)
   double precision LambdaOut(20), ConvInt(20,1000), Visib(20,1000),     &
-       Offset(1000), qtheta1(1000), Te_min
+       Offset(1000), qtheta1(1000), Te_min, YJOut(10), JOut(npL,10)
 ! =============================================================================
   
   
