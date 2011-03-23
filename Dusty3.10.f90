@@ -32,7 +32,7 @@
 !!
 !!  5) Minor fixes:
 !! FH 10/26/10
-!!    = Removed iPhys from dusty.inp still hardcoded to iPhys = 0
+!!    = Removed iPhys from dusty.mas still hardcoded to iPhys = 0
 !!    = Fixed the RDW output
 !!
 !!   General comments:
@@ -58,7 +58,7 @@
 ! This program solves the continuum radiative transfer problem for a
 ! spherically symmetric envelope or for a plane-parallel slab.
 ! It is assumed that all input data are given in files named *.inp,
-! and that the list of these files is given in a master input file 'dusty.inp'.
+! and that the list of these files is given in a master input file 'dusty.mas'.
 !
 ! This is Dusty version from summer 2010, with major changes in the numerical
 ! method, and greatly improved numerical stability at high optical depth.
@@ -84,9 +84,7 @@
 !**************************
 !*** ABOUT THIS VERSION ***
 !**************************
-
-  version= '3.11'
-
+  version= '3.12'
 !********************  MAIN  *******************************
 
   equal = .true.
@@ -97,16 +95,16 @@
   end if
 ! Open master input file; first determine whether user supplies custom
 ! DUSTY input file as the 1st argument on the command line. If yes,
-! use it. Else revert to the default file ./dusty.inp
-  call getarg(1,dustyinpfile)
-  if (trim(dustyinpfile) == "") then
-     write(*,*) "No input file name found on command line. Proceeding with default file ./dusty.inp"
-     dustyinpfile = "dusty.inp"
-  else
-     write(*,*) "Found input file ", trim(dustyinpfile), " on on command line."
-  endif
-!  open(13,err=998,file='dusty.inp',status='old')
-  open(13,err=998,file=trim(dustyinpfile),status='old')
+! use it. Else revert to the default file ./dusty.mas
+!!**  call getarg(1,dustyinpfile)
+!!**  if (trim(dustyinpfile) == "") then
+!!**     write(*,*) "No input file name found on command line. Proceeding with default file ./dusty.mas"
+     dustyinpfile = "dusty.mas"
+!!**  else
+!!**     write(*,*) "Found input file ", trim(dustyinpfile), " on on command line."
+!!**  endif
+  open(13,err=998,file='dusty.mas',status='old')
+!!**  open(13,err=998,file=trim(dustyinpfile),status='old')
   io1 = 0
 ! read the verbose mode
   iVerb = RDINP(Equal,13)
@@ -358,8 +356,11 @@ subroutine Find_Text(nG,T4_ext)
            T4_ext(iY) = (Tsub(1)**4.0d0)*(qPT1/qU1)/(Y(iY)**2.0d0)
         end do
      elseif(slb) then
-        T4_ext = Tsub(1)**4.0d0*(qPT1/qU1)
+        do iY = 1, nY
+           T4_ext(iY) = Tsub(1)**4.0d0*(qPT1/qU1)
+        end do
      end if
+     if (typentry(1).eq.5) Ji = sigma/pi*T4_ext(1)
   end do
 !-----------------------------------------------------------------------
   return
@@ -413,26 +414,29 @@ subroutine Find_Tran(pstar,T4_ext,us,fs)
   if (typEntry(1).ne.5) then
 ! for slab
      if(slb) then
-        if (left.eq.1.and.right.eq.0) then
-           if (mu1.eq.-1.0d0) then
-              T4_ext = pi*Ji/(2.0d0*sigma)
-           else
-              T4_ext = pi*Ji/sigma
+        do iY = 1, nY
+           if (left.eq.1.and.right.eq.0) then
+              if (mu1.eq.-1.0d0) then
+                 T4_ext(iY) = pi*Ji/(2.0d0*sigma)
+              else
+                 T4_ext(iY) = pi*Ji/sigma
+              end if
+           elseif (left.eq.0.and.right.eq.1) then
+              if (mu2.eq.-1.0d0) then
+                 T4_ext(iY) = pi*ksi*Ji/(2.0d0*sigma)
+              else
+                 T4_ext(iY) = pi*ksi*Ji/(sigma)
+              end if
+           elseif (left.eq.1.and.right.eq.1) then
+              if (mu1.eq.-1.0d0.and.mu2.eq.-1.0d0) then
+                 T4_ext(iY) = pi*(Ji + ksi*Ji)/(2.0d0*sigma)
+              else
+                 T4_ext(iY) = pi*(Ji + ksi*Ji)/sigma
+              end if
+
            end if
-        elseif (left.eq.0.and.right.eq.1) then
-           if (mu2.eq.-1.0d0) then
-              T4_ext = pi*ksi*Ji/(2.0d0*sigma)
-           else
-              T4_ext = pi*ksi*Ji/(sigma)
-           end if
-        elseif (left.eq.1.and.right.eq.1) then
-           if (mu1.eq.-1.0d0.and.mu2.eq.-1.0d0) then
-              T4_ext = pi*(Ji + ksi*Ji)/(2.0d0*sigma)
-           else
-              T4_ext = pi*(Ji + ksi*Ji)/sigma
-           end if
-        end if
-! for sphere
+        end do
+     ! for sphere
      elseif(sph) then
         do iY = 1, nY
            if (left.eq.1.and.right.eq.0) then
@@ -620,31 +624,7 @@ subroutine Flux_Consv(flux1,flux2,fbolOK,error,Lprint)
   elseif(slb) then
      deltaumax = 2.0d0*tautot(1)/nY
   end if
-!!**
-! search for places to improve the grid
-!  do  iY = 2, nY
-!   if(sph) then
-!     if(Y(iY).gt.1.5d0) then
-!       if(left.eq.1) then
-!         ratio(iY) = abs(abs(flux1(iY))-abs(flux2(iY)))/(abs(flux1(iY))+abs(flux2(iY)))
-!       elseif(left.eq.0.and.right.eq.1.and.(flux1(iY).gt.0.05d0*pi)) then
-!         ratio(iY) = abs(abs(flux1(iY))-abs(flux2(iY)))/(abs(flux1(iY))+abs(flux2(iY)))
-!       end if
-!     end if
-!   elseif(slb) then
-!     ratio(iY) = abs(abs(flux1(iY))-abs(flux2(iY)))/(abs(flux1(iY))+abs(flux2(iY)))
-!   end if
-!    if (ratio(iY).gt.maxrat) maxrat = abs(ratio(iY))
-!  end do
-! For very high optical depth (taumax > 200), change the accuracy to 20% [Deka'09]
-!  if(taumax.ge.200.0d0) accuracy = 0.2d0
-!  if (taumax.ge.200.0d0.and.(2*nY-1).gt.npY) accuracy = 0.2d0
-
-!!** FH 10/25/2010
-!!** changed the above to old dusty criteria (fmax-fmin)/(fmax+fmin) < accuracy  
   call FindErr(flux1,maxrat)
-!!** FH 10/25/2010
-!!** Handles condition where Flux is zero! If the computed Flux is better than dynrange the condition is valid and maxra = dynrange
   IF (maxval(flux1).lt.dynrange**2) maxrat = dynrange
 ! if any of these criteria is satisfied insert a point:
   DO WHILE (istop.ne.1)
@@ -904,7 +884,7 @@ subroutine Rad_Transf(nG,Lprint,initial,pstar,y_incr,us,fs,em,omega, &
        fs(npL,npY), us(npL,npY), T4_ext(npY), T_old(nG,npY), u_old(npL,npY), &
        maxerrT,maxerrU, aux1,aux2, x1,x2, eta, &
        fDebol(npY), fDsbol(npY), Usbol(npY), Udebol(npY), Udsbol(npY), &
-	   U_prev(npL,npY), Ubol_old(npY), xx, JL, JR
+	   U_prev(npL,npY), Ubol_old(npY), xx, JL, JR,maxFerr
   double precision, dimension(:), allocatable:: xg, wg
   logical, intent(in) ::  initial,Lprint
   external eta
@@ -1032,10 +1012,11 @@ subroutine Rad_Transf(nG,Lprint,initial,pstar,y_incr,us,fs,em,omega, &
   moment = 2
   call Find_Diffuse(initial,iter,iterfbol,T4_ext,us,em,omega,error)
   if(iVerb.eq.2.and.Lprint) write(*,*) ' Done with finding energy density and diffuse flux.'
+  
 !-----------------------------------------------------------------
 !!** additional printout [MN] vvvvvv
   IF(iInn.eq.1 .AND. Lprint) THEN
-     write(18,'(a9,f5.0))') ' taufid0=',taufid0
+     write(18,'(a9,f5.0)') ' taufid0=',taufid0
      write(18,'(2(a9,i4))') 'iterfbol=',iterfbol,'     nY =', nY
      call Bolom(Utot,Ubol)
      call Bolom(Us,Usbol)
@@ -1293,7 +1274,7 @@ subroutine Solve(model,Lprint,initial,nG,error,delta,iterfbol,fbolOK)
         fbol(iY) = fDebol(iY)+fDsbol(iY)+fsbol(iY)
      END DO
      call Finderr(fbol,maxFerr)
-
+     if(iVerb.eq.2.and.Lprint) write(*,'(A,F10.3,A)') '  Achieved error in bolometric Flux:',maxFerr*100,'%'
      IF(iInn.eq.1 .AND. Lprint) THEN
         write(18,'(a20,1p,e12.3)') 'from Solve: maxFerr=',maxFerr
         IF(SLB) THEN
@@ -1314,7 +1295,13 @@ subroutine Solve(model,Lprint,initial,nG,error,delta,iterfbol,fbolOK)
 ! increase number of grid points
 
 !   call Flux_Consv(calc_fdiff,comp_fdiff_bol,fbolOK,error,Lprint)
-   call Flux_Consv(fbol,fbol,fbolOK,error,Lprint)
+     call BOLOM(fs,fsbol)
+     call BOLOM(fde,fDebol)
+     call BOLOM(fds,fDsbol)
+     DO iY = 1, nY
+        fbol(iY) = fDebol(iY)+fDsbol(iY)+fsbol(iY)
+     END DO
+     call Flux_Consv(fbol,fbol,fbolOK,error,Lprint)
 
    if (iVerb.eq.2) &
       write(*,'(a20,i3)') ' After Flux_Cons nY=', nY
@@ -1894,6 +1881,7 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
 ! area aveA (needed in dynamics)
      if(dabs(a1-a2).le.1.d-3) then
         aveV = 4.0d0/3.0d0*pi*a1**3
+        print*,'aveV:',aveV,'a1:',a1
         aveA = pi*a1**2.0d0
      else
         do iiA = 1, nA
@@ -1901,6 +1889,7 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
         end do
         call powerint(npA,1,nA,a,faux1,a3ave)
         aveV = 4.0d0/3.0d0*pi*a3ave/Cnorm
+        print*,'aveV:',aveV,'a3ave/Cnorm:',a3ave/Cnorm
         do iiA = 1, nA
            faux1(iiA)=nsd(iiA)*a(iiA)**2.0d0
         end do
@@ -3006,36 +2995,22 @@ END SUBROUTINE setupETA
 !!**      SmC(5,model) = maxFerr  !maxFerr is the asymmetry of fbol                                                                      
       SmC(5,model) = maxrat  !maxrat is the max err of calculated diffuse flux as in Blueprint. 
 
-!-------------
-! additional output quantities
-! bolometric flux at r1 (in W/m2)
-  if (typentry(1).eq.5) then
-     Fi = 4.0d0*sigma*T4_ext(1)
-  else
-     if(left.eq.0) then
-        Fi = 10.0d-20
-     elseif(left.eq.1.and.typentry(1).ne.5) then
-        Fi = Fint
-     end if
-  end if
 ! inner radius (in cm) in case it is not an input
 ! 5.53e16 = sqrt(10^4*Lo/4/pi)
   if (typentry(1).ne.2) then
      if(slb) then
-!       r1 is found from Fi = L/(4*pi*r1^2). since in sub input
-!       Fi=Fi*mu1, here the mu1 dependence has to be removed
-        Cr1 =  5.53d+16 / dsqrt(Fi/abs(mu1))
+        Cr1 =  5.53d+16 / dsqrt(Ji*4*pi/abs(mu1))
      else
-        Cr1 = 5.53d+16 / dsqrt(Fi)
+        Cr1 = 5.53d+16 / dsqrt(Ji*4*pi)
      end if
   end if
   if (sph) then
 !  angular diameter of inner cavity if Fbol=1d-6 W/m2
-     theta1_loc = 412.6d0 / dsqrt(Fi)
+     theta1_loc = 412.6d0 / dsqrt(Ji*4*pi)
 !    check if the pt.source assumption is still obeyed
 !    (This is only for BB-type spectrum including Engelke-Marengo function)
      if(startyp(1).eq.1.or.startyp(1).eq.2) then
-        mx = sqrt(sqrt(Fi/sigma))
+        mx = sqrt(sqrt(Ji*4*pi/sigma))
         Te_min = 2.0d0 * dmax1(Td(1,1), mx)
      end if
   end if
@@ -4320,10 +4295,12 @@ subroutine CLLOSE(error,model,Nmodel)
   if (iError.ne.0) then
    write(12,'(a42,i4)') ' There are some error messages for model:',model
    write(12,*) ' Please check m## file (if not produced then rerun)'
+   if (iverb.gt.0) print*, 'There are some error messages for model:',model,' (check m## file)'
   end if
   if (iWarning.ne.0.and.iError.eq.0) then
    write(12,'(a36,i4)') ' There are some warnings for model:',model
    write(12,*)' Please check m## file (if not produced then rerun)'
+   if (iverb.gt.0) print*, 'There are some warnings for model:',model,' (check m## file)'
   end if
   iCumm = iCumm + iError + iWarning
   if (model.eq.Nmodel.or.error.eq.3.or.error.eq.4) then
@@ -4345,13 +4322,14 @@ subroutine CLLOSE(error,model,Nmodel)
 !  ----------  for slab output ----------------------------
     if(slb) then
      write(12,'(a)')'  (3) input bol.flux (in W/m2) of the left-side source at the left slab boundary'
-     write(12,'(a)')'  (4) bolometric half-flux (in W/m2) at the left slab boundary'
-     write(12,'(a)')'  (5) bolometric half-flux (in W/m2) at the right slab boundary'
-     write(12,'(a)')'  (6) position of the left slab boundary for L = 1e4 Lo'
-     write(12,'(a)')'  (7) dust temperature at the left slab boundary'
-     write(12,'(a)')'  (8) dust temperature at the right slab boundary'
-     write(12,'(a)')'  (9) radiative pressure force (in N) at the left slab boundary'
-     write(12,'(a)')'  (10) maximum error in flux conservation (%)'
+     write(12,'(a)')'  (4) input bol.flux (in W/m2) of the right-side source at the right slab boundary'
+     write(12,'(a)')'  (5) bolometric flux (in W/m2) at the left slab boundary'
+     write(12,'(a)')'  (6) bolometric flux (in W/m2) at the right slab boundary'
+     write(12,'(a)')'  (7) position of the left slab boundary for L = 1e4 Lo'
+     write(12,'(a)')'  (8) dust temperature at the left slab boundary'
+     write(12,'(a)')'  (9) dust temperature at the right slab boundary'
+     write(12,'(a)')'  (10) radiative pressure force (in N) at the left slab boundary'
+     write(12,'(a)')'  (11) maximum error in flux conservation (%)'
     else
 !---------- for spherical shell ----------------------------
       write(12,'(a)')'  (3) bolometric flux at the inner radius '
@@ -4679,7 +4657,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
   parameter (Nmax = 1000, nLambdam = 10000, nis = 2)
   double precision tau1, tau2, sum, a, b, xx(Nmax), e(Nmax), &
        aa(Nmax), bb(Nmax), tauIn(Nrec), ceta, x1, psf1, &
-       lum, dist, var1, var2, var3, Lstar, th1, th2,      &
+       lum, dist, var1, var2, var3, spec_scale, th1, th2,      &
        lambdas(nLambdam), Llamstar(nLambdam), res, value, RDINP
   character lamstr(20)*72, strpow*72, strg*40, version*(*),stdf(7)*235
   character*(*) nameIn,nameOut, nameQ(npG),nameNK(10), namepsf*100, &
@@ -4730,263 +4708,170 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
 ! of "left" and "right" source,
 ! illumination
   call rdinps2(Equal,1,str,L,UCASE)
-  if(str(1:L).eq.'ON') then
-   left = 1
-  elseif(str(1:L).eq.'OFF') then
-   left = 0
-  end if
-
+  if(str(1:L).eq.'ON') left = 1
+  if(str(1:L).eq.'OFF') left = 0
   if(left.eq.0) then
-   if(slb) then
-    call msg(23)
-    left = 1
-   end if
+     if(slb) then
+        call msg(23)
+        left = 1
+     end if
   end if
 
   call rdinps2(Equal,1,str,L,UCASE)
-  if(str(1:L).eq.'ON') then
-   right = 1
-  elseif(str(1:L).eq.'OFF') then
-   right = 0
-  end if
+  if(str(1:L).eq.'ON') right = 1
+  if(str(1:L).eq.'OFF') right = 0
+  if (slb.and.(left.eq.0.and.right.eq.1)) then
+     left=1
+     right=0
+  endif
 
-! 1.1) CENTRAL SOURCE RADIATION (left-side source for slab)
-  if(left.gt.0) then
-   call inp_rad(error,1,nameIn)
-   if(error.ne.0) goto 996
-! typentry give the scale of input radiation
-   call rdinps2(Equal,1,str,L,UCASE)
-   if (str(1:L).eq.'FLUX') then
-    typentry(1) = 1
-   elseif (str(1:L).eq.'LUM_R1') then
-    typentry(1) = 2
-   elseif (str(1:L).eq.'ENERGY_DEN') then
-    typentry(1) = 3
-   elseif (str(1:L).eq.'DILUTN_FAC') then
-    typentry(1) = 4
-   elseif (str(1:L).eq.'T1') then
-    typentry(1) = 5
-   end if
-
-! check if the entered value is acceptable
-   if (typentry(1).lt.1.or.typentry(1).gt.5) then
-    call msg(21)
-    error = 1
-    goto 999
-   end if
-   if (typentry(1).eq.1) then
-    if (startyp(1).gt.3) then
-!    for source spectrum in a file
-!    get the scale of the input flux from the file
-     call readspectar(lambdas,Llamstar,Lstar,nLs,1,error)
-     dilutn = RDINP(Equal,1)
-     Fint = dilutn*Lstar/pi
-    else
-!    typentry(1)=1: enter Fint, [W/m2]
-!    N.B. in slab case Tei is calculated in this case
-!    since the scaling flux is mu1*Fi,the local bol.flux Fint=L/(4*pi*r^2)
-     Fint = RDINP(Equal,1)
-    end if
-    var1 = Fint
-    Ji = Fint/(4.0d0*pi)
-    Tei = (pi*Ji/sigma)**0.25d0
-    var2 = Tei
-   else if (typentry(1).eq.2) then
-!   enter luminosity [in Lo] of the source and distance r1[cm] to the source
-    Lum = RDINP(Equal,1)
-    dist = RDINP(Equal,1)
-! all units in dusty are in SI, so convert the input
-    var1 = Lum
-    var2 = dist
-    Lum = Lum*3.862d+26
-    dist = dist/100.0d0
-    Fint = Lum/(4.0d0*pi*dist*dist)
-    Ji = Fint/(4.0d0*pi)
-    Cr1 = dist
-    Tei = (Fint/sigma)**0.25d0
-   else if (typentry(1).eq.3) then
-    Ji = RDINP(Equal,1)
-    var3 = Ji
-   else if (typentry(1).eq.4) then
-!   entry of dilution (normalization) factor
-    dilutn = RDINP(Equal,1)
-    if (startyp(1).gt.3) then
-! get the scale of the input flux from the file
-     call readspectar(lambdas,Llamstar,Lstar,nLs,1,error)
-     Ji = dilutn*Lstar
-    else
-! for one Bbody Tstar=Tbb, for any other shape Dusty's default is Tstar=1e4 K.
-     Ji = dilutn*sigma/pi*Tstar(1)**4.0d0
-    end if
-! var3 = dilutn
-    var3 = Ji
-    Fint = 4.0d0*pi*Ji
-    Tei = (Fint/sigma)**0.25d0
-   elseif (typentry(1).eq.5) then
-!   enter dust temperature on inner boundary, T1[K]
-    Tsub(1) = RDINP(Equal,1)
-    var1 = Tsub(1)
-! in this case Tei (or Fint) is determined from the Rad.Equillibrium condition
-! at the first y-grid point. the ini.approximation is in
-! InitTemp and Tei is adjusted in FindTemp for ea. Td-iteration.
-   end if
-  else
-! if no central source
-   Tei = 0.0d0
-   typentry(1) = 0
-! end if for presence of central(left) source
-  end if
-
-! for slab:
-  if (slb) then
-   write(12,'(a33)') ' Calculation in planar geometry:'
-! find the kind of illumination
-   call rdinps2(Equal,1,str,L,UCASE)
-   if (str(1:L).eq.'DIRECTIONAL') then
-   write(12,'(a41)') ' Directional illumination from the left.'
-! enter incident theta_in:
-! th1 the left illumination angle (in degrees) measured from the normal
-   th1 = RDINP(Equal,1)
-   elseif (str(1:L).eq.'ISOTROPIC') then
-    th1 = -1.0d0
-   end if
-! for isotropic illumination
-   if (th1.eq.-1.0d0) then
-    write(12,'(a40)') ' Isotropic illumination from the left.'
-! in this case th1=-1.0 is a flag for diffuse slab illumination,
-! mu1 is set to -1.0 as a flag as well, not an actual value
-    mu1 = -1.0d0
-    if (typentry(1).eq.1.or.typentry(1).eq.2) then
-     Ji = Fint/pi
-    end if
-! for directional illumination
-   else
-    write(12,'(a28,F5.2,a8)') ' Left illumination angle =',th1,' degrees'
-    call chkangle(th1)
-! convert to radians
-    th1 = th1*pi/180.0d0
-    mu1 = dcos(th1)
-    if (typentry(1).eq.1.or.typentry(1).eq.2) then
-     Ji = Fint/(4.0d0*pi)
-    end if
-   end if
-   if (typentry(1).ge.2.and.th1.ne.-1.0d0) then
-! for oblique illumination the input flux is Fint*mu1,
-! scaling is with this flux. Since mu1 is read here
-! Fint (resp. Tei) need recalculation:
-! dabs(mu1) to accomodate the case with mu1=-1 (isotropic ill.)
-! Fint = Fint*dabs(mu1)
-    Tei = (pi*Ji/ sigma)**0.25d0
-   end if
-   var1 = Fint
-   var2 = Tei
-! even if no second source is supplied, mu2 needs a value
-! of 1 to avoid crashing in the formulae in SLBStar [MN]
-   mu2 = 1.0d0
-   ksi = 0.0d0
-  end if
-
-! 1.2) external radiation (right-side source for slab)
-  if (right.gt.0) then
-   call inp_rad(error,2,nameIn)
-   if (error.ne.0) goto 996
-   if (slb) then
-      call rdinps2(Equal,1,str,L,UCASE)
-    if (str(1:L).eq.'DIRECTIONAL') then
-       write(12,'(a42)') '  Directional illumination from the right.'
-       th2 = RDINP(Equal,1)
-    elseif (str(1:L).eq.'ISOTROPIC') then
-       write(12,'(a41)') ' Isotropic illumination from the right.'
-       th2 = -1.0d0
-    end if
-!  ksi is the relative bol.flux of the second source
-    ksi = RDINP(Equal,1)
-    if (ksi.lt.0.0) ksi = 0.0d0
-    if (ksi.gt.1.0) ksi = 1.0d0
-    write(12,'(a49,F5.2)') ' Relative bol.flux fraction of right source: R =',ksi
-    if (th2.eq.-1.0d0) then
-! in this case th2=-1.0 is a flag for diffuse slab illumination,
-! mu2is set to -1.0 as a flag as well, not an actual value
-     mu2 = -1.0d0
-    else
-     write(12,'(a29,F5.2,a8)') ' Right illumination angle =',th2,' degrees'
-     call chkangle(th2)
-! convert to radians
-     th2 = th2*pi/180.0d0
-     mu2 = dcos(th2)
-    end if
-   elseif(sph) then
-! for sphere:
-    call rdinps2(Equal,1,str,L,UCASE)
-! typentry(2) can be 1(flux), 2(lum,r1) 3 (en_den), 4 Tsub(1)
-    if (str(1:L).eq.'FLUX') then
-     typentry(2) = 1
-    elseif (str(1:L).eq.'LUM_R1') then
-     typentry(2) = 2
-    elseif (str(1:L).eq.'ENERGY_DEN') then
-     typentry(2) = 3
-    elseif (str(1:L).eq.'DILUTN_FAC') then
-     typentry(2) = 4
-    end if
-    if (typentry(2).gt.4) then
-     call msg(22)
-     error = 1
-     goto 999
-    end if
-    if (typentry(2).eq.1) then
-     if (startyp(2).gt.3) then
-      call readspectar(lambdas,Llamstar,Lstar,nLs,1,error)
-      dilutn = RDINP(Equal,1)
-      Fo = dilutn*Lstar/pi
+  !FOR SPHERE
+  if (sph) then
+     if (left.gt.0) then 
+        call inp_rad(error,1,nameIn)
+        if(error.ne.0) goto 996
+        if (startyp(1).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,1,error)
+        !for one Bbody Tstar=Tbb, for any other shape Dusty's default is Tstar=1e4 K.
+        if (startyp(1).eq.1) spec_scale = sigma*Tstar(1)**4.0d0
+        !typentry give the scale of input radiation
+        call rdinps2(Equal,1,str,L,UCASE)
+        if (str(1:L).eq.'FLUX') typentry(1) = 1
+        if (str(1:L).eq.'LUM_R1') typentry(1) = 2
+        if (str(1:L).eq.'ENERGY_DEN') typentry(1) = 3
+        if (str(1:L).eq.'DILUTN_FAC') typentry(1) = 4
+        if (str(1:L).eq.'T1') typentry(1) = 5
+        !check if the entered value is acceptable
+        if (typentry(1).lt.1.or.typentry(1).gt.5) then
+           call msg(21)
+           error = 1
+           goto 999
+        end if
+        if (typentry(1).eq.2) then
+           !enter luminosity [in Lo] of the source and distance r1[cm] to the source
+           Lum = RDINP(Equal,1)
+           dist = RDINP(Equal,1)
+           !all units in dusty are in SI, so convert the input
+           Lum = Lum*3.862d+26
+           dist = dist/100.0d0
+           Ji = Lum/(4.0d0*pi*dist*dist)/(4.0d0*pi)
+           Cr1 = dist
+        endif
+        if (typentry(1).eq.3) Ji = RDINP(Equal,1)
+        if (typentry(1).eq.4) then
+           !entry of dilution (normalization) factor
+           dilutn = RDINP(Equal,1)
+           Ji = dilutn*spec_scale/(4*pi)
+        endif
+        if (typentry(1).eq.5) then
+           !enter dust temperature on inner boundary, T1[K]
+           Tsub(1) = RDINP(Equal,1)
+        end if
      else
-!  enter Fo, [W/m2]
-       Fo = RDINP(Equal,1)
+        typentry(1) = 0
+     endif
+     if (right.gt.0) then
+        call inp_rad(error,2,nameIn)
+        if(error.ne.0) goto 996
+        if (startyp(2).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,1,error)
+        !for one Bbody Tstar=Tbb, for any other shape Dusty's default is Tstar=1e4 K.
+        if (startyp(2).eq.1) spec_scale = sigma*Tstar(2)**4.0d0
+        !typentry give the scale of input radiation
+        call rdinps2(Equal,1,str,L,UCASE)
+        print*,str
+        if (left.eq.0) then 
+           if (str(1:L).eq.'ENERGY_DEN') typentry(2) = 3
+           if (str(1:L).eq.'DILUTN_FAC') typentry(2) = 4
+           !check if the entered value is acceptable
+           if (typentry(2).lt.3.or.typentry(2).gt.4) then
+              call msg(21)
+              error = 1
+              goto 999
+           end if
+           if (typentry(2).eq.3) Jo = RDINP(Equal,1)
+           if (typentry(2).eq.4) then
+              !entry of dilution (normalization) factor
+              dilutn = RDINP(Equal,1)
+              Jo = dilutn*spec_scale/(pi)
+           endif
+        else
+        ! ksi is the relative bol.flux of the second source
+           ksi = RDINP(Equal,1)
+           if (ksi.lt.0.0) ksi = 0.0d0
+           if (ksi.gt.1.0) ksi = 1.0d0
+           write(12,'(a49,F5.2)') ' Relative bol.flux fraction of right source: R =',ksi
+        end if
      end if
-     Jo = Fo/pi
-     Teo = (Fo/sigma)**0.25d0
-    elseif(typentry(2).eq.2) then
-! typEntry(2)=2: enter luminosity,[in Lo] of the source and
-! distance r1,[cm] to the source
-      lum = RDINP(Equal,1)
-     dist = RDINP(Equal,1)
-! all units in dusty are in SI, so convert the input
-     lum = lum*3.862d+26
-     dist = dist/100.0d+00
-!  Cr1 is carried in common/dyn/
-     Cr1 = dist
-     Fo = lum/(4.0d+00*pi*dist*dist)
-     Teo = (Fo/sigma)**0.25d0
-     Jo = Fo/pi
-    elseif (typentry(2).eq.3) then
-     Jo = RDINP(Equal,1)
-     Fo = pi*Jo
-     Teo = (Fo/sigma)**0.25d0
-    elseif(typentry(2).eq.4) then
-! typentry(2)=4 for entry of dilution (normalization) factor
-     dilutn = RDINP(Equal,1)
-     if (startyp(2).gt.3) then
-! get the scale of the input flux from the file
-     call readspectar(lambdas,Llamstar,Lstar,nLs,2,error)
-     Jo = dilutn*Lstar
-    else
-! for one blackbody Tstar=Tbb, for any other shape
-! dusty's default is Tstar =1e4 K.
-     Jo = dilutn*sigma/pi*Tstar(2)**4.0d0
-    end if
-!   var3 = dilutn
-    Fo = pi*Ji
-    Teo = (Fo/sigma)**0.25d0
-   end if
-   var3 = Jo
-! end if for geometry
-   end if
-  else
-! if no external radiation -- set to 0
-   Teo = 0.0d0
-   typentry(2) = 0
-! end if for second source
   end if
-!! line added for clarity in the .out file [MN]
+!FOR SLAB
+  if (slb) then
+     if (left.gt.0) then
+        call inp_rad(error,1,nameIn)
+        if(error.ne.0) goto 996
+        if (startyp(1).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,1,error)
+        ! for one Bbody Tstar=Tbb, for any other shape Dusty's default is Tstar=1e4 K.
+        if (startyp(1).eq.1) spec_scale = sigma*Tstar(1)**4.0d0
+        ! typentry give the scale of input radiation
+        call rdinps2(Equal,1,str,L,UCASE)
+        if (str(1:L).eq.'ENERGY_DEN') typentry(1) = 3
+        if (str(1:L).eq.'DILUTN_FAC') typentry(1) = 4
+        if (str(1:L).eq.'T1') typentry(1) = 5
+        print*,str
+        if (typentry(1).lt.3.or.typentry(1).gt.5) then
+           call msg(21)
+           error = 1
+           goto 999
+        end if
+        if (typentry(1).eq.3) Ji = RDINP(Equal,1)
+        if (typentry(1).eq.4) then
+           !entry of dilution (normalization) factor
+           dilutn = RDINP(Equal,1)
+           Ji = dilutn*spec_scale/pi
+        endif
+        ! var3 = dilutn
+        if (typentry(1).eq.5) then
+           !   enter dust temperature on inner boundary, T1[K]
+           Tsub(1) = RDINP(Equal,1)
+        end if
+        write(12,'(a33)') ' Calculation in planar geometry:'
+        !find the kind of illumination
+        call rdinps2(Equal,1,str,L,UCASE)
+        if (str(1:L).eq.'DIRECTIONAL') then
+           write(12,'(a41)') ' Directional illumination from the left.'
+           ! enter incident theta_in:
+           ! th1 the left illumination angle (in degrees) measured from the normal
+           call chkangle(th1)
+           th1 = RDINP(Equal,1)
+           mu1 = dcos(th1)
+        elseif (str(1:L).eq.'ISOTROPIC') then
+           th1 = -1.0d0
+           write(12,'(a40)') ' Isotropic illumination from the left.'
+           mu1 = -1.0d0
+        end if
+     endif
+     if (right.gt.0) then
+        call inp_rad(error,2,nameIn)
+        if(error.ne.0) goto 996
+        if (startyp(2).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,1,error)
+        call rdinps2(Equal,1,str,L,UCASE)
+        if (str(1:L).eq.'DIRECTIONAL') then
+           write(12,'(a41)') ' Directional illumination from the left.'
+           ! enter incident theta_in:
+           ! th1 the left illumination angle (in degrees) measured from the normal
+           call chkangle(th1)
+           th2 = RDINP(Equal,1)
+           mu2 = dcos(th2)
+        elseif (str(1:L).eq.'ISOTROPIC') then
+           th2 = -1.0d0
+           write(12,'(a40)') ' Isotropic illumination from the left.'
+           mu2 = -1.0d0
+        end if
+        ! ksi is the relative bol.flux of the second source
+        ksi = RDINP(Equal,1)
+        if (ksi.lt.0.0) ksi = 0.0d0
+        if (ksi.gt.1.0) ksi = 1.0d0
+        write(12,'(a49,F5.2)') ' Relative bol.flux fraction of right source: R =',ksi
+     endif
+  endif
   write(12,*) ' --------------------------------------------'
 
 !=========  END READING OF SOURCE PARAMETERS ===================
@@ -5641,6 +5526,974 @@ end subroutine Input
 !***********************************************************************
 
 
+!!$!***********************************************************************
+!!$subroutine Input_old(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
+!!$           Nrec,GridType,Nmodel,error,version,stdf)
+!!$!=======================================================================
+!!$! This subroutine reads input data from the file 'filename.inp'. It
+!!$! utilizes the function RDINP and subroutine RDINPS2 written by Moshe Elitzur.
+!!$!                                           [ZI,NOV'95; MN,JAN'00, MN'09]
+!!$!=======================================================================
+!!$
+!!$  use common
+!!$  implicit none
+!!$  integer i, iG, nG, Nmodel, EtaOK, error,GridType, istop, nLs, Nrec, &
+!!$       ioverflw, Nmax, nLambdam, Nis, imu, geom, denstyp, ang_type, L
+!!$! Nmax is the size of user supplied eta file
+!!$! nLambdam is the max number entries for a user supplied stellar spectrum
+!!$  parameter (Nmax = 1000, nLambdam = 10000, nis = 2)
+!!$  double precision tau1, tau2, sum, a, b, xx(Nmax), e(Nmax), &
+!!$       aa(Nmax), bb(Nmax), tauIn(Nrec), ceta, x1, psf1, &
+!!$       lum, dist, var1, var2, var3, Lstar, th1, th2,      &
+!!$       lambdas(nLambdam), Llamstar(nLambdam), res, value, RDINP
+!!$  character lamstr(20)*72, strpow*72, strg*40, version*(*),stdf(7)*235
+!!$  character*(*) nameIn,nameOut, nameQ(npG),nameNK(10), namepsf*100, &
+!!$       nametau*100, anggrid*100,str*235
+!!$  logical Equal, noEqual, UCASE
+!!$!-----------------------------------------------------------------------
+!!$
+!!$  UCASE = .true.
+!!$  Equal = .true.
+!!$  noEqual = .false.
+!!$  error = 0
+!!$  geom = 0
+!!$
+!!$! Open output file
+!!$  open(12,file=nameOut,status='unknown')
+!!$  write(12,*)'==========================='
+!!$  write(12,*)' Output from program dusty '
+!!$  write(12,*)' version: ',version
+!!$  write(12,*)'==========================='
+!!$  write(12,*)' '
+!!$  write(12,*)' Input parameters from file: '
+!!$  write(12,'(2x,a140)')nameIn
+!!$  write(12,*)' '
+!!$
+!!$! Open input file
+!!$  open(1,err=998,file=nameIn,status='old')
+!!$  rewind(1)
+!!$
+!!$!********************************************
+!!$!** I. Geometry **
+!!$!********************************************
+!!$  call rdinps2(Equal,1,str,L,UCASE)
+!!$  if(str(1:L).eq.'SPHERE') then
+!!$   slb = .false.
+!!$   sph = .true.
+!!$   geom = 1
+!!$  elseif(str(1:L).eq.'SLAB') then
+!!$   slb = .true.
+!!$   sph = .false.
+!!$   geom = 0
+!!$  end if
+!!$
+!!$
+!!$!********************************************
+!!$!** II. Physical parameters **
+!!$!********************************************
+!!$! (1) Flags for presence of sources for slab these have the meaning
+!!$! of "left" and "right" source,
+!!$! illumination
+!!$  call rdinps2(Equal,1,str,L,UCASE)
+!!$  if(str(1:L).eq.'ON') then
+!!$   left = 1
+!!$  elseif(str(1:L).eq.'OFF') then
+!!$   left = 0
+!!$  end if
+!!$
+!!$  if(left.eq.0) then
+!!$   if(slb) then
+!!$    call msg(23)
+!!$    left = 1
+!!$   end if
+!!$  end if
+!!$
+!!$  call rdinps2(Equal,1,str,L,UCASE)
+!!$  if(str(1:L).eq.'ON') then
+!!$   right = 1
+!!$  elseif(str(1:L).eq.'OFF') then
+!!$   right = 0
+!!$  end if
+!!$
+!!$! 1.1) CENTRAL SOURCE RADIATION (left-side source for slab)
+!!$  if(left.gt.0) then
+!!$   call inp_rad(error,1,nameIn)
+!!$   if(error.ne.0) goto 996
+!!$! typentry give the scale of input radiation
+!!$   call rdinps2(Equal,1,str,L,UCASE)
+!!$   if (str(1:L).eq.'FLUX') then
+!!$    typentry(1) = 1
+!!$   elseif (str(1:L).eq.'LUM_R1') then
+!!$    typentry(1) = 2
+!!$   elseif (str(1:L).eq.'ENERGY_DEN') then
+!!$    typentry(1) = 3
+!!$   elseif (str(1:L).eq.'DILUTN_FAC') then
+!!$    typentry(1) = 4
+!!$   elseif (str(1:L).eq.'T1') then
+!!$    typentry(1) = 5
+!!$   end if
+!!$
+!!$! check if the entered value is acceptable
+!!$   if (typentry(1).lt.1.or.typentry(1).gt.5) then
+!!$    call msg(21)
+!!$    error = 1
+!!$    goto 999
+!!$   end if
+!!$   if (typentry(1).eq.1) then
+!!$    if (startyp(1).gt.3) then
+!!$!    for source spectrum in a file
+!!$!    get the scale of the input flux from the file
+!!$     call readspectar(lambdas,Llamstar,Lstar,nLs,1,error)
+!!$     dilutn = RDINP(Equal,1)
+!!$     Fint = dilutn*Lstar/pi
+!!$    else
+!!$!    typentry(1)=1: enter Fint, [W/m2]
+!!$!    N.B. in slab case Tei is calculated in this case
+!!$!    since the scaling flux is mu1*Fi,the local bol.flux Fint=L/(4*pi*r^2)
+!!$     Fint = RDINP(Equal,1)
+!!$    end if
+!!$    var1 = Fint
+!!$    Ji = Fint/(4.0d0*pi)
+!!$   else if (typentry(1).eq.2) then
+!!$!   enter luminosity [in Lo] of the source and distance r1[cm] to the source
+!!$    Lum = RDINP(Equal,1)
+!!$    dist = RDINP(Equal,1)
+!!$! all units in dusty are in SI, so convert the input
+!!$    var1 = Lum
+!!$    var2 = dist
+!!$    Lum = Lum*3.862d+26
+!!$    dist = dist/100.0d0
+!!$    Fint = Lum/(4.0d0*pi*dist*dist)
+!!$    Ji = Fint/(4.0d0*pi)
+!!$    Cr1 = dist
+!!$   else if (typentry(1).eq.3) then
+!!$    Ji = RDINP(Equal,1)
+!!$    var3 = Ji
+!!$   else if (typentry(1).eq.4) then
+!!$!   entry of dilution (normalization) factor
+!!$    dilutn = RDINP(Equal,1)
+!!$    if (startyp(1).gt.3) then
+!!$! get the scale of the input flux from the file
+!!$     call readspectar(lambdas,Llamstar,Lstar,nLs,1,error)
+!!$     Ji = dilutn*Lstar
+!!$    else
+!!$! for one Bbody Tstar=Tbb, for any other shape Dusty's default is Tstar=1e4 K.
+!!$     Ji = dilutn*sigma/pi*Tstar(1)**4.0d0
+!!$    end if
+!!$! var3 = dilutn
+!!$    var3 = Ji
+!!$    Fint = 4.0d0*pi*Ji
+!!$   elseif (typentry(1).eq.5) then
+!!$!   enter dust temperature on inner boundary, T1[K]
+!!$    Tsub(1) = RDINP(Equal,1)
+!!$    var1 = Tsub(1)
+!!$! in this case Tei (or Fint) is determined from the Rad.Equillibrium condition
+!!$! at the first y-grid point. the ini.approximation is in
+!!$! InitTemp and Tei is adjusted in FindTemp for ea. Td-iteration.
+!!$   end if
+!!$  else
+!!$! if no central source
+!!$   typentry(1) = 0
+!!$! end if for presence of central(left) source
+!!$  end if
+!!$
+!!$! for slab:
+!!$  if (slb) then
+!!$   write(12,'(a33)') ' Calculation in planar geometry:'
+!!$! find the kind of illumination
+!!$   call rdinps2(Equal,1,str,L,UCASE)
+!!$   if (str(1:L).eq.'DIRECTIONAL') then
+!!$   write(12,'(a41)') ' Directional illumination from the left.'
+!!$! enter incident theta_in:
+!!$! th1 the left illumination angle (in degrees) measured from the normal
+!!$   th1 = RDINP(Equal,1)
+!!$   elseif (str(1:L).eq.'ISOTROPIC') then
+!!$    th1 = -1.0d0
+!!$   end if
+!!$! for isotropic illumination
+!!$   if (th1.eq.-1.0d0) then
+!!$    write(12,'(a40)') ' Isotropic illumination from the left.'
+!!$! in this case th1=-1.0 is a flag for diffuse slab illumination,
+!!$! mu1 is set to -1.0 as a flag as well, not an actual value
+!!$    mu1 = -1.0d0
+!!$    if (typentry(1).eq.1.or.typentry(1).eq.2) then
+!!$     Ji = Fint/pi
+!!$    end if
+!!$! for directional illumination
+!!$   else
+!!$    write(12,'(a28,F5.2,a8)') ' Left illumination angle =',th1,' degrees'
+!!$    call chkangle(th1)
+!!$! convert to radians
+!!$    th1 = th1*pi/180.0d0
+!!$    mu1 = dcos(th1)
+!!$    if (typentry(1).eq.1.or.typentry(1).eq.2) then
+!!$     Ji = Fint/(4.0d0*pi)
+!!$    end if
+!!$   end if
+!!$   if (typentry(1).ge.2.and.th1.ne.-1.0d0) then
+!!$! for oblique illumination the input flux is Fint*mu1,
+!!$! scaling is with this flux. Since mu1 is read here
+!!$! Fint (resp. Tei) need recalculation:
+!!$! dabs(mu1) to accomodate the case with mu1=-1 (isotropic ill.)
+!!$! Fint = Fint*dabs(mu1)
+!!$   end if
+!!$   var1 = Fint
+!!$! even if no second source is supplied, mu2 needs a value
+!!$! of 1 to avoid crashing in the formulae in SLBStar [MN]
+!!$   mu2 = 1.0d0
+!!$   ksi = 0.0d0
+!!$  end if
+!!$
+!!$! 1.2) external radiation (right-side source for slab)
+!!$  if (right.gt.0) then
+!!$   call inp_rad(error,2,nameIn)
+!!$   if (error.ne.0) goto 996
+!!$   if (slb) then
+!!$      call rdinps2(Equal,1,str,L,UCASE)
+!!$    if (str(1:L).eq.'DIRECTIONAL') then
+!!$       write(12,'(a42)') '  Directional illumination from the right.'
+!!$       th2 = RDINP(Equal,1)
+!!$    elseif (str(1:L).eq.'ISOTROPIC') then
+!!$       write(12,'(a41)') ' Isotropic illumination from the right.'
+!!$       th2 = -1.0d0
+!!$    end if
+!!$!  ksi is the relative bol.flux of the second source
+!!$    ksi = RDINP(Equal,1)
+!!$    if (ksi.lt.0.0) ksi = 0.0d0
+!!$    if (ksi.gt.1.0) ksi = 1.0d0
+!!$    write(12,'(a49,F5.2)') ' Relative bol.flux fraction of right source: R =',ksi
+!!$    if (th2.eq.-1.0d0) then
+!!$! in this case th2=-1.0 is a flag for diffuse slab illumination,
+!!$! mu2is set to -1.0 as a flag as well, not an actual value
+!!$     mu2 = -1.0d0
+!!$    else
+!!$     write(12,'(a29,F5.2,a8)') ' Right illumination angle =',th2,' degrees'
+!!$     call chkangle(th2)
+!!$! convert to radians
+!!$     th2 = th2*pi/180.0d0
+!!$     mu2 = dcos(th2)
+!!$    end if
+!!$   elseif(sph) then
+!!$! for sphere:
+!!$    call rdinps2(Equal,1,str,L,UCASE)
+!!$! typentry(2) can be 1(flux), 2(lum,r1) 3 (en_den), 4 Tsub(1)
+!!$    if (str(1:L).eq.'FLUX') then
+!!$     typentry(2) = 1
+!!$    elseif (str(1:L).eq.'LUM_R1') then
+!!$     typentry(2) = 2
+!!$    elseif (str(1:L).eq.'ENERGY_DEN') then
+!!$     typentry(2) = 3
+!!$    elseif (str(1:L).eq.'DILUTN_FAC') then
+!!$     typentry(2) = 4
+!!$    end if
+!!$    if (typentry(2).gt.4) then
+!!$     call msg(22)
+!!$     error = 1
+!!$     goto 999
+!!$    end if
+!!$    if (typentry(2).eq.1) then
+!!$     if (startyp(2).gt.3) then
+!!$      call readspectar(lambdas,Llamstar,Lstar,nLs,1,error)
+!!$      dilutn = RDINP(Equal,1)
+!!$      Fo = dilutn*Lstar/pi
+!!$     else
+!!$!  enter Fo, [W/m2]
+!!$       Fo = RDINP(Equal,1)
+!!$     end if
+!!$     Jo = Fo/pi
+!!$    elseif(typentry(2).eq.2) then
+!!$! typEntry(2)=2: enter luminosity,[in Lo] of the source and
+!!$! distance r1,[cm] to the source
+!!$      lum = RDINP(Equal,1)
+!!$     dist = RDINP(Equal,1)
+!!$! all units in dusty are in SI, so convert the input
+!!$     lum = lum*3.862d+26
+!!$     dist = dist/100.0d+00
+!!$!  Cr1 is carried in common/dyn/
+!!$     Cr1 = dist
+!!$     Fo = lum/(4.0d+00*pi*dist*dist)
+!!$     Jo = Fo/pi
+!!$    elseif (typentry(2).eq.3) then
+!!$     Jo = RDINP(Equal,1)
+!!$     Fo = pi*Jo
+!!$    elseif(typentry(2).eq.4) then
+!!$! typentry(2)=4 for entry of dilution (normalization) factor
+!!$     dilutn = RDINP(Equal,1)
+!!$     if (startyp(2).gt.3) then
+!!$! get the scale of the input flux from the file
+!!$     call readspectar(lambdas,Llamstar,Lstar,nLs,2,error)
+!!$     Jo = dilutn*Lstar
+!!$    else
+!!$! for one blackbody Tstar=Tbb, for any other shape
+!!$! dusty's default is Tstar =1e4 K.
+!!$     Jo = dilutn*sigma/pi*Tstar(2)**4.0d0
+!!$    end if
+!!$!   var3 = dilutn
+!!$    Fo = pi*Ji
+!!$   end if
+!!$   var3 = Jo
+!!$! end if for geometry
+!!$   end if
+!!$  else
+!!$! if no external radiation -- set to 0
+!!$   typentry(2) = 0
+!!$! end if for second source
+!!$  end if
+!!$!! line added for clarity in the .out file [MN]
+!!$  write(12,*) ' --------------------------------------------'
+!!$
+!!$!=========  END READING OF SOURCE PARAMETERS ===================
+!!$
+!!$! (2) DUST PROPERTIES
+!!$! # of different dust grains, to be used in a future version
+!!$  nG = 1
+!!$! 2.1 Chemical composition
+!!$! Type of optical properties
+!!$  call rdinps2(Equal,1,str,L,UCASE)
+!!$  if (str(1:L).eq.'COMMON_GRAIN') then
+!!$   top = 1
+!!$  elseif (str(1:L).eq.'COMMON_AND_ADDL_GRAIN') then
+!!$   top = 2
+!!$  elseif (str(1:L).eq.'TABULATED') then
+!!$   top = 3
+!!$  end if
+!!$  if (top.ne.1.and.top.ne.2.and.top.ne.3) then
+!!$   call msg(9)
+!!$   error = 1
+!!$   goto 999
+!!$  end if
+!!$! For top.lt.3 read in abundances for supported grains
+!!$  if (top.lt.3) then
+!!$     xC(1) = RDINP(Equal,1)
+!!$     if (xC(1).lt.0.0d0) xC(1) = 0.0d0
+!!$     sum = xC(1)
+!!$     do i = 2, 7
+!!$! Special care to be taken of graphite (1/3-2/3 rule):
+!!$       if (i.ne.5) then
+!!$          xC(i) = RDINP(noEqual,1)
+!!$          if (xC(i).lt.0.0d0) xC(i) = 0.0d0
+!!$!        i Equal 4 is data for graphite (parallel to c axis):
+!!$          if(i.eq.4) xC(i) = 1.0d0*xC(i)/3.0d0
+!!$      else
+!!$! graphite (perpendicular to c axis) :
+!!$          xC(i) = 2.0d0 * xC(i-1)
+!!$      end if
+!!$      sum = sum + xC(i)
+!!$     end do
+!!$  end if
+!!$
+!!$! Assign supported dust filenames to stdf
+!!$  do i = 1,7
+!!$   if (i.eq.1) write(stdf(i),'(a)')"stnd_dust_lib/OssOdef.nk"
+!!$   if (i.eq.2) write(stdf(i),'(a)')"stnd_dust_lib/OssOrich.nk"
+!!$   if (i.eq.3) write(stdf(i),'(a)')"stnd_dust_lib/sil-dlee.nk"
+!!$   if (i.eq.4) write(stdf(i),'(a)')"stnd_dust_lib/gra-par-draine.nk"
+!!$   if (i.eq.5) write(stdf(i),'(a)')"stnd_dust_lib/gra-perp-draine.nk"
+!!$   if (i.eq.6) write(stdf(i),'(a)')"stnd_dust_lib/amC-hann.nk"
+!!$   if (i.eq.7) write(stdf(i),'(a)')"stnd_dust_lib/SiC-peg.nk"
+!!$  enddo
+!!$! user supplied n and k:
+!!$  if (top.eq.2) then
+!!$     nfiles = RDINP(Equal,1)
+!!$! File names
+!!$   strg = 'optical constants:'
+!!$   do i = 1, nfiles
+!!$    call filemsg(nameNK(i),strg)
+!!$   end do
+!!$   if(error.ne.0) goto 996
+!!$! Abundances
+!!$   xCuser(1) = RDINP(Equal,1)
+!!$   if (xCuser(1).lt.0.0d0) xCuser(1) = 0.0d0
+!!$   sum = sum + xCuser(1)
+!!$   if (nfiles.gt.1) then
+!!$    do i = 2, nfiles
+!!$     xCuser(i) = RDINP(noEqual,1)
+!!$     if (xCuser(i).lt.0.0d0) xCuser(i) = 0.0d0
+!!$     sum = sum + xCuser(i)
+!!$    end do
+!!$   end if
+!!$  end if
+!!$  if (top.lt.3) then
+!!$   if (sum.le.0.0d0) then
+!!$    call msg(5)
+!!$    error = 1
+!!$    goto 999
+!!$   end if
+!!$! Normalize abundances for supported grains:
+!!$   do i = 1, 7
+!!$    xC(i) = xC(i) / sum
+!!$   end do
+!!$! Normalize abundances for user supplied grains
+!!$   if (top.eq.2) then
+!!$    do i = 1, nfiles
+!!$     xCuser(i) = xCuser(i) / sum
+!!$    end do
+!!$   end if
+!!$  end if
+!!$! user supplied cross-sections:
+!!$  if (top.eq.3) then
+!!$! filename for qabs and qsca
+!!$   strg= 'abs. and scatt. cross-sections:'
+!!$   do iG = 1, nG
+!!$    call filemsg(nameQ(iG),strg)
+!!$   end do
+!!$  end if
+!!$! 2.2 Grain size distribution
+!!$  if (top.ne.3) then
+!!$! Type of size distribution
+!!$   call rdinps2(Equal,1,str,L,UCASE)
+!!$   if (str(1:L).eq.'MRN') then
+!!$    szds = 1
+!!$   elseif (str(1:L).eq.'MODIFIED_MRN') then
+!!$    szds = 2
+!!$   elseif (str(1:L).eq.'KMH') then
+!!$    szds = 3
+!!$   end if
+!!$
+!!$   if (szds.ne.1.and.szds.ne.2.and.szds.ne.3) then
+!!$    call msg(10)
+!!$    error = 1
+!!$    goto 999
+!!$   end if
+!!$! Grain sizes
+!!$   if (szds.gt.1) then
+!!$      qsd = RDINP(Equal,1)
+!!$      a1 = RDINP(Equal,1)
+!!$    if (a1.le.0.0) a1 = 0.0001d0
+!!$      a2 = RDINP(Equal,1)
+!!$    if (szds.eq.2.and.a2.lt.a1) a2 = a1
+!!$   else
+!!$    qsd = 3.5d0
+!!$    a1 = 0.005d0
+!!$    a2 = 0.25d0
+!!$   end if
+!!$  end if
+!!$!=========  END READING DUST PROPERTIES ===================
+!!$
+!!$! WriteOut prints all input data, read so far, in fname.out
+!!$! var1 is t1,fe1,luminosity or teff; var2 is r1; var3 is ext.rad. input
+!!$  call WriteOut(var1,var2,var3,nG,nameQ,nameNK)
+!!$
+!!$! (3) Density distribution
+!!$! For sphere only:
+!!$  if(sph) then
+!!$   powd  = .false.
+!!$   expd  = .false.
+!!$   rdw   = .false.
+!!$   rdwa  = .false.
+!!$   fild  = .false.
+!!$   rdwpr = .false.
+!!$! Parameter describing eta function:
+!!$   call rdinps2(Equal,1,str,L,UCASE)
+!!$   if (str(1:L).eq.'POWD') then
+!!$    powd = .true.
+!!$    denstyp = 1
+!!$   elseif (str(1:L).eq.'EXPD') then
+!!$    expd = .true.
+!!$    denstyp = 2
+!!$! *** Winds ***
+!!$! denstyp.eq.3 is RDW with default values of v1/ve=0.2, GravCor=0.5
+!!$! denstyp.eq.6 is a private option with additional input for v1/ve and
+!!$! GravCor=max(Fgrav/Frad);
+!!$   elseif (str(1:L).eq.'RDW') then
+!!$    rdw = .true.
+!!$    denstyp = 3
+!!$! analytical (gray) approximation for rdw
+!!$  elseif (str(1:L).eq.'RDWA') then
+!!$    rdwa = .true.
+!!$    denstyp = 4
+!!$! file with user supplied density distribution
+!!$    elseif (str(1:L).eq.'USER_SUPPLIED') then
+!!$    fild = .true.
+!!$    denstyp = 5
+!!$!  private option for RDW with additional output
+!!$   elseif (str(1:L).eq.'RDWPR') then
+!!$    rdwpr = .true.
+!!$    denstyp = 6
+!!$   end if
+!!$! initialize EtaOK and Ntr
+!!$   EtaOK = 0
+!!$   Ntr = 0
+!!$! read parameters for each type of density distribution
+!!$! smooth or broken power laws
+!!$   if (powd) then
+!!$    EtaOK = 1
+!!$    Ntr = RDINP(Equal,1)
+!!$! changed definition
+!!$    Ntr = Ntr - 1
+!!$! read in transition radii
+!!$    if (Ntr.gt.0) then
+!!$      Ytr(1) = RDINP(Equal,1)
+!!$      if (Ntr.gt.1) then
+!!$        do i = 2, Ntr
+!!$          Ytr(i) = RDINP(NoEqual,1)
+!!$        end do
+!!$      end if
+!!$      Yout = RDINP(noEqual,1)
+!!$    else
+!!$! for smooth density power law
+!!$      Yout = RDINP(Equal,1)
+!!$    end if
+!!$    if (Yout.le.1.0d0) Yout = 1.001d0
+!!$! read in powers
+!!$    pow = RDINP(Equal,1)
+!!$    if (Ntr.gt.0) then
+!!$      do i = 1, Ntr
+!!$         ptr(i) = RDINP(NoEqual,1)
+!!$      end do
+!!$    end if
+!!$! print info to the output file
+!!$    if (Ntr.eq.0) then
+!!$     call getfs(pow,2,0,strpow)
+!!$     write(12,'(a38,a5)') ' density described by 1/r**k with k =',strpow
+!!$     write(12,'(a21,1p,e10.3)')'  relative thickness:',Yout
+!!$    else
+!!$     write(12,*)' density described by a broken power law:'
+!!$     write(12,*)'  power   Ytransition'
+!!$     write(12,*)'  -------------------'
+!!$     write(12,*)'              1.0'
+!!$     call getfs(pow,2,0,strpow)
+!!$     write(12,'(a2,a5)')'  ',strpow
+!!$     do i = 1, Ntr
+!!$      write(12,'(a10,1p,e10.3)')'          ',Ytr(i)
+!!$      call getfs(ptr(i),2,0,strpow)
+!!$      write(12,'(a2,a5)')'  ',strpow
+!!$     end do
+!!$     write(12,'(a10,1p,e10.3)')'          ',Yout
+!!$    end if
+!!$   end if
+!!$
+!!$! exponential law
+!!$   if (expd) then
+!!$     EtaOK = 1
+!!$     Yout = RDINP(Equal,1)
+!!$     if (Yout.le.1.0d0) Yout = 1.001d0
+!!$       pow = RDINP(Equal,1)
+!!$       if (pow.le.0.0d0) then
+!!$       EtaOK = 0
+!!$     else
+!!$       write(12,*)' density described by exponential distribution'
+!!$       write(12,'(a21,1p,e10.3)')'               sigma:',pow
+!!$       write(12,'(a21,1p,e10.3)')'  relative thickness:',Yout
+!!$     end if
+!!$   end if
+!!$! default approximation and default numerics for rad. driven winds
+!!$   if (rdwa.or.rdw) then
+!!$     EtaOK = 1
+!!$     Yout = RDINP(Equal,1)
+!!$     if (Yout.le.1.0d0) Yout = 1.001d0
+!!$! ** default ** for epsilon = v1/ve = u1/ue:
+!!$     pow = 0.2d0
+!!$     if(rdw) then
+!!$! ** default ** for max(gravcor = fgrav/frad_press):
+!!$      ptr(1) = 0.5d0
+!!$! convergence criterion:
+!!$      ptr(2) = 1.0d0
+!!$! default linear version of the eq. for velocity
+!!$      ver = 1
+!!$     end if
+!!$     write(12,*)' Density for radiatively driven winds from'
+!!$     if (rdwa) then
+!!$       write(12,*)' Analytic approximation for gray dust.'
+!!$     else
+!!$       write(12,*)' Full dynamic calculation.'
+!!$     end if
+!!$     write(12,'(a21,1p,e10.3)')'  Relative thickness:',Yout
+!!$   end if
+!!$! full dynamical calculation for radiatively driven winds (private option)
+!!$! the user can specify parameters that have default values in denstyp=3
+!!$! user specified table for eta
+!!$   if(fild) then
+!!$    EtaOK = 1
+!!$    strg = 'Dust density distribution:'
+!!$    call filemsg(nameeta,strg)
+!!$    write(12,*)' Density distribution supplied from file:'
+!!$    write(12,'(2x,a100)') nameeta
+!!$    call prHeader(3,nameeta)
+!!$! read in the density
+!!$    open(26,err=997,file=nameeta,status='old')
+!!$! three lines in the header:
+!!$    do i = 1, 3
+!!$      read(26,*,err=997) strpow
+!!$    end do
+!!$    istop = 0
+!!$    i = 0
+!!$    do while (istop.ge.0)
+!!$     read(26,*,end=900,err=997,iostat=istop) a, b
+!!$     if (istop.ge.0) then
+!!$      i = i + 1
+!!$      xx(i) = a
+!!$      e(i) = b
+!!$      if (i.eq.1) x1 = xx(i)
+!!$      yetaf(i) = xx(i) / x1
+!!$     end if
+!!$    end do
+!!$900 close(26)
+!!$    nYetaf = i
+!!$    if (nYetaf.lt.2) goto 997
+!!$! if input positions in descending order turn them around
+!!$    if (yetaf(1).gt.yetaf(2)) then
+!!$     do i = 1, nYetaf
+!!$      aa(i) = yetaf(i)
+!!$      bb(i) = e(i)
+!!$     end do
+!!$     do i = 1, nYetaf
+!!$      yetaf(i) = aa(nYetaf+1-i)
+!!$      e(i) = bb(nYetaf+1-i)
+!!$     end do
+!!$    end if
+!!$! relative thickness
+!!$    Yout = yetaf(nYetaf)
+!!$    write(12,'(a21,1p,e10.3)')'  relative thickness:',Yout
+!!$    if (Yout.le.1.0d0) Yout = 1.001d0
+!!$! integrate and ...
+!!$    call Simpson(Nmax,1,nYetaf,yetaf,e,ceta)
+!!$! ... renormalize
+!!$    do i = 1, nYetaf
+!!$     etaf(i) = e(i) / ceta
+!!$    end do
+!!$   end if
+!!$! Done with the reading of density distribution
+!!$   if (EtaOK.ne.1) then
+!!$    call msg(3)
+!!$    error = 1
+!!$    goto 999
+!!$   end if
+!!$   write(12,*)' --------------------------------------------'
+!!$  end if
+!!$!=========  End reading density distribution ===================
+!!$
+!!$! 4) Optical depth
+!!$! Grid type
+!!$  call rdinps2(Equal,1,str,L,UCASE)
+!!$  if (str(1:L).eq.'LINEAR') then
+!!$   GridType = 1
+!!$  elseif (str(1:L).eq.'LOGARITHMIC') then
+!!$   GridType = 2
+!!$  elseif (str(1:L).eq.'USER_SUPPLIED') then
+!!$   GridType = 3
+!!$  end if
+!!$  if (GridType.eq.3) then
+!!$! tau-grid from a file
+!!$    strg = 'user supplied tau-grid:'
+!!$    call filemsg(nametau,strg)
+!!$! read optical depths
+!!$    open(27,err=992,file=nametau,status='old')
+!!$! fiducial wavelength
+!!$! (the second argument of rdinp is the unit)
+!!$    lamfid = RDINP(Equal,27)
+!!$! number of models in the list
+!!$    Nmodel = RDINP(Equal,27)
+!!$    do i = 1, Nmodel
+!!$      read(27,*) tauIn(i)
+!!$    end do
+!!$902 close(27)
+!!$! Sort the tau-grid if there is more than one model:
+!!$    if(Nmodel.gt.1) then
+!!$      call sort(tauIn,Nmodel)
+!!$    end if
+!!$    tau1 = tauIn(1)
+!!$    if (tau1.le.0.0d0) tau1 = 0.0001d0
+!!$    tau2 = tauIn(Nmodel)
+!!$  else
+!!$! fiducial wavelength
+!!$      lamfid = RDINP(Equal,1)
+!!$! total optical depths at lamfid
+!!$      TAU1 = RDINP(Equal,1)
+!!$   if (tau1.le.0.0d0) tau1 = 0.0001d0
+!!$      TAU2 = RDINP(Equal,1)
+!!$   if (tau2.le.tau1) then
+!!$    tau2 = tau1
+!!$    Nmodel = 1
+!!$   end if
+!!$! read number of models
+!!$     Nmodel = RDINP(Equal,1)
+!!$! Nrec = 1000, initialized in MAIN
+!!$   if (Nmodel.gt.(Nrec-1)) Nmodel = Nrec-1
+!!$   if (Nmodel.lt.1) Nmodel = 1
+!!$  end if
+!!$  if (Nmodel.gt.1) then
+!!$   write(12,'(a19,1p,e8.1,a8)')' Optical depths at',lamfid, 'microns'
+!!$   write(12,'(a14,1p,e9.2,a3,e9.2)')' ranging from',tau1,' to',tau2
+!!$   if (GridType.eq.1) strg=' models with linear grid    '
+!!$   if (GridType.eq.2) strg=' models with logarithmic grid'
+!!$   if (GridType.eq.3) strg=' models with grid from file  '
+!!$   write(12,'(a1,i4,a)')' ', Nmodel, strg
+!!$   if (GridType.eq.3) write(12,'(a4,a70)')'    ',nametau
+!!$  else
+!!$   write(12,'(a18,1p,e8.1,a9,e9.2)')' Optical depth at',lamfid, ' microns:',tau1
+!!$  end if
+!!$
+!!$! 5) disk
+!!$! for disk calculations make sure you have npX>1 in 'userpar.inc' !!
+!!$  if (npX.gt.1) then
+!!$   if (iVerb.ge.1) write(*,*) 'No disk option in this version.'
+!!$   goto 999
+!!$  end if
+!!$
+!!$!********************************************
+!!$!** III. Numerical accuracy **
+!!$!********************************************
+!!$! accuracy for convergence (typical 0.0001)
+!!$!!** this is accConv for dust temperature
+!!$!!**  accConv = 10.0d-3  !! Too rough.
+!!$!  accConv = 1.0d-4  !tests on July,8,2010  1e-4 and 1e-6 give very close results
+!!$! accuracy for flux conservation
+!!$  accuracy = RDINP(Equal,1)
+!!$  accConv = RDINP(Equal,1)
+!!$  if (accuracy.le.0.0d0) accuracy = 0.02d0
+!!$! Protect against a very large value for accuracies
+!!$  if (accuracy.gt.0.25d0) accuracy = 0.25d0
+!!$! starting optical depth
+!!$  init_tau = RDINP(Equal,1)
+!!$! increment in optical depth
+!!$  dtau = RDINP(Equal,1)
+!!$! dynamical range
+!!$  dynrange = 1.0d-15
+!!$  if (accuracy.ge.0.1d0) then
+!!$   call getfs(accuracy*1000.0d0,0,1,strpow)
+!!$   write(12,'(a20,a3,a1)')' Required accuracy:',strpow,'%'
+!!$  else
+!!$   call getfs(accuracy*100.0d0,0,1,strpow)
+!!$   write(12,'(a20,a2,a1)')' Required accuracy:',strpow,'%'
+!!$  end if
+!!$!  write(12,*)' --------------------------------------------'
+!!$
+!!$!********************************************
+!!$!** IV. Output flags **
+!!$!********************************************
+!!$! Internal flag for additional miscellaneous output  [MN]:
+!!$! if iInn=1: print err.vs.iter in unt=38 (fname.err) for all models
+!!$! and additionally list scaled fbol(y) and ubol(y) in m-files.
+!!$  iInn = 1
+!!$  iPhys = 0
+!!$!  spectra
+!!$  iA = RDINP(Equal,1)
+!!$  iC = RDINP(Equal,1)
+!!$! images (intensity)
+!!$  if (iC.ne.0) then
+!!$    if (slb) then
+!!$! Read angular grid (this is theta_out) for slab intensity output.
+!!$! the output intensities are in units of lambda*I_lambda*cos(theta_out)/Fe
+!!$! where Fe=L/(4*pi*r^2), the local bolometric flux.
+!!$     ang_type = RDINP(Equal,1)
+!!$!    Create the grid depending on grid type
+!!$!    1-equidistant in theta, 2-equidistant in cos(theta), 3-from a file
+!!$     call input_slb_ang(ang_type)
+!!$!    Convert to radians
+!!$     do imu = 1, nmu
+!!$      theta(imu) = theta(imu)*pi/180.0d0
+!!$     end do
+!!$     iV = 0
+!!$     iPsf = 0
+!!$    else
+!!$! for spherical case
+!!$     NlambdaOut = RDINP(Equal,1)
+!!$     if (nLambdaOut.ge.1) then
+!!$      do i = 1, nLambdaOut
+!!$         LambdaOut(i) = RDINP(NoEqual,1)
+!!$!  make sure the wavelengths are inside dusty's range
+!!$        if (LambdaOut(i).le.0.01d0) LambdaOut(i) = 0.01d0
+!!$        if (LambdaOut(i).gt.36000.0d0) LambdaOut(i) = 36000.0d0
+!!$      end do
+!!$      ioverflw = 0
+!!$      do i = 1, nLambdaOut
+!!$        if (LambdaOut(i).lt.0.995d0) then
+!!$           call getfs(LambdaOut(i),2,1,lamstr(i))
+!!$        else
+!!$          if (LambdaOut(i).lt.9.95d0) then
+!!$            call getfs(LambdaOut(i),1,0,lamstr(i))
+!!$          else
+!!$             if (LambdaOut(i).lt.99.5d0) then
+!!$               call getfs(LambdaOut(i),0,0,lamstr(i))
+!!$             else
+!!$               call getfs(LambdaOut(i),0,1,lamstr(i))
+!!$             end if
+!!$          end if
+!!$        end if
+!!$        if (LambdaOut(i).gt.9999.5d0) then
+!!$          ioverflw = 1
+!!$          strpow = lamstr(i)
+!!$          strpow(4:4) = '*'
+!!$          strpow(5:5) = ' '
+!!$          lamstr(i) = strpow
+!!$        end if
+!!$      end do
+!!$     end if
+!!$    write(12,*)' Images requested for these wavelengths (mic)'
+!!$    write(12,'(a1,20a5)')' ',(lamstr(i),i=1,nLambdaOut)
+!!$    if (ioverflw.eq.1) write(12,*)'  *: in mm'
+!!$! Convolved images  (only for our use)
+!!$    if (iC.lt.0) then
+!!$     iPsf = 1
+!!$! iPsf = rdinp(Equal,1)
+!!$     if (iPsf.ne.0) then
+!!$      Theta1 = RDINP(Equal,1)
+!!$      write(12,'(a39,1p,e7.1)') ' Convolved images produced for theta1=',theta1
+!!$       psftype = RDINP(Equal,1)
+!!$      if (psftype.ne.1.and.psftype.ne.2.and.psftype.ne.3) goto 994
+!!$      if (psftype.lt.3) then
+!!$! Gaussians, read in parameters
+!!$! FWHM for the first component
+!!$       FWHM1(1) = RDINP(Equal,1)
+!!$       if (nLambdaOut.gt.1) then
+!!$        do i = 2, nLambdaOut
+!!$           FWHM1(i) = RDINP(NoEqual,1)
+!!$        end do
+!!$       end if
+!!$       if (psftype.eq.2) then
+!!$! Relative strength for the second component
+!!$        kPSF(1) = RDINP(Equal,1)
+!!$        if (nLambdaOut.gt.1) then
+!!$         do i = 2, nLambdaOut
+!!$           kPSF(i) = RDINP(NoEqual,1)
+!!$         end do
+!!$        end if
+!!$!       FWHM for the second component
+!!$        FWHM2(1) = RDINP(Equal,1)
+!!$        if (nLambdaOut.gt.1) then
+!!$         do i = 2, nLambdaOut
+!!$           FWHM2(i) = RDINP(NoEqual,1)
+!!$         end do
+!!$        end if
+!!$       end if
+!!$       write(12,*)' the point spread functions are gaussians'
+!!$      else
+!!$! user supplied psf
+!!$       strg = 'point spread function:'
+!!$       call filemsg(namepsf,strg)
+!!$       write(12,*)' the point spread function supplied from file'
+!!$       write(12,'(2x,a100)')namepsf
+!!$       open(28,err=995,file=namepsf,status='old')
+!!$! Three lines in the header:
+!!$       do i = 1, 3
+!!$        read(28,*,err=995)
+!!$       end do
+!!$       istop = 0
+!!$       i = 0
+!!$       do while (istop.ge.0)
+!!$        read(28,*,end=901,err=995,iostat=istop)a, b
+!!$        if (istop.ge.0) then
+!!$         i = i + 1
+!!$         if (i.eq.1) then
+!!$          psf1 = b
+!!$          if (a.ne.0.0d0) goto 995
+!!$         end if
+!!$         xpsf(i) = a
+!!$         ypsf(i) = b / psf1
+!!$        end if
+!!$       end do
+!!$901    close(28)
+!!$       Npsf = i
+!!$!      scale to 1 at the center. This is only to get FWHM here.
+!!$!      ypsf is normalized to area in Subroutine Convolve [MN]
+!!$       call scaleto1(1000,npsf,ypsf)
+!!$!      Find equivalent fwhm
+!!$       istop = 0
+!!$       i = 1
+!!$       do while (istop.eq.0)
+!!$        i = i + 1
+!!$        if (ypsf(i).le.0.5d0) istop = 1
+!!$       end do
+!!$!      Linear interpolation
+!!$       FWHM1(1) = (xpsf(i)-xpsf(i-1))/(ypsf(i)-ypsf(i-1))
+!!$       FWHM1(1) = (fwhm1(1)*(0.5d0-ypsf(i-1))+xpsf(i-1))*2.0d0
+!!$       FWHM2(1) = 0.0d0
+!!$       write(12,'(a18,1p,e8.1)')' equivalent FWHM:',FWHM1(1)
+!!$! end if for psf from a file
+!!$      end if
+!!$! end if for psf
+!!$     end if
+!!$! end if for convolved images
+!!$    end if
+!!$
+!!$! visibility (only if the intensity is requested)
+!!$    iV = RDINP(Equal,1)
+!!$    if(iV.ne.0) iV = abs(iC)
+!!$! end if for geometry
+!!$   end if
+!!$   write(12,*)' --------------------------------------------'
+!!$  else
+!!$! if iC=0 set the other flags to 0 (just in case).
+!!$   iPsf = 0
+!!$   iV = 0
+!!$   write(12,*)' --------------------------------------------'
+!!$  end if
+!!$
+!!$! ---- added printout of lam*J_lam/J for sphere [MN'10] ------------
+!!$  if(SPH) then
+!!$   iJ = RDINP(Equal,1)          
+!!$   if(iJ.GT.0) then
+!!$     nJOut = RDINP(Equal,1)                                                                 
+!!$     if (nJOut.ge.1) then
+!!$       do i = 1, nJOut
+!!$         YJOut(i) = RDINP(NoEqual,1)                                                         
+!!$!        make sure the radii are inside Dusty's range
+!!$         if (YJOut(i).le.1.0) YJOut(i) = 1.0
+!!$         if (YJOut(i).gt.Yout) YJOut(i) = Yout
+!!$       end do
+!!$     end if
+!!$     write(12,*)' En.density profile requested for these y:'
+!!$     write(12,'(a1,1p,10e12.3)')' ',(YJOut(i),i=1,nJOut)  
+!!$     write(12,*)' --------------------------------------------'
+!!$   end if
+!!$  end if
+!!$! radial quantities
+!!$  iB = RDINP(Equal,1)
+!!$! run-time messages
+!!$  iX = RDINP(Equal,1)
+!!$! *** DONE READING INPUT PARAMETERS ***
+!!$
+!!$! if everything is ok, close the input file and finish
+!!$999 goto 996
+!!$! or in the case of err reading files...
+!!$920 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
+!!$  write(12,*)' File with user supplied angular grid:   '
+!!$  write(12,*)'     slab_ang_grid.dat                   '
+!!$  write(12,*)' is missing or not properly formatted?!  '
+!!$  write(12,*)' ****************************************'
+!!$  close(12)
+!!$  error = 3
+!!$992 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
+!!$  write(12,*)' File with user supplied TAU-grid:       '
+!!$  write(12,'(2x,a100)') nameTAU
+!!$  write(12,*)' is missing or not properly formatted?!  '
+!!$  write(12,*)' ****************************************'
+!!$!  close(12)
+!!$  error = 3
+!!$  goto 996
+!!$994 call MSG(12)
+!!$!  close(12)
+!!$  error = 3
+!!$  goto 996
+!!$995 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
+!!$  write(12,*)' File with the point spread function:    '
+!!$  write(12,'(a2,a100)')'  ', namePSF
+!!$  write(12,*)' is missing or not properly formatted?!  '
+!!$  write(12,*)' ****************************************'
+!!$!  close(12)
+!!$  error = 3
+!!$997 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
+!!$  write(12,*)' File with the dust density distribution:'
+!!$  write(12,'(2x,a100)') nameETA
+!!$  write(12,*)' is missing or not properly formatted?!  '
+!!$  write(12,*)' ****************************************'
+!!$!  close(12)
+!!$  error = 3
+!!$998 write(12,*)' ***  FATAL ERROR IN DUSTY  ****'
+!!$  write(12,*)' Input file:'
+!!$  write(12,'(2x,a100)') nameIn
+!!$  write(12,*)' is missing?!'
+!!$  write(12,*)' *******************************'
+!!$!  close(12)
+!!$  error = 3
+!!$!-----------------------------------------------------------------------
+!!$996  close(1)
+!!$  return
+!!$end subroutine Input_old
+!!$!***********************************************************************
+
+
 !***********************************************************************
 subroutine inp_rad(error,is,nameIn)
 !=======================================================================
@@ -5666,111 +6519,100 @@ subroutine inp_rad(error,is,nameIn)
   Tstar(is) = 10000.0d0
 ! Flag for the external spectrum
   call rdinps2(Equal,1,str,L,UCASE)
-  if (str(1:L).eq.'BLACK_BODY') then
-   startyp(is) = 1
-  elseif(str(1:L).eq.'ENGELKE_MARENGO') then
-   startyp(is) = 2
-  elseif(str(1:L).eq.'POWER_LAW') then
-   startyp(is) = 3
-  elseif(str(1:L).eq.'FILE_LAMBDA_F_LAMBDA') then
-   startyp(is) = 4
-  elseif(str(1:L).eq.'FILE_F_LAMBDA') then
-   startyp(is) = 5
-  elseif(str(1:L).eq.'FILE_F_NU') then
-   startyp(is) = 6
-  end if
-
+  if (str(1:L).eq.'BLACK_BODY') startyp(is) = 1
+  if(str(1:L).eq.'ENGELKE_MARENGO') startyp(is) = 2
+  if(str(1:L).eq.'POWER_LAW') startyp(is) = 3
+  if(str(1:L).eq.'FILE_LAMBDA_F_LAMBDA') startyp(is) = 4
+  if(str(1:L).eq.'FILE_F_LAMBDA') startyp(is) = 5
+  if(str(1:L).eq.'FILE_F_NU') startyp(is) = 6
 ! (1) Black body(ies) for startyp=1
-  if(startyp(is).eq.1) then
+  if (startyp(is).eq.1) then
 ! Number of black bodies
-   nBB(is) = RDINP(Equal,1)
+     nBB(is) = RDINP(Equal,1)
 ! Stellar temperature(s)
-   Tbb(is,1) = RDINP(Equal,1)
-   if (Tbb(is,1).le.0.0d0) then
-    call msg(8)
-    error = 1
-    goto 999
-   end if
-! Single black body
-   if (nbb(is).eq.1) then
-    Tstar(is) = Tbb(is,1)
-!    relative luminosity
-    rellum(is,1) = 1.0d0
-   endif  !end if for one bb
-! Multiple black bodies
-   if (nbb(is).gt.1) then
-    do i = 2, nbb(is)
-     Tbb(is,i) = RDINP(NoEqual,1)
-     if (Tbb(is,i).le.0.0d0) then
-      call msg(8)
-      error = 1
-      goto 999
+     Tbb(is,1) = RDINP(Equal,1)
+     if (Tbb(is,1).le.0.0d0) then
+        call msg(8)
+        error = 1
+        goto 999
      end if
-    end do
+! Single black body
+     if (nbb(is).eq.1) then
+        Tstar(is) = Tbb(is,1)
+!    relative luminosity
+        rellum(is,1) = 1.0d0
+     endif  !end if for one bb
+! Multiple black bodies
+     if (nbb(is).gt.1) then
+        do i = 2, nbb(is)
+           Tbb(is,i) = RDINP(NoEqual,1)
+           if (Tbb(is,i).le.0.0d0) then
+              call msg(8)
+              error = 1
+              goto 999
+           end if
+        end do
 ! Read in relative luminosities
-    rellum(is,1) = RDINP(Equal,1)
-    sum = rellum(is,1)
-    do i = 2, nbb(is)
-     rellum(is,i) = RDINP(NoEqual,1)
-     sum = sum + rellum(is,i)
-    end do
-    if (sum.le.0.0d0) then
-     call msg(7)
-     error = 1
-     goto 999
-    end if
+        rellum(is,1) = RDINP(Equal,1)
+        sum = rellum(is,1)
+        do i = 2, nbb(is)
+           rellum(is,i) = RDINP(NoEqual,1)
+           sum = sum + rellum(is,i)
+        end do
+        if (sum.le.0.0d0) then
+           call msg(7)
+           error = 1
+           goto 999
+        end if
 ! Normalize
-    tsum = 0.0d0
-    do i = 1, nbb(is)
-     rellum(is,i) = rellum(is,i)/sum
-     tsum = tsum + rellum(is,i)*Tbb(is,i)**(4.0d0)
-    end do
-    Tstar(is) = (tsum)**(0.25d0)
-   end if ! end if for multiple bb
+        tsum = 0.0d0
+        do i = 1, nbb(is)
+           rellum(is,i) = rellum(is,i)/sum
+           tsum = tsum + rellum(is,i)*Tbb(is,i)**(4.0d0)
+        end do
+        Tstar(is) = (tsum)**(0.25d0)
+     end if ! end if for multiple bb
   end if  ! end if for bb-type or startype 1
-
 ! (2) engelkd-marengo function for startyp=2
   if(startyp(is).eq.2) then
 ! Effective stellar temperature
-    Tbb(is,1) = RDINP(Equal,1)
-    Tstar(is) = Tbb(1,1)
+     Tbb(is,1) = RDINP(Equal,1)
+     Tstar(is) = Tbb(1,1)
 ! Depth of SiO abs.feature in %
-    xSiO = RDINP(Equal,1)
-   if (xSiO.le.0.0d0) xSiO = 0.0001d0
-   if (xSiO.gt.100.0d0) xSiO = 100.0d0
+     xSiO = RDINP(Equal,1)
+     if (xSiO.le.0.0d0) xSiO = 0.0001d0
+     if (xSiO.gt.100.0d0) xSiO = 100.0d0
   end if
-
 ! (3) Power-law(s) for startyp=3
   if(startyp(is).eq.3) then
 ! Number of transitions
-   Nlamtr(is)= RDINP(Equal,1)
-   if (nLamtr(is).gt.0) then
-    lamtr(is,1) = RDINP(Equal,1)
-    if (nLamtr(is).gt.1) then
-     do i = 2, nLamtr(is)+1
-      lamtr(is,i) = RDINP(NoEqual,1)
-      if (lamtr(is,i).lt.lamtr(is,i-1)) then
-       call msg(6)
-       error = 1
-       goto 999
-      end if
-     end do
-    endif
-    klam(is,1) = RDINP(Equal,1)
-    if (nLamtr(is).gt.1) then
-     do i = 2, nLamtr(is)
-       klam(is,i) = RDINP(NoEqual,1)
-     end do
-    end if
-   else
-    startyp(is) = 1
-    Tstar(is) = 10000.0d0
-   end if
+     Nlamtr(is)= RDINP(Equal,1)
+     if (nLamtr(is).gt.0) then
+        lamtr(is,1) = RDINP(Equal,1)
+        if (nLamtr(is).gt.1) then
+           do i = 2, nLamtr(is)+1
+              lamtr(is,i) = RDINP(NoEqual,1)
+              if (lamtr(is,i).lt.lamtr(is,i-1)) then
+                 call msg(6)
+                 error = 1
+                 goto 999
+              end if
+           end do
+        endif
+        klam(is,1) = RDINP(Equal,1)
+        if (nLamtr(is).gt.1) then
+           do i = 2, nLamtr(is)
+              klam(is,i) = RDINP(NoEqual,1)
+           end do
+        end if
+     else
+        startyp(is) = 1
+        Tstar(is) = 10000.0d0
+     end if
   end if
-
  if (startyp(is).ge.4.and.startyp(is).le.6) then
-  strg = 'Spectral shape of external radiation:'
-  call filemsg(namestar(is),strg)
+    strg = 'Spectral shape of external radiation:'
+    call filemsg(namestar(is),strg)
  end if
 !-----------------------------------------------------------------------
 999 return
@@ -6305,36 +7147,68 @@ subroutine PrOut(model,nG,delta)
 
   use common
   implicit none
-  integer iY, iL, i, model, j, unt, imu, nrows, ncols,nG, iOut, iNloc
+  integer iG, iY, iL, i, model, j, unt, imu, nrows, ncols,nG, iOut, iNloc , iLV
 !  parameter (nrows=200, ncols=25)
   double precision psfn, psffunc(20,1000),eta, faux(npL), omega(npG,npL),  &
        tht1, xs, xds, xde, res, fnormL, fnormR, dmax, limval, GinfG1, delta, &
-       y_loc, J_loc, Jbol(10), FbolL, FbolR
+       y_loc, J_loc, Jbol(10), FbolL, FbolR, FbolIL,FbolIR,xAttTotL,xAttTotR,xDsTotL,xDsTotR,xDeTotL,xDeTotR,temp1,temp2
   double precision, allocatable::Elems(:,:)
   character*90 STemp,Serr,hdint, hdcon,hdvis, s1, su1, s2, su2, tstr*10
   character*132 hdsp1,hdsp2,hdrslb1,hdrslb2,hdrsph1,hdrsph2,hdrdyn
+  double precision sigmaVs,sigmaVa,sigmaVe
 !----------------------------------------------------------------------
-!!** Don't forget to remove this later
-  RPr(1) = 0.
 
+  call Simpson(npL,1,nL,lambda,fsL(:,1)/lambda,FbolIL)
+  call Simpson(npL,1,nL,lambda,fsR(:,nY)/lambda,FbolIR)
+  FbolIL=FbolIL*Jext(1)
+  FbolIR=FbolIR*Jext(nY)
   if(allocated(Elems)) deallocate(Elems)
   allocate(Elems(npL,8))
-!  find the bolometric fluxes at the boundaries [MN]
-   do iL = 1, nL
-!    the emerging spectra for sphere (or right-side spectra for slab)
-     ftot(iL,nY) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY) 
-     faux(iL) = ftot(iL,nY)/lambda(iL)
-   end do
-   call Simpson(npL,1,nL,lambda,faux,res)
-!  normalization factor for output spectra 
-   fnormR = res
-!  the emerging bolometric flux
-   FbolR = fnormR * Jext(nY)
 
-   if (slb) then
+!  find the bolometric fluxes at the boundaries [MN]
+!** FH changed to find ftot everywhere
+  do iY = 1, nY
+     do iL = 1, nL
+!    the emerging spectra for sphere (or right-side spectra for slab)
+        ftot(iL,iY) = fsL(iL,iY) + fde(iL,iY) + fds(iL,iY) - ksi*fsR(iL,iY)
+        faux(iL) = ftot(iL,nY)/lambda(iL)
+     end do
+  enddo
+  call Simpson(npL,1,nL,lambda,faux,res)
+  call Simpson(npL,1,nL,lambda,(ftot(:,1)-fsL(:,1))/lambda,temp1)
+  call Simpson(npL,1,nL,lambda,fsR(:,1)/lambda,temp2)
+  xAttTotL = abs(temp2/temp1)
+  call Simpson(npL,1,nL,lambda,fde(:,1)/lambda,temp2)
+  xDeTotL = abs(temp2/temp1)
+  call Simpson(npL,1,nL,lambda,fds(:,1)/lambda,temp2)
+  xDsTotL = abs(temp2/temp1)
+  call Simpson(npL,1,nL,lambda,(ftot(:,nY)+ksi*fsR(:,nY))/lambda,temp1)
+  call Simpson(npL,1,nL,lambda,fsL(:,nY)/lambda,temp2)
+  xAttTotR = abs(temp2/temp1)
+  call Simpson(npL,1,nL,lambda,fde(:,nY)/lambda,temp2)
+  xDeTotR = abs(temp2/temp1)
+  call Simpson(npL,1,nL,lambda,fds(:,nY)/lambda,temp2)
+  xDsTotR = abs(temp2/temp1)
+
+!  normalization factor for output spectra 
+  fnormR = res
+!**FH new equal to the above
+!   call Simpson(npL,1,nL,lambda,(fsL(:,nY)+fde(:,nY)+fds(:,nY))/lambda(:),fnormR)
+!  the emerging bolometric flux
+  FbolR = fnormR * Jext(nY)
+
+  do iG = 1, nG
+     call lininter(npL,nL,lambda,sigmaS(iG,:),0.55d0,iLV,sigmaVs)
+     call lininter(npL,nL,lambda,sigmaA(iG,:),0.55d0,iLV,sigmaVa)
+     sigmaVe = sigmaVa+sigmaVs
+     do iY=1,nY
+        call Simpson(npL,1,nL,lambda,(sigmaS(iG,:)+sigmaA(iG,:))*ftot(:,iY)/lambda(:),temp1)
+        RPr(iY) = temp1/(4*pi*clight*mprot*Gconst)*1.0D4*3.84e26/1.988e30*5.0D-22*Jext(iY)/sigmaVe
+     enddo
+  end do
+  if (slb) then
      do iL = 1, nL
 !      the left-side spectra for slab
-       ftot(iL,1) = dabs(fde(iL,1) + fds(iL,1) + ksi*fsR(iL,1))
        faux(iL) = ftot(iL,1)/lambda(iL)
      end do
      call Simpson(npL,1,nL,lambda,faux,res)
@@ -6348,7 +7222,7 @@ subroutine PrOut(model,nG,delta)
 ! this is the cut-off for printout of small values (in spectra)
   limval = 1.0d-20
 ! Zeljko's calculation of theta1, the ang. size (in arcsec) of the cavity for Fbol=1e-6 W/m2
-  tht1 = 412.6d0/(dsqrt(Fi))
+  tht1 = 412.6d0/(dsqrt(Ji*4*pi))
 ! error in %
   if (SmC(5,model).lt.0.1d0) then
    call getfs(SmC(5,model)*100.0d0,0,0,Serr)
@@ -6365,8 +7239,8 @@ subroutine PrOut(model,nG,delta)
    write(12,*)' --------'
    if (slb) then
 !    slab output 
-      s1=' ###   Tau0   Psi/Psi0  Fi(W/m2)  FbolL   FbolR   r1(cm)   T1(K)    Td(K)    RPr(1)  err'
-     su1=' ###     1       2         3        4       5       6        7        8        9      10'
+      s1=' ###   Tau0   Psi/Psi0  FiL    FiR    FbolL   FbolR   r1(cm)   T1(K)    Td(K)  RPr(1)  err'
+     su1=' ###     1       2       3      4       5       6       7        8        9     10     11'
      write(12,'(a)') s1
      write(12,'(a)') su1
      write(12,'(a)') &
@@ -6402,15 +7276,15 @@ subroutine PrOut(model,nG,delta)
 ! print output tables for ea.model
 !---------------- Output for slab: ---------------------------
   if(slb) then
-    write(12,'(i4,1p,9e9.2,a3)') model, taufid, Psi/Psi0, Fi, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
+    write(12,'(i4,1p,10e9.2,a3)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
 !---------- for spherical shell ------------------------------
   elseif(sph) then
    if (rdwa.or.rdw.or.rdwpr) then
     write(12,'(i4,1p,9e9.2,a1,a3,a1,1p,3e9.2)') &
-         model, taufid, Psi/Psi0, Fi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr,' ',CMdot, CVe, CM
+         model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr,' ',CMdot, CVe, CM
    else
     write(12,'(i4,1p,9e9.2,a1,a3)') &
-         model, taufid, Psi/Psi0, Fi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr
+         model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr
    end if
 !!!  if (left.eq.1) then
 ! If rc/r1 > 0.1% issue a warning about violation of point source assumption
@@ -6506,7 +7380,13 @@ subroutine PrOut(model,nG,delta)
    else
     hdsp1 = '#   lambda     fTot       xAtt       xDs        xDe        fInp       TauTot     albedo'
    end if
-   write(unt,'(a)') hdsp1
+   write(unt,'(A90)') hdsp1
+   if(slb) then
+write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',FbolR,' ',xAttTotR,' ',xDsTotR,' ',xDeTotR,' ',FbolIL
+   else
+    write(hdsp1,'(A,E9.3,A,E9.3,A)')  '   -1        ',FbolR,'                                   ',FbolIL,'   '
+   end if
+   write(unt,'(A90)') hdsp1
    call maketable(Elems,npL,8,unt)
 !  spectra from the left (illuminated) slab side (file *.z##)
    if (slb) then
@@ -6548,6 +7428,8 @@ subroutine PrOut(model,nG,delta)
     write(unt,'(a13,1p,e9.2)') '# Fbol[W/m2]=',FbolL 
     call line(1,1,unt)
     write(unt,'(a)')'#   lambda     fLeft      xAtt       xDs        xDe        fInp_R     TauTot     albedo'
+write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',FbolL,' ',xAttTotL,' ',xDsTotL,' ',xDeTotL,' ',FbolIR
+    write(unt,'(A)') hdsp1
     call maketable(Elems,nL,8,unt)
    end if
   end if
@@ -6555,11 +7437,11 @@ subroutine PrOut(model,nG,delta)
 !-----------  radial quantities to *.r## (old *.bxx) file -------------
   if (iB.ne.0) then
    if(allocated(Elems)) deallocate(Elems)
-   allocate(Elems(nY,9))
+   allocate(Elems(nY,10))
    hdrslb1= '#     t        Td      epsilon       tauF '
-   hdrslb2= '      fsbol      fRbol      fLbol '
+   hdrslb2= '      RPr '
    hdrsph1= '#     y         Td         eta         t '
-   hdrsph2= '     tauF      epsilon        rg '
+   hdrsph2= '     tauF      epsilon        RPr             rg'
    hdrdyn= '         u        drift'
    unt = 16
    call line(1,2,unt)
@@ -6576,12 +7458,10 @@ subroutine PrOut(model,nG,delta)
      Elems(iY,2) = Td(1,iY)
      Elems(iY,3) = eps(iY)
      Elems(iY,4) = tauF(iY)
-     Elems(iY,5) = fsbol(iY)/fsbol(1)
-     Elems(iY,6) = fpbol(iY)/fsbol(1)
-     Elems(iY,7) = fmbol(iY)/fsbol(1)
+     Elems(iY,5) = RPr(iY)/RPr(1)
     end do
     write(unt,'(a42,a34)') hdrslb1,hdrslb2
-    call maketable(Elems,nY,7,unt)
+    call maketable(Elems,nY,5,unt)
 !------  for spherical shell --------
    elseif(sph) then
     do iY = 1, nY
@@ -6591,15 +7471,17 @@ subroutine PrOut(model,nG,delta)
      Elems(iY,4) = tr(iY)
      Elems(iY,5) = tauF(iY)
      Elems(iY,6) = eps(iY)
-     Elems(iY,7) = rg(1,iY)
-     if (rdwpr) then
+     Elems(iY,7) = RPr(iY)/RPr(1) 
+     Elems(iY,8) = rg(1,iY)*Jext(iY)
+!     if (rdwpr) then
 ! redefine for private rdw (denstyp.eq.6) option
-      Elems(iY,5) = gamma(iY)
-      Elems(iY,7) = qF(iY)
-     end if
+!      Elems(iY,8) = rg(1,iY)
+!      Elems(iY,9) = gamma(iY)
+!      Elems(iY,10) = qF(iY)
+!     end if
     end do
 ! check values:
-    do i = 1, 7
+    do i = 1, 8
      do iY = 1, nY
       if(Elems(iY,i).lt.limval) Elems(iY,i) = 0.0d0
      end do
@@ -6607,20 +7489,20 @@ subroutine PrOut(model,nG,delta)
 ! with dynamics
     if (rdw) then
      do iY = 1, nY
-      Elems(iY,8) = ugas(iY)/ugas(nY)
-      Elems(iY,9) = vrat(1,iY)
+        Elems(iY,9) = ugas(iY)/ugas(nY)
+        Elems(iY,10) = vrat(1,iY)
      end do
 ! check values:
-     do i = 8, 9
+     do i = 9, 10
       do iY = 1, nY
        if(Elems(iY,i).lt.limval) Elems(iY,i) = 0.0d0
       end do
      end do
-     write(unt,'(a42,a32,a23)') hdrsph1,hdrsph2,hdrdyn
-     call maketable(Elems,nY,9,unt)
+     write(unt,'(a42,a42,a23)') hdrsph1,hdrsph2,hdrdyn
+     call maketable(Elems,nY,10,unt)
     else
-     write(unt,'(a42,a32)') hdrsph1,hdrsph2
-     call maketable(Elems,nY,7,unt)
+     write(unt,'(a42,a42)') hdrsph1,hdrsph2
+     call maketable(Elems,nY,8,unt)
     end if
 ! end if for geometry
    end if
@@ -6631,114 +7513,107 @@ subroutine PrOut(model,nG,delta)
   if (abs(iC).ne.0) then
 ! slab intensity (found at the end of subroutine slbradt)
 ! theta(nmu) are the angles of output intensities
-   if (slb) then
-    if(allocated(Elems)) deallocate(Elems)
-    allocate(Elems(npL,nmu+2))
-
-    hdint = '   lambda'
-    unt = 17
-    call line(1,2,unt)
-    write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=', &
-         taufid,' transmitted i(theta)*cos(theta)'
-    call line(1,1,unt)
-    do iL = 1, nL
-     Elems(iL,1) = lambda(iL)
-     do imu = 1, nmu
-!      if(iPhys.eq.1) SLBintm(imu,iL) = SLBintm(imu,iL)*Jext(nY)
-      Elems(iL,imu+1) = SLBintm(imu,iL)
-     end do
-     Elems(iL,nmu+2) = istR(iL)
-    end do
-! write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
-! printout angles in degrees
-! write(unt,'(a9,37f11.1,a9)') hdint,
-! &                    (theta(imu)*180.0d0/pi,imu=1,nmu),'     IstR'
-    write(unt,'(a9,100f11.1)') hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
-    call maketable(Elems,npL,nmu+1,unt)
-! adding the column with stellar ints at the end of the table
-!        call maketable(Elems,nL,nmu+2,unt)
-
-    hdint = '   lambda'
-    unt = 17
-    call line(1,2,unt)
-    write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model, &
-         ' taufid=',taufid,' reflected cos(theta)*i(theta)'
-    call line(1,1,unt)
-    do iL = 1, nL
-     Elems(iL,1) = lambda(iL)
-     do imu = 1, nmu
-      if(iPhys.eq.1) SLBintp(imu,iL) = SLBintp(imu,iL)*Jext(1)
-      Elems(iL,imu+1) = SLBintp(imu,iL)
-     end do
-    end do
-!       write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
-!       printout angles in degrees
-    write(unt,'(a9,99f11.1)')hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
-    call maketable(Elems,npL,nmu+1,unt)
+     if (slb) then
+        if(allocated(Elems)) deallocate(Elems)
+        allocate(Elems(npL,nmu+2))
+        hdint = '   lambda'
+        unt = 17
+        call line(1,2,unt)
+        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' transmitted i(theta)*cos(theta)'
+        call line(1,1,unt)
+        do iL = 1, nL
+           Elems(iL,1) = lambda(iL)
+           do imu = 1, nmu
+              !if(iPhys.eq.1) SLBintm(imu,iL) = SLBintm(imu,iL)*Jext(nY)
+              Elems(iL,imu+1) = SLBintm(imu,iL)
+           end do
+           Elems(iL,nmu+2) = istR(iL)
+        end do
+        ! write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
+        ! printout angles in degrees
+        ! write(unt,'(a9,37f11.1,a9)') hdint,
+        ! &                    (theta(imu)*180.0d0/pi,imu=1,nmu),'     IstR'
+        write(unt,'(a9,100f11.1)') hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
+        call maketable(Elems,npL,nmu+1,unt)
+        ! adding the column with stellar ints at the end of the table
+        !  call maketable(Elems,nL,nmu+2,unt)
+        hdint = '   lambda'
+        unt = 17
+        call line(1,2,unt)
+        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' reflected cos(theta)*i(theta)'
+        call line(1,1,unt)
+        do iL = 1, nL
+           Elems(iL,1) = lambda(iL)
+           do imu = 1, nmu
+              if(iPhys.eq.1) SLBintp(imu,iL) = SLBintp(imu,iL)*Jext(1)
+              Elems(iL,imu+1) = SLBintp(imu,iL)
+           end do
+        end do
+        !write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
+        !printout angles in degrees
+        write(unt,'(a9,99f11.1)')hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
+        call maketable(Elems,npL,nmu+1,unt)
 !------  for spherical shell --------
-   elseif(sph) then
-    if(allocated(Elems)) deallocate(Elems)
-    allocate(Elems(np+2,nLambdaOut+2))
-    hdint = '#     b          t(b)'
-    hdcon = '#   offset '
-    hdvis = '#     q    '
-    unt = 17
-    call line(1,2,unt)
-    write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
-    call line(1,1,unt)
-    do i = 1, nP+2
-     Elems(i,1) = bOut(i)
-     Elems(i,2) = tauZout(i)
-     do j = 1, nLambdaOut
-! check values:
-      if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
-       IntOut(j,i) = 0.0d0
-      end if
-      Elems(i,j+2) = IntOut(j,i)
-! we want intensity in Jy/arcsec^2
-! this was the bug in intensity output for sphere,
-! the missing 4piY^2 factor for intensity output [June 2006]
-! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
-      IF (iPhys.eq.1) THEN
-        Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-      ELSE
-        Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-      END IF
+     elseif(sph) then
+        if(allocated(Elems)) deallocate(Elems)
+        allocate(Elems(np+2,nLambdaOut+2))
+        hdint = '#     b          t(b)'
+        hdcon = '#   offset '
+        hdvis = '#     q    '
+        unt = 17
+        call line(1,2,unt)
+        write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
+        call line(1,1,unt)
+        do i = 1, nP+2
+           Elems(i,1) = bOut(i)
+           Elems(i,2) = tauZout(i)
+           do j = 1, nLambdaOut
+              ! check values:
+              if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
+                 IntOut(j,i) = 0.0d0
+              end if
+              Elems(i,j+2) = IntOut(j,i)
+              ! we want intensity in Jy/arcsec^2
+              ! this was the bug in intensity output for sphere,
+              ! the missing 4piY^2 factor for intensity output [June 2006]
+              ! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
+              IF (iPhys.eq.1) THEN
+                 Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
+              ELSE
+                 Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
+              END IF
+           end do
+        end do
+        write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
+        call maketable(Elems,nP+2,nLambdaOut+2,unt)
+     end if
+     unt = 17
+     call line(1,2,unt)
+     write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
+     call line(1,1,unt)
+     do i = 1, nP+2
+        Elems(i,1) = bOut(i)
+        Elems(i,2) = tauZout(i)
+        do j = 1, nLambdaOut
+           ! check values:
+           if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
+              IntOut(j,i) = 0.0d0
+           end if
+           Elems(i,j+2) = IntOut(j,i)
+           ! we want intensity in Jy/arcsec^2
+           ! this was the bug in intensity output for sphere,
+           ! the missing 4piY^2 factor for intensity output [June 2006]
+           ! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
+           IF (iPhys.eq.1) THEN
+              Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
+           ELSE
+              Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
+           END IF
+        end do
      end do
-    end do
-    write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
-    call maketable(Elems,nP+2,nLambdaOut+2,unt)
-   end if
+     write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
+     call maketable(Elems,nP+2,nLambdaOut+2,unt) 
   end if
-    unt = 17
-    call line(1,2,unt)
-    write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
-    call line(1,1,unt)
-    do i = 1, nP+2
-     Elems(i,1) = bOut(i)
-     Elems(i,2) = tauZout(i)
-     do j = 1, nLambdaOut
-! check values:
-      if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
-       IntOut(j,i) = 0.0d0
-      end if
-      Elems(i,j+2) = IntOut(j,i)
-! we want intensity in Jy/arcsec^2
-! this was the bug in intensity output for sphere,
-! the missing 4piY^2 factor for intensity output [June 2006]
-! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
-      IF (iPhys.eq.1) THEN
-        Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-      ELSE
-        Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-      END IF
-     end do
-    end do
-    write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
-    call maketable(Elems,nP+2,nLambdaOut+2,unt) 
-!   end if
-!  end if
-
   if (iC.lt.0) then
 !---------  convolved images either add to .i## file or write in *.c## file --
    if(iC.eq.-3) unt = 21
@@ -6819,8 +7694,8 @@ subroutine PrOut(model,nG,delta)
       Jbol(iOut) = J_loc                
     end do
 !   write the scale in the header    
-    write(unt,'(a11,1p,10e11.3))')'Jbol[W/m2]=',(Jbol(iOut),iOut=1,nJout)
-    write(unt,'(a11,10f11.2))')'      Y =  ',(YJOut(iOut),iOut=1,nJout)
+    write(unt,'(a11,1p,10e11.3)')'Jbol[W/m2]=',(Jbol(iOut),iOut=1,nJout)
+    write(unt,'(a11,10f11.2)')'      Y =  ',(YJOut(iOut),iOut=1,nJout)
     write(unt,'(a11)')'   lambda  '
     
 !   normalize en. density profiles
@@ -7986,6 +8861,8 @@ subroutine Bolom(q,qbol)
   double precision q(npL,npY), qaux(npL), qbol(npY), resaux
 !-----------------------------------------------------------------------
 ! loop over iY (radial coordinate)
+
+!$OMP PARALLEL DO private(iY,iL)
   do iY = 1, nY
 ! generate auxiliary function for integration
 ! loop over iL (wavelength)
@@ -7995,6 +8872,7 @@ subroutine Bolom(q,qbol)
    call Simpson(npL,1,nL,lambda,qaux,resaux)
    qbol(iY) = resaux
   end do
+!$OMP END PARALLEL DO
 !-----------------------------------------------------------------------
   return
 end subroutine Bolom
@@ -8840,10 +9718,12 @@ SUBROUTINE NORDLUND(flag,x,f,N1,N2,m,intfdx,error)
 !     if flag=1 use analytic approximation for the last Nanal points
       IF (flag.EQ.1.AND.N2n.GT.N1+Nanal) THEN
 !       generate auxiliary arrays for ANALINT
+!$OMP PARALLEL DO
         DO i=1,Nanal
           xaux(i) = x(N2n+Nanal-i)
           faux(i) = f(N2n+Nanal-i)
         END DO
+!$OMP END PARALLEL DO
 !     calculate the contribution of the last Nanal points
 !       produce REAL copy of m
         am = 1.0*(m)

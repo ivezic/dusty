@@ -4,11 +4,13 @@
 module common
   implicit none
   
-  double precision pi, sigma, Gconst, r_gd
+  double precision pi, sigma, Gconst, r_gd, clight, mprot
   parameter (pi=3.141592653589793116)
   parameter (sigma=5.67D-08)
   parameter (Gconst= 6.67D-11)
   parameter (r_gd = 2.0D+02)
+  parameter (clight = 3.0D+08)
+  parameter (mprot = 1.67D-27)
 ! =============================================================================
   
 
@@ -132,15 +134,13 @@ module common
 !  ksi - the ratio of the right/left bol. fluxes (<1) for slab
 !
 !  chi - relative contribution of the external illumination of spherical shell
-!  Tei - the effective T(K) of the central source (Left source for slab)
-!  Teo - the effective T(K) of the external isotropic illumination (Right source for slab)
 ! -----------------------------------------------------------------------------
 
   integer startyp(2), Nlamtr(2), nBB(2), typEntry(2), Left, Right
   character nameStar(2)*235
   double precision  lamtr(2,101), klam(2,100), &
        Tbb(2,10), rellum(2,10), Tstar(2), mu1, ksi, mu2, xSiO, &
-       r1rs, Tei, Teo, chi, dilutn
+       r1rs, chi, dilutn
 ! =============================================================================
   
 ! =============================================================================
@@ -232,7 +232,7 @@ module common
        Ubol(npY), fbol(npY), Spectrum(npL), SmC(30,99), tauF(npY), tr(npY), rg(npG,npY), &
        Intens(npL,npP+2), IntOut(20,npP+2), tauZout(npP+2), tauOut(npL), Eps(npY), &
        fsL(npL,npY), fsR(npL,npY), fsLbol(npY), fsRbol(npY),fsbol(npY), RPr(npY), Jext(npY), &
-       Ude(npL,npY), Uds(npL,npY), ETAzp(npP,npY), Fint, Fi, Fo, Ji, Jo, Psi, Psi0
+       Ude(npL,npY), Uds(npL,npY), ETAzp(npP,npY), Ji, Jo, Psi, Psi0, RPr1
   
 ! =============================================================================
 
