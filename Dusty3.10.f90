@@ -76,6 +76,7 @@
   double precision value, tau1, tau2, tauIn(Nrec), pstar, us(npL,npY),delta, RDINP
   double precision, allocatable :: tau(:)
   character*12 version
+  character (len=4) :: suffix
   character*235 dustyinpfile,arg, path, apath, nameIn, nameOut, nameQ(npG), &
        nameNK(10), stdf(7), str , verb
   logical UCASE,equal,initial, Lprint
@@ -102,11 +103,11 @@
      dustyinpfile = "dusty.mas"
      io1 = 0
   else
-     if (index(dustyinpfile,'.mas').ne.0)  then 
+     suffix = dustyinpfile(len(trim(dustyinpfile))-3:)
+     if (suffix .eq. '.mas') then 
         write(*,*) "Found master input file ", trim(dustyinpfile), " on on command line."
         io1 = 0
-     endif
-     if (index(dustyinpfile,'.inp').ne.0)  then 
+     else if (suffix .eq. '.inp') then 
         call getarg(2,verb)
         read(verb,'(i2)') iVerb
         write(*,*) "Found normal input file ", trim(dustyinpfile), " on on command line."
@@ -134,6 +135,9 @@
         endif
         if(allocated(tau)) deallocate(tau)
         io1 = -1
+     else
+        write(*,*) "Specified file is neither a Dusty master file (suffix .mas) nor a single input file (suffix .inp)"
+        stop
      endif
   endif
   !!open(13,err=998,file='dusty.mas',status='old')
