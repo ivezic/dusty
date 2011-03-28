@@ -77,7 +77,7 @@
   double precision, allocatable :: tau(:)
   character*12 version
   character*235 dustyinpfile,arg, path, apath, nameIn, nameOut, nameQ(npG), &
-       nameNK(10), stdf(7), str
+       nameNK(10), stdf(7), str , verb
   logical UCASE,equal,initial, Lprint
 !----------------------------------------------------------------------
 
@@ -96,42 +96,72 @@
 ! Open master input file; first determine whether user supplies custom
 ! DUSTY input file as the 1st argument on the command line. If yes,
 ! use it. Else revert to the default file ./dusty.mas
-!!**  call getarg(1,dustyinpfile)
-!!**  if (trim(dustyinpfile) == "") then
-!!**     write(*,*) "No input file name found on command line. Proceeding with default file ./dusty.mas"
+  call getarg(1,dustyinpfile)
+  if (trim(dustyinpfile) == "") then
+     write(*,*) "No input file name found on command line. Proceeding with default file ./dusty.mas"
      dustyinpfile = "dusty.mas"
-!!**  else
-!!**     write(*,*) "Found input file ", trim(dustyinpfile), " on on command line."
-!!**  endif
-  open(13,err=998,file='dusty.mas',status='old')
-!!**  open(13,err=998,file=trim(dustyinpfile),status='old')
-  io1 = 0
-! read the verbose mode
+     io1 = 0
+  else
+     if (index(dustyinpfile,'.mas').ne.0)  then 
+        write(*,*) "Found master input file ", trim(dustyinpfile), " on on command line."
+        io1 = 0
+     endif
+     if (index(dustyinpfile,'.inp').ne.0)  then 
+        call getarg(2,verb)
+        read(verb,'(i2)') iVerb
+        write(*,*) "Found normal input file ", trim(dustyinpfile), " on on command line."
+        apath = dustyinpfile(1:index(dustyinpfile,'.inp')-1)
+        call clean(apath, path, lpath)
+        ! if not eof and if line is not empty, or commented, proceed
+        ! get input/output file names
+        call attach(path,lpath,'.inp',nameIn)
+        call attach(path,lpath,'.out',nameOut)
+        ! read input data
+        call Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,&
+             tauIn,Nrec,GridType,Nmodel,error,version,stdf)
+        if (iVerb.eq.2) write(*,*) 'Done with reading input'
+        ! if an error reading files go to the next input file
+        ! get optical properties
+        call getOptPr(nG,nameQ,nameNK,error,stdf)
+        ! if an error reading files go to the next input file
+        if (iVerb.eq.2) write(*,*) 'Done with getOptPr'
+        if(allocated(tau)) deallocate(tau)
+        allocate(tau(Nmodel))
+        if (error.eq.0) then
+           call GetTau(nG,tau1,tau2,tauIn,Nrec,GridType,Nmodel,tau)
+           if (iVerb.eq.2) write(*,*) 'Done with GetTau'
+           call Kernel(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error,Lprint)
+        endif
+        if(allocated(tau)) deallocate(tau)
+        io1 = -1
+     endif
+  endif
+  !!open(13,err=998,file='dusty.mas',status='old')
+  open(13,err=998,file=trim(dustyinpfile),status='old')
+  ! read the verbose mode
   iVerb = RDINP(Equal,13)
-! read flag for spectra in W/m^2
-! iPhys = RDINP(Equal,13)
-! loop over input files
+  ! loop over input files if io1 ge 0
   do while (io1.ge.0)
-! read a line from master input file using
+     ! read a line from master input file using
 100  read(13,'(a)',iostat=io1) apath
      if(io1.lt.0) then
         stop
      end if
      call clean(apath, path, lpath)
-! if not eof and if line is not empty, or commented, proceed
+     ! if not eof and if line is not empty, or commented, proceed
      if (empty(path).ne.1) then
-! get input/output file names
+        ! get input/output file names
         call attach(path,lpath,'.inp',nameIn)
         call attach(path,lpath,'.out',nameOut)
-! read input data
+        ! read input data
         call Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,&
              tauIn,Nrec,GridType,Nmodel,error,version,stdf)
         if (iVerb.gt.0) write(*,'(a24,a235)') ' working on input file: ',nameIn
         if (iVerb.eq.2) write(*,*) 'Done with reading input'
-! if an error reading files go to the next input file
-! error=3 means some files are missing
+        ! if an error reading files go to the next input file
+        ! error=3 means some files are missing
         if (error.eq.3) goto 100
-! get optical properties
+        ! get optical properties
         call getOptPr(nG,nameQ,nameNK,error,stdf)
 ! if an error reading files go to the next input file
         if (error.eq.3) goto 100
