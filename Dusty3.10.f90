@@ -7622,6 +7622,10 @@ write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',Fbol
         write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
         call maketable(Elems,nP+2,nLambdaOut+2,unt)
      end if
+!FH 30/03/2011
+!comment these lines to remove unneccessary output in .i## files for the 
+!slab case
+!
 !!$     unt = 17
 !!$     call line(1,2,unt)
 !!$     write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
