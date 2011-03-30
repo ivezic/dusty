@@ -4362,7 +4362,7 @@ subroutine CLLOSE(error,model,Nmodel)
      write(12,'(a)')'  (7) position of the left slab boundary for L = 1e4 Lo'
      write(12,'(a)')'  (8) dust temperature at the left slab boundary'
      write(12,'(a)')'  (9) dust temperature at the right slab boundary'
-     write(12,'(a)')'  (10) radiative pressure force (in N) at the left slab boundary'
+     write(12,'(a)')'  (10) radiative pressure force at the left slab boundary'
      write(12,'(a)')'  (11) maximum error in flux conservation (%)'
     else
 !---------- for spherical shell ----------------------------
@@ -7187,7 +7187,7 @@ subroutine PrOut(model,nG,delta)
        tht1, xs, xds, xde, res, fnormL, fnormR, dmax, limval, GinfG1, delta, &
        y_loc, J_loc, Jbol(10), FbolL, FbolR, FbolIL,FbolIR,xAttTotL,xAttTotR,xDsTotL,xDsTotR,xDeTotL,xDeTotR,temp1,temp2
   double precision, allocatable::Elems(:,:)
-  character*90 STemp,Serr,hdint, hdcon,hdvis, s1, su1, s2, su2, tstr*10
+  character*120 STemp,Serr,hdint, hdcon,hdvis, s1, su1, s2, su2, tstr*10
   character*132 hdsp1,hdsp2,hdrslb1,hdrslb2,hdrsph1,hdrsph2,hdrdyn
   double precision sigmaVs,sigmaVa,sigmaVe
 !----------------------------------------------------------------------
@@ -7273,8 +7273,8 @@ subroutine PrOut(model,nG,delta)
    write(12,*)' --------'
    if (slb) then
 !    slab output 
-      s1=' ###   Tau0   Psi/Psi0  FiL    FiR    FbolL   FbolR   r1(cm)   T1(K)    Td(K)  RPr(1)  err'
-     su1=' ###     1       2       3      4       5       6       7        8        9     10     11'
+      s1=' ###   Tau0   Psi/Psi0    FiL     FiR      FbolL   FbolR    r1(cm)    T1(K)    Td(K)   RPr(1)  err'
+     su1=' ###     1       2         3       4         5       6        7         8        9      10     11'
      write(12,'(a)') s1
      write(12,'(a)') su1
      write(12,'(a)') &
@@ -7475,7 +7475,7 @@ write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',Fbol
    hdrslb1= '#     t        Td      epsilon       tauF '
    hdrslb2= '      RPr '
    hdrsph1= '#     y         Td         eta         t '
-   hdrsph2= '     tauF      epsilon        RPr             rg'
+   hdrsph2= '     tauF      epsilon        RPr'
    hdrdyn= '         u        drift'
    unt = 16
    call line(1,2,unt)
@@ -7505,8 +7505,8 @@ write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',Fbol
      Elems(iY,4) = tr(iY)
      Elems(iY,5) = tauF(iY)
      Elems(iY,6) = eps(iY)
-     Elems(iY,7) = RPr(iY)/RPr(1) 
-     Elems(iY,8) = rg(1,iY)*Jext(iY)
+     if (RPr(1).ne.0) Elems(iY,7) = RPr(iY)/RPr(1)
+!     Elems(iY,8) = rg(1,iY)*Jext(iY)
 !     if (rdwpr) then
 ! redefine for private rdw (denstyp.eq.6) option
 !      Elems(iY,8) = rg(1,iY)
@@ -7515,7 +7515,7 @@ write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',Fbol
 !     end if
     end do
 ! check values:
-    do i = 1, 8
+    do i = 1, 7
      do iY = 1, nY
       if(Elems(iY,i).lt.limval) Elems(iY,i) = 0.0d0
      end do
@@ -7523,20 +7523,20 @@ write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',Fbol
 ! with dynamics
     if (rdw) then
      do iY = 1, nY
-        Elems(iY,9) = ugas(iY)/ugas(nY)
-        Elems(iY,10) = vrat(1,iY)
+        Elems(iY,8) = ugas(iY)/ugas(nY)
+        Elems(iY,9) = vrat(1,iY)
      end do
 ! check values:
-     do i = 9, 10
+     do i = 8, 9
       do iY = 1, nY
        if(Elems(iY,i).lt.limval) Elems(iY,i) = 0.0d0
       end do
      end do
      write(unt,'(a42,a42,a23)') hdrsph1,hdrsph2,hdrdyn
-     call maketable(Elems,nY,10,unt)
+     call maketable(Elems,nY,9,unt)
     else
      write(unt,'(a42,a42)') hdrsph1,hdrsph2
-     call maketable(Elems,nY,8,unt)
+     call maketable(Elems,nY,7,unt)
     end if
 ! end if for geometry
    end if

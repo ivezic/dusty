@@ -52,8 +52,8 @@
 
 %(available options: flux\lum_r1\energy_den\dilutn_fac\T1)
 
-	Scale:         type of entry = energy_den
-                       	          T1 =  1.80e4
+	Scale:         type of entry = dilutn_fac
+                       	          dil = 1.     %E_DEN =  1.80e4
 
      2) Dust Properties 
 
