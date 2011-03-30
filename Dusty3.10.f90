@@ -4362,7 +4362,7 @@ subroutine CLLOSE(error,model,Nmodel)
      write(12,'(a)')'  (7) position of the left slab boundary for L = 1e4 Lo'
      write(12,'(a)')'  (8) dust temperature at the left slab boundary'
      write(12,'(a)')'  (9) dust temperature at the right slab boundary'
-     write(12,'(a)')'  (10) radiative pressure force at the left slab boundary'
+     write(12,'(a)')'  (10) radiation pressure on left boundary; see manual for units'
      write(12,'(a)')'  (11) maximum error in flux conservation (Fmax-Fmin)/(Fmax+Fmin)'
     else
 !---------- for spherical shell ----------------------------
@@ -4372,9 +4372,8 @@ subroutine CLLOSE(error,model,Nmodel)
       write(12,'(a)')'  (6) angular size (in arcsec) when Fbol=1e-6 W/m2'
       write(12,'(a)')'  (7) dust temperature at the inner radius '
       write(12,'(a)')'  (8) dust temperature at the outer edge'
-      write(12,'(a)')'  (9) radiative pressure force (in N) at the inner radius'
-      write(12,'(a)')' (10) maximum error in flux conservation (%)'
-!!     write(12,'(a)')'  (10) maximum error in calculated diffuse flux (%)'
+      write(12,'(a)')'  (9) radiation pressure on inner boundary; see manual for units'
+      write(12,'(a)')' (10) maximum error in flux conservation (Fmax-Fmin)/(Fmax+Fmin)'
 
      if(rdw.or.rdwa.or.rdwpr) then
       write(12,'(a)')' (11) mass-loss rate (in Mo/year)'
@@ -7237,7 +7236,7 @@ subroutine PrOut(model,nG,delta)
      sigmaVe = sigmaVa+sigmaVs
      do iY=1,nY
         call Simpson(npL,1,nL,lambda,(sigmaS(iG,:)+sigmaA(iG,:))*ftot(:,iY)/lambda(:),temp1)
-        RPr(iY) = temp1/(4*pi*clight*mprot*Gconst)*1.0D4*3.84e26/1.988e30*5.0D-22*Jext(iY)/sigmaVe
+        RPr(iY) = temp1/(4*pi*clight*mprot*Gconst)*1.0D4*3.84e26/1.988e30*5.0D-26*Jext(iY)/sigmaVe
      enddo
   end do
   if (slb) then
