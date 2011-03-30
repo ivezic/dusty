@@ -4363,7 +4363,7 @@ subroutine CLLOSE(error,model,Nmodel)
      write(12,'(a)')'  (8) dust temperature at the left slab boundary'
      write(12,'(a)')'  (9) dust temperature at the right slab boundary'
      write(12,'(a)')'  (10) radiative pressure force at the left slab boundary'
-     write(12,'(a)')'  (11) maximum error in flux conservation (%)'
+     write(12,'(a)')'  (11) maximum error in flux conservation (Fmax-Fmin)/(Fmax+Fmin)'
     else
 !---------- for spherical shell ----------------------------
       write(12,'(a)')'  (3) bolometric flux at the inner radius '
@@ -7273,15 +7273,15 @@ subroutine PrOut(model,nG,delta)
    write(12,*)' --------'
    if (slb) then
 !    slab output 
-      s1=' ###   Tau0   Psi/Psi0    FiL     FiR      FbolL   FbolR    r1(cm)    T1(K)    Td(K)   RPr(1)  err'
+      s1=' ###   Tau0   Psi/Psi0    FiL     FiR      FbolL   FbolR    r1(cm)   TdL(K)   TdR(K)   RPr(1)  e(%)'
      su1=' ###     1       2         3       4         5       6        7         8        9      10     11'
      write(12,'(a)') s1
      write(12,'(a)') su1
      write(12,'(a)') &
-         ' ======================================================================================='
+         ' ==================================================================================================='
 !  output for sphere 
    elseif(sph) then
-      s1= ' ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1   T1(K)    Td(K)    RPr(1)  err'
+      s1= ' ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1   T1(K)    Td(K)    RPr(1)  e(%)'
      su1= ' ###     1       2        3        4        5        6        7        8        9      10'
      if(rdwa.or.rdw) then
       s2='  Mdot      Ve       M> '
