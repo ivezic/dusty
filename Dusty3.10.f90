@@ -7622,32 +7622,32 @@ write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',Fbol
         write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
         call maketable(Elems,nP+2,nLambdaOut+2,unt)
      end if
-     unt = 17
-     call line(1,2,unt)
-     write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
-     call line(1,1,unt)
-     do i = 1, nP+2
-        Elems(i,1) = bOut(i)
-        Elems(i,2) = tauZout(i)
-        do j = 1, nLambdaOut
-           ! check values:
-           if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
-              IntOut(j,i) = 0.0d0
-           end if
-           Elems(i,j+2) = IntOut(j,i)
-           ! we want intensity in Jy/arcsec^2
-           ! this was the bug in intensity output for sphere,
-           ! the missing 4piY^2 factor for intensity output [June 2006]
-           ! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
-           IF (iPhys.eq.1) THEN
-              Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-           ELSE
-              Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-           END IF
-        end do
-     end do
-     write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
-     call maketable(Elems,nP+2,nLambdaOut+2,unt) 
+!!$     unt = 17
+!!$     call line(1,2,unt)
+!!$     write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
+!!$     call line(1,1,unt)
+!!$     do i = 1, nP+2
+!!$        Elems(i,1) = bOut(i)
+!!$        Elems(i,2) = tauZout(i)
+!!$        do j = 1, nLambdaOut
+!!$           ! check values:
+!!$           if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
+!!$              IntOut(j,i) = 0.0d0
+!!$           end if
+!!$           Elems(i,j+2) = IntOut(j,i)
+!!$           ! we want intensity in Jy/arcsec^2
+!!$           ! this was the bug in intensity output for sphere,
+!!$           ! the missing 4piY^2 factor for intensity output [June 2006]
+!!$           ! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
+!!$           IF (iPhys.eq.1) THEN
+!!$              Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
+!!$           ELSE
+!!$              Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
+!!$           END IF
+!!$        end do
+!!$     end do
+!!$     write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
+!!$     call maketable(Elems,nP+2,nLambdaOut+2,unt) 
   end if
   if (iC.lt.0) then
 !---------  convolved images either add to .i## file or write in *.c## file --

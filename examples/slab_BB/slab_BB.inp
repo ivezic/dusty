@@ -40,7 +40,7 @@
      
 %(available options: on\off)
 
-         Left = on                Right = of
+         Left = on                Right = on
 
       1.1 Left-side source radiation:    
 
@@ -51,16 +51,15 @@
 			  TBB = 1000
 
 %(available options: flux\lum_r1\energy_den\dilutn_fac\t1)
-                         type of entry = flux
+                         type of entry = T1
                                     T1 = 1000.
-                  kind of illumination = directional %ISOTROPIC
-		   angle = 5.0
+                  kind of illumination = ISOTROPIC
 
-%          Spectral shape:     Spectrum = black_body
-%                          NBB = 1
-%			  TBB = 1000
-%                  kind of illumination = ISOTROPIC
-%	  scale =1.
+          Spectral shape:     Spectrum = black_body
+                          NBB = 1
+			  TBB = 1000
+                  kind of illumination = ISOTROPIC
+	  scale =1.
 
      2) Dust Properties 
 
