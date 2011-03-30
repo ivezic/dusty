@@ -48,12 +48,12 @@
 
           Spectral shape:     Spectrum = black_body
                           Number of BB = 1      
-                           Temperature = 2500 K 
+                           Temperature = 2000 K 
 
 %(available options: flux\lum_r1\energy_den\dilutn_fac\t1)
     
           Scale:         type of entry = T1     % Td at the inner boundary  
-                                    Td = 800   K
+                                    Td = 1000   K
 
                   kind of illumination = directional
            illumination angle theta_in = 0.0  % degrees
@@ -82,8 +82,13 @@
            
         - grid type = logarithmic          % log grid
         - lambda0 = 0.55 micron            % optical depth specified 
+<<<<<<< .mine
+        - tau(min) = 1.0; tau(max) = 100.0   % for the visual wavelength   
+        - number of models = 3
+=======
         - tau(min) = 1.0; tau(max) = 1.0   % for the visual wavelength   
         - number of models = 1
+>>>>>>> .r52
   ----------------------------------------------------------------------
                                                                        
   II NUMERICS                                                           
@@ -114,7 +119,7 @@
        - properties of emerging spectra;             fname.spp = 0    
        - detailed spectra for each model;           fname.s### = 2   
        - images at specified wavelengths;           fname.i### = 0  
-       - radial profiles for each model;            fname.r### = 0  
+       - radial profiles for each model;            fname.r### = 2  
        - detailed run-time messages;                fname.m### = 0
        ------------------------------------------------------------- 
  

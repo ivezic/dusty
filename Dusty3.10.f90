@@ -81,13 +81,13 @@
        nameNK(10), stdf(7), str , verb
   logical UCASE,equal,initial, Lprint
 !----------------------------------------------------------------------
-
 !**************************
 !*** ABOUT THIS VERSION ***
 !**************************
-  version= '3.12'
-!********************  MAIN  *******************************
 
+  version= '3.12'
+
+!********************  MAIN  *******************************
   equal = .true.
 ! First read lambda grid
   call ChkLambda(lambdaOK)
@@ -4849,7 +4849,6 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
         if (str(1:L).eq.'ENERGY_DEN') typentry(1) = 3
         if (str(1:L).eq.'DILUTN_FAC') typentry(1) = 4
         if (str(1:L).eq.'T1') typentry(1) = 5
-        print*,str
         if (typentry(1).lt.3.or.typentry(1).gt.5) then
            call msg(21)
            error = 1

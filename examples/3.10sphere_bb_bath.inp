@@ -62,8 +62,8 @@
 (available options: common_grain\common_and_addl_grain\tabulated)
 
            optical properties index = tabulated
-% physical dust, no scattering   
-                    ism-noscatt.dat                         
+% physical dust, no scattering    
+                    sfn-noscatt.dat                   
                                  
 
      3) Density Distribution
