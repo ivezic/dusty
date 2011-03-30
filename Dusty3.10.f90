@@ -4872,8 +4872,9 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
            write(12,'(a41)') ' Directional illumination from the left.'
            ! enter incident theta_in:
            ! th1 the left illumination angle (in degrees) measured from the normal
-           call chkangle(th1)
            th1 = RDINP(Equal,1)
+           call chkangle(th1)
+           th1 = th1*pi/180.0d0
            mu1 = dcos(th1)
         elseif (str(1:L).eq.'ISOTROPIC') then
            th1 = -1.0d0
@@ -4890,8 +4891,9 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
            write(12,'(a41)') ' Directional illumination from the left.'
            ! enter incident theta_in:
            ! th1 the left illumination angle (in degrees) measured from the normal
-           call chkangle(th1)
            th2 = RDINP(Equal,1)
+           call chkangle(th2)
+           th2 = th2*pi/180.0d0
            mu2 = dcos(th2)
         elseif (str(1:L).eq.'ISOTROPIC') then
            th2 = -1.0d0

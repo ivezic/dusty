@@ -56,7 +56,7 @@
                                     Td = 1000   K
 
                   kind of illumination = directional
-           illumination angle theta_in = 0.0  % degrees
+           illumination angle theta_in = 10.0  % degrees
 
 
      2) Dust Properties 
@@ -82,13 +82,8 @@
            
         - grid type = logarithmic          % log grid
         - lambda0 = 0.55 micron            % optical depth specified 
-<<<<<<< .mine
         - tau(min) = 1.0; tau(max) = 100.0   % for the visual wavelength   
         - number of models = 3
-=======
-        - tau(min) = 1.0; tau(max) = 1.0   % for the visual wavelength   
-        - number of models = 1
->>>>>>> .r52
   ----------------------------------------------------------------------
                                                                        
   II NUMERICS                                                           
@@ -117,9 +112,9 @@
         FILE DESCRIPTION                               FLAG        
        ------------------------------------------------------------     
        - properties of emerging spectra;             fname.spp = 0    
-       - detailed spectra for each model;           fname.s### = 2   
+       - detailed spectra for each model;           fname.s### = 0   
        - images at specified wavelengths;           fname.i### = 0  
-       - radial profiles for each model;            fname.r### = 2  
+       - radial profiles for each model;            fname.r### = 0  
        - detailed run-time messages;                fname.m### = 0
        ------------------------------------------------------------- 
  
