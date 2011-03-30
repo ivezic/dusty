@@ -4811,7 +4811,6 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
         if (startyp(2).eq.1) spec_scale = sigma*Tstar(2)**4.0d0
         !typentry give the scale of input radiation
         call rdinps2(Equal,1,str,L,UCASE)
-        print*,str
         if (left.eq.0) then 
            if (str(1:L).eq.'ENERGY_DEN') typentry(2) = 3
            if (str(1:L).eq.'DILUTN_FAC') typentry(2) = 4

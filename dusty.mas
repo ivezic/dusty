@@ -6,14 +6,7 @@
    verbose =  2
 % -------------------------------
 
-%examples/ivezic
-examples/3.10slab1
-%examples/3.10slab2
-%examples/3.10slab_bb_bath
-%examples/3.10sphere_bb_bath
-
-%examples/3.10sphere1
-%examples/3.10sphere2
-%examples/3.10sphere3
+examples/slab_BB/slab_BB
+examples/sphere_BB/sphere_BB
 
 % -------------------------------
