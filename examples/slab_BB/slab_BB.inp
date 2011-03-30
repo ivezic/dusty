@@ -1,0 +1,114 @@
+ ----------------------------------------------------------------------
+    Input data for DUSTY                                               
+ ---------------------------------------------------------------------- 
+ This is an input file for radiative transfer code DUSTY, version 07.2009
+ NOTE: this input file is not compatible with old versions of Dusty 
+ due to the added new input options. Examples of each input option are 
+ given at the end of this file. For a more detailed description please 
+ refer to the Manual. 
+ 
+ This input file has a free format. Text and empty lines can be entered
+ arbitrarily. The occurrence of relevant numerical input, which is 
+ entered in standard FORTRAN conventions, is flagged by the equal sign.  
+ The only restrictions are that all required input entries must be 
+ specified, and in the correct order; the most likely source of an input
+ error is failure to comply with these requirements.  Single entries are
+ always preceded by the equal sign and terminated by a blank, which can 
+ be optionally preceded with a punctuation mark. Some input is entered 
+ as a list, in which case only the first member is preceded by the equal
+ sign, while each following member must be preceded by a blank (a comma 
+ followed by a blank can be entered for additional separation). Because 
+ of the special role of the equal sign as a flag for input entry, care 
+ must be taken not to introduce any equal signs except when required. 
+ All text following the `%' sign is ignored (as in TeX) and this can be 
+ used to comment out material that includes equal signs. All lines that 
+ start with the `*' sign are echoed in the output.
+* ----------------------------------------------------------------------
+* NOTES:                                                                
+* This is a sample of an input file for planar geometry in a blackbody 
+* bath: a slab istropically illuminated from both sides. No scattering. 
+* ----------------------------------------------------------------------
+
+   I. GEOMETRY
+
+%(available options: sphere\slab)
+
+     flag = slab
+                                                                        
+  II. PHYSICAL PARAMETERS                                                 
+     1) Source(s) 
+     
+%(available options: on\off)
+
+         Left = on                Right = on
+
+      1.1 Left-side source radiation:    
+
+%(available options: black_body\engelkd_marengo\power_law\file_lambda_f_lambda\file_f_lambda\file_f_nu)
+
+          Spectral shape: Spectrum = black_body
+                          NBB = 1
+			  TBB = 1000
+
+%(available options: flux\lum_r1\energy_den\dilutn_fac\t1)
+                         type of entry = t1 
+                                    T1 = 1000.
+                  kind of illumination = ISOTROPIC
+
+          Spectral shape:     Spectrum = black_body
+                          NBB = 1
+			  TBB = 1000
+                  kind of illumination = ISOTROPIC
+	  scale =1.
+
+     2) Dust Properties 
+
+%(available options: common_grain\common_and_addl_grain\tabulated)
+     
+      2.1 Chemical composition                       
+           optical properties index = tabulated
+                    ism-noscatt.dat
+%       		     ISM-OHM.dat
+     3) Optical Depth     
+
+%(available options: linear\logarithmic\user_supplied)
+
+        - grid type = LOGARITHMIC                % log grid
+        - lambda0 = 0.55 micron            % optical depth specified 
+        - tau(min) = 1.0; tau(max) = 1000.0   % for the visual wavelength   
+        - number of models = 2
+  ----------------------------------------------------------------------
+                                                                        
+ III. NUMERICS                                                           
+      
+     - accuracy for flux conservation = 0.1
+     - accuracy for Temperature fluctuation  = 1e-3
+     - starting optical depth = 1.00
+     - increment in optical depth = 2.0                                                                
+  ----------------------------------------------------------------------
+                                                                        
+  IV. OUTPUT PARAMETERS                                                 
+
+    The flags governing file production are as follows: 
+    If flag.eq.0 the particular file(s) is not produced. If flag.eq.1
+    all model results are in corresponding files with extensions 'spp' 
+    (sp.properties), 'stb' (spectra), 'itb' (images and visibilities, 
+    if chosen), 'rtb' (radial profiles) and 'mtb' (messages).  If 
+    flag.eq.2 each model result is in a separate corresponding file, 
+    with visibilities contained in fname.i##. If the images flag.eq.3 
+    the visibilities will be in separate files fname.v## (the flag for 
+    visibilities has to be the same as for images).
+
+
+        FILE DESCRIPTION                               FLAG        
+       ------------------------------------------------------------     
+       - detailed spectra for each model;           fname.s### = 2   
+       - images at specified wavelengths;           fname.i### = 0  
+       - radial profiles for each model;            fname.r### = 0   
+       - detailed run-time messages;                fname.m### = 2
+       ------------------------------------------------------------- 
+ 
+
+  The end of the input parameters listing.                                                                       
+  **********************************************************************
+ 
