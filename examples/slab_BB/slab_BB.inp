@@ -40,7 +40,7 @@
      
 %(available options: on\off)
 
-         Left = on                Right = off
+         Left = on                Right = of
 
       1.1 Left-side source radiation:    
 
@@ -51,10 +51,10 @@
 			  TBB = 1000
 
 %(available options: flux\lum_r1\energy_den\dilutn_fac\t1)
-                         type of entry = t1 
+                         type of entry = flux
                                     T1 = 1000.
                   kind of illumination = directional %ISOTROPIC
-		  angle = 5.0
+		   angle = 5.0
 
 %          Spectral shape:     Spectrum = black_body
 %                          NBB = 1

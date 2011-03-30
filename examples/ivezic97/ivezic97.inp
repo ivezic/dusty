@@ -94,7 +94,7 @@
         - grid type = logarithmic                    % log grid
         - lambda0 = 1.0 micron            % optical depth specified 
         - tau(min) = 1.0; tau(max) = 1000.0   % for the visual wavelength   
-        - number of models = 4
+        - number of models = 1
   ----------------------------------------------------------------------
                                                                         
   III. NUMERICS                                                           
@@ -125,10 +125,10 @@
        ------------------------------------------------------------     
        - detailed spectra for each model;           fname.s### = 2
        - images at specified wavelengths;           fname.i### = 0
-       - en.density at specified radii;             fname.j### = 2
-               number of radii = 4                        
-                              y = 1.0, 10.0, 100.0, 1000.0 
-       - radial profiles for each model;            fname.r### = 0   
+       - en.density at specified radii;             fname.j### = 0
+%               number of radii = 4                        
+%                              y = 1.0, 10.0, 100.0, 1000.0 
+       - radial profiles for each model;            fname.r### = 0
        - detailed run-time messages;                fname.m### = 0
        ------------------------------------------------------------- 
  
