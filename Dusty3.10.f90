@@ -4844,6 +4844,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
         if (startyp(1).eq.1) spec_scale = sigma*Tstar(1)**4.0d0
         ! typentry give the scale of input radiation
         call rdinps2(Equal,1,str,L,UCASE)
+        if (str(1:L).eq.'FLUX') typentry(1) = 1
         if (str(1:L).eq.'ENERGY_DEN') typentry(1) = 3
         if (str(1:L).eq.'DILUTN_FAC') typentry(1) = 4
         if (str(1:L).eq.'T1') typentry(1) = 5
@@ -4852,6 +4853,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
            error = 1
            goto 999
         end if
+        if (typentry(1).eq.1) Ji = RDINP(Equal,1) / pi
         if (typentry(1).eq.3) Ji = RDINP(Equal,1)
         if (typentry(1).eq.4) then
            !entry of dilution (normalization) factor
