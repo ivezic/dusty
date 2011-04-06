@@ -3337,6 +3337,7 @@ end subroutine Analysis
       else
          maxFerr = (fmax - fmin)/(fmax + dabs(fmin))
       end if
+      if (fmax.LT.(Ji*4*pi*1e-5)) maxFerr = 1e-5
 ! -----------------------------------------------------------------------
       RETURN
       END SUBROUTINE FindErr
