@@ -8199,7 +8199,7 @@ subroutine WriteOut(var1,var2,var3,nG,nameQ,nameNK)
            ' Flux at the slab left boundary:', dilutn*var1,' W/m^2'
      else
       write(12,'(a33,1p,e9.2,a6)') &
-           ' Flux at the slab left boundary:', var1,' W/m^2'
+           ' Flux at the slab left boundary:', Ji*4*pi,' W/m^2'
      end if
 ! if input spectrum is from a file its bol.flux is calculated
 ! and then normalized with the value of 'dilutn' from the input file.
