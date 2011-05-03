@@ -3316,7 +3316,8 @@ end subroutine Analysis
       INTEGER iY
       DOUBLE PRECISION flux(npY), maxFerr, fmin, fmax, aux, accFbol
 ! -----------------------------------------------------------------------
-      accFbol = 1.0d-04
+      !accFbol = 1e-3 of input flux
+      accFbol = max(Ji,Jo)*4*pi*1.0d-03
 
 !     Find the min and max of fbol values
 !     The abs and lower limit on fbol are protection for the case
@@ -3335,9 +3336,9 @@ end subroutine Analysis
 !     bad solution; overall flux cannot be negative
          maxFerr = 1
       else
-         maxFerr = (fmax - fmin)/(fmax + dabs(fmin))
+         maxFerr = (fmax - dabs(fmin))/(fmax + dabs(fmin))
+!         maxFerr = 2*(fmax-(fmax+fmin)*0.5)/(fmax+fmin)
       end if
-      if (fmax.LT.(Ji*4*pi*1e-5)) maxFerr = 1e-5
 ! -----------------------------------------------------------------------
       RETURN
       END SUBROUTINE FindErr
@@ -4256,20 +4257,20 @@ subroutine ChkLambda(lambdaOK)
 99 close(4)
   call sort(lambda,npL)
 ! check the ends of the lambda grid :
-  if(lambda(1).gt.0.01d0) then
-     write(*,*)' *************** WARNING! ********************** '
-     write(*,*)'  the shortest wavelength in lambda_grid.dat has '
-     write(*,*)'  to be 0.01 microns. correct this and try again!'
-     write(*,*)' *********************************************** '
-     goto 999
-  end if
-  if(lambda(npL).lt.36000.0d0) then
-     write(*,*)' *************** WARNING! ******************* '
-     write(*,*)'  the longest wavelength in lambda_grid.dat   '
-     write(*,*)'  has to be 3.6e4 um. correct this and try again!'
-     write(*,*)' ******************************************** '
-     goto 999
-  end if
+!  if(lambda(1).gt.0.01d0) then
+!     write(*,*)' *************** WARNING! ********************** '
+!     write(*,*)'  the shortest wavelength in lambda_grid.dat has '
+!     write(*,*)'  to be 0.01 microns. correct this and try again!'
+!     write(*,*)' *********************************************** '
+!     goto 999
+!  end if
+!  if(lambda(npL).lt.36000.0d0) then
+!     write(*,*)' *************** WARNING! ******************* '
+!     write(*,*)'  the longest wavelength in lambda_grid.dat   '
+!     write(*,*)'  has to be 3.6e4 um. correct this and try again!'
+!     write(*,*)' ******************************************** '
+!     goto 999
+!  end if
 ! check the resolution:
   do iL = 2, npL
      if (lambda(iL)/lambda(iL-1).gt.1.51d0) then
@@ -4906,6 +4907,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
         if (ksi.lt.0.0) ksi = 0.0d0
         if (ksi.gt.1.0) ksi = 1.0d0
         write(12,'(a49,F5.2)') ' Relative bol.flux fraction of right source: R =',ksi
+        Jo = Ji*ksi
      endif
   endif
   write(12,*) ' --------------------------------------------'
@@ -7185,7 +7187,7 @@ subroutine PrOut(model,nG,delta)
   implicit none
   integer iG, iY, iL, i, model, j, unt, imu, nrows, ncols,nG, iOut, iNloc , iLV
 !  parameter (nrows=200, ncols=25)
-  double precision psfn, psffunc(20,1000),eta, faux(npL), omega(npG,npL),  &
+  double precision psfn, psffunc(20,1000),eta, faux(npL), omega(npG,npL),ftotL(npL),ftotR(npL),  &
        tht1, xs, xds, xde, res, fnormL, fnormR, dmax, limval, GinfG1, delta, &
        y_loc, J_loc, Jbol(10), FbolL, FbolR, FbolIL,FbolIR,xAttTotL,xAttTotR,xDsTotL,xDsTotR,xDeTotL,xDeTotR,temp1,temp2
   double precision, allocatable::Elems(:,:)
@@ -7210,29 +7212,34 @@ subroutine PrOut(model,nG,delta)
         faux(iL) = ftot(iL,nY)/lambda(iL)
      end do
   enddo
+  do iL = 1,nL
+     ftotL(iL) = fde(iL,1) + fds(iL,1) - ksi*fsR(iL,1)
+     ftotR(iL) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY)
+  end do
   call Simpson(npL,1,nL,lambda,faux,res)
-  call Simpson(npL,1,nL,lambda,(ftot(:,1)-fsL(:,1))/lambda,temp1)
-  call Simpson(npL,1,nL,lambda,fsR(:,1)/lambda,temp2)
+  call Simpson(npL,1,nL,lambda,ftotL/lambda,temp1)
+  call Simpson(npL,1,nL,lambda,fsR(:,1)/lambda(:),temp2)
   xAttTotL = abs(temp2/temp1)
-  call Simpson(npL,1,nL,lambda,fde(:,1)/lambda,temp2)
+  call Simpson(npL,1,nL,lambda,fde(:,1)/lambda(:),temp2)
   xDeTotL = abs(temp2/temp1)
-  call Simpson(npL,1,nL,lambda,fds(:,1)/lambda,temp2)
+  call Simpson(npL,1,nL,lambda,fds(:,1)/lambda(:),temp2)
   xDsTotL = abs(temp2/temp1)
-  call Simpson(npL,1,nL,lambda,(ftot(:,nY)+ksi*fsR(:,nY))/lambda,temp1)
-  call Simpson(npL,1,nL,lambda,fsL(:,nY)/lambda,temp2)
+  call Simpson(npL,1,nL,lambda,ftotR/lambda,temp1)
+  call Simpson(npL,1,nL,lambda,fsL(:,nY)/lambda(:),temp2)
   xAttTotR = abs(temp2/temp1)
-  call Simpson(npL,1,nL,lambda,fde(:,nY)/lambda,temp2)
+  call Simpson(npL,1,nL,lambda,fde(:,nY)/lambda(:),temp2)
   xDeTotR = abs(temp2/temp1)
-  call Simpson(npL,1,nL,lambda,fds(:,nY)/lambda,temp2)
+  call Simpson(npL,1,nL,lambda,fds(:,nY)/lambda(:),temp2)
   xDsTotR = abs(temp2/temp1)
 
-!  normalization factor for output spectra 
-  fnormR = res
-!**FH new equal to the above
-!   call Simpson(npL,1,nL,lambda,(fsL(:,nY)+fde(:,nY)+fds(:,nY))/lambda(:),fnormR)
-!  the emerging bolometric flux
+  ! normalization factor for output spectra 
+  call Simpson(npL,1,nL,lambda,ftotR/lambda,fnormR)
+  call Simpson(npL,1,nL,lambda,ftotL/lambda,fnormL)
+  ! the emerging bolometric flux
   FbolR = fnormR * Jext(nY)
+  if (slb) FbolL = fnormL * Jext(1)
 
+  ! calculation of radiation pressure
   do iG = 1, nG
      call lininter(npL,nL,lambda,sigmaS(iG,:),0.55d0,iLV,sigmaVs)
      call lininter(npL,nL,lambda,sigmaA(iG,:),0.55d0,iLV,sigmaVa)
@@ -7242,17 +7249,6 @@ subroutine PrOut(model,nG,delta)
         RPr(iY) = temp1/(4*pi*clight*mprot*Gconst)*1.0D4*3.84e26/1.988e30*5.0D-26*Jext(iY)/sigmaVe
      enddo
   end do
-  if (slb) then
-     do iL = 1, nL
-!      the left-side spectra for slab
-       faux(iL) = ftot(iL,1)/lambda(iL)
-     end do
-     call Simpson(npL,1,nL,lambda,faux,res)
-!    normalization factor for output spectra
-     fnormL = res
-!    the emerging bolometric flux at the left slab boundary
-     FbolL = fnormL * Jext(1)
-   end if
 
   res = 0.0d00
 ! this is the cut-off for printout of small values (in spectra)
@@ -7394,19 +7390,13 @@ subroutine PrOut(model,nG,delta)
     if (xde.lt.limval) xde = 0.0d0
     if (fsL(iL,1).lt.limval) fsL(iL,1) = 0.0d0
 !   Printing normalized spectral shapes. Bol. flux values are in the headers. [MN]
-    ftot(iL,nY) = ftot(iL,nY)/fnormR
     if(ftot(iL,nY).lt.limval) ftot(iL,nY) = 0.0d0
     Elems(iL,1) = lambda(iL)
-    Elems(iL,2) = ftot(iL,nY)
+    Elems(iL,2) = ftotR(iL)/fnormR
     Elems(iL,3) = xs
     Elems(iL,4) = xds
     Elems(iL,5) = xde
-    if (slb) then
-!     spectral shape of the left-side source
-      Elems(iL,6) = fsL(iL,1)/fsLbol(1)
-    else
-      Elems(iL,6) = fsL(iL,1) /fnormL
-    end if
+    Elems(iL,6) = fsL(iL,1)/fsLbol(1)
     Elems(iL,7) = tautot(iL)
     Elems(iL,8) = omega(1,iL)
    end do
@@ -7442,10 +7432,9 @@ write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',Fbol
      if (xde.lt.limval) xde =0.0d0
      if(fsR(iL,nY).lt.limval) fsR(iL,nY) = 0.0d0
 !     rescale ftot with the bolom flux for z-spectra
-      ftot(iL,1) = dabs(ftot(iL,1))/fnormL
       if(ftot(iL,1).lt.limval) ftot(iL,1) = 0.0d0
       Elems(iL,1) = lambda(iL)
-      Elems(iL,2) = ftot(iL,1)
+      Elems(iL,2) = ftotL(iL)/fnormL
       Elems(iL,3) = xs
       Elems(iL,4) = xds
       Elems(iL,5) = xde

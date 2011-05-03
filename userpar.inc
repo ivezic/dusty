@@ -26,7 +26,7 @@
 !c     a safe limit which works even on old machines and PCs
 !c      PARAMETER (npY=55)
 !c     for a typical workstation  
-      PARAMETER (npY=70)
+      PARAMETER (npY=970)
 !c     do not change these coefficients!
       PARAMETER (npP=20*npY+20)  
 !c     do not change except if added disk: 
