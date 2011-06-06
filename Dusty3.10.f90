@@ -7008,6 +7008,9 @@ subroutine OPPEN(model,rootname,length)
 ! set up the status indicators
   iError = 0
   iWarning = 0
+  call attach(rootname,length,'.ext',fname)
+  open(855,file=fname,status='unknown')
+
   if (model.eq.1) iCumm = 0
 ! the following files pertain to all models and are open if model.eq.1
   if (model.eq.1) then
@@ -7193,8 +7196,20 @@ subroutine PrOut(model,nG,delta)
   double precision, allocatable::Elems(:,:)
   character*120 STemp,Serr,hdint, hdcon,hdvis, s1, su1, s2, su2, tstr*10
   character*132 hdsp1,hdsp2,hdrslb1,hdrslb2,hdrsph1,hdrsph2,hdrdyn
+  character*255 crossfilename
   double precision sigmaVs,sigmaVa,sigmaVe
 !----------------------------------------------------------------------
+
+  if(allocated(Elems)) deallocate(Elems)
+  allocate(Elems(npL,3))
+  call lininter(npL,nL,lambda,sigmaS(1,:),lamfid,iLV,sigmaVs)
+  call lininter(npL,nL,lambda,sigmaA(1,:),lamfid,iLV,sigmaVa)
+  Elems(:,1) = lambda(:)
+  Elems(:,2) = SigmaA(1,:)/sigmaVa
+  Elems(:,3) = SigmaS(1,:)/sigmaVs
+  write(855,*) '  lambda  <s_abs>/<V> <s_sca>/<V>'
+  call maketable(Elems,npL,3,855)
+  close(855)
 
   call Simpson(npL,1,nL,lambda,fsL(:,1)/lambda,FbolIL)
   call Simpson(npL,1,nL,lambda,fsR(:,nY)/lambda,FbolIR)
@@ -7241,8 +7256,8 @@ subroutine PrOut(model,nG,delta)
 
   ! calculation of radiation pressure
   do iG = 1, nG
-     call lininter(npL,nL,lambda,sigmaS(iG,:),0.55d0,iLV,sigmaVs)
-     call lininter(npL,nL,lambda,sigmaA(iG,:),0.55d0,iLV,sigmaVa)
+     call lininter(npL,nL,lambda,sigmaS(iG,:),lamfid,iLV,sigmaVs)
+     call lininter(npL,nL,lambda,sigmaA(iG,:),lamfid,iLV,sigmaVa)
      sigmaVe = sigmaVa+sigmaVs
      do iY=1,nY
         call Simpson(npL,1,nL,lambda,(sigmaS(iG,:)+sigmaA(iG,:))*ftot(:,iY)/lambda(:),temp1)
