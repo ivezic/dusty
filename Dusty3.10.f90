@@ -7008,6 +7008,7 @@ subroutine OPPEN(model,rootname,length)
 ! set up the status indicators
   iError = 0
   iWarning = 0
+
   call attach(rootname,length,'.ext',fname)
   open(855,file=fname,status='unknown')
 
@@ -7205,8 +7206,8 @@ subroutine PrOut(model,nG,delta)
   call lininter(npL,nL,lambda,sigmaS(1,:),lamfid,iLV,sigmaVs)
   call lininter(npL,nL,lambda,sigmaA(1,:),lamfid,iLV,sigmaVa)
   Elems(:,1) = lambda(:)
-  Elems(:,2) = SigmaA(1,:)/sigmaVa
-  Elems(:,3) = SigmaS(1,:)/sigmaVs
+  Elems(:,2) = SigmaA(1,:)/(sigmaVa+sigmaVs)
+  Elems(:,3) = SigmaS(1,:)/(sigmaVa+sigmaVs)
   write(855,*) '  lambda  <s_abs>/<V> <s_sca>/<V>'
   call maketable(Elems,npL,3,855)
   close(855)
@@ -7423,9 +7424,10 @@ subroutine PrOut(model,nG,delta)
    end if
    write(unt,'(A90)') hdsp1
    if(slb) then
-write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',FbolR,' ',xAttTotR,' ',xDsTotR,' ',xDeTotR,' ',FbolIL
+      write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3,A)')  '    -1      ',FbolR,' ',xAttTotR,' ',&
+           xDsTotR,' ',xDeTotR,' ',FbolIL,'     -1.       -1.'
    else
-    write(hdsp1,'(A,E9.3,A,E9.3,A)')  '   -1        ',FbolR,'                                   ',FbolIL,'   '
+      write(hdsp1,'(A,E9.3,A,E9.3,A)')  '   -1.       ',FbolR,'                                   ',FbolIL,'      -1.         -1.'
    end if
    write(unt,'(A90)') hdsp1
    call maketable(Elems,npL,8,unt)
@@ -7468,7 +7470,8 @@ write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',Fbol
     write(unt,'(a13,1p,e9.2)') '# Fbol[W/m2]=',FbolL 
     call line(1,1,unt)
     write(unt,'(a)')'#   lambda     fLeft      xAtt       xDs        xDe        fInp_R     TauTot     albedo'
-write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',FbolL,' ',xAttTotL,' ',xDsTotL,' ',xDeTotL,' ',FbolIR
+    write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3,A)')  '    -1      ',&
+         FbolL,' ',xAttTotL,' ',xDsTotL,' ',xDeTotL,' ',FbolIR,'     -1.       -1.'
     write(unt,'(A)') hdsp1
     call maketable(Elems,nL,8,unt)
    end if
