@@ -179,7 +179,7 @@ module common
 !  omega(npL,npY) - scattering albedo
 ! -----------------------------------------------------------------------------
   
-  integer iLfid, szds, top, Nfiles,noprint
+  integer iLfid, ifidG, szds, top, Nfiles,noprint
   double precision TAUtot(npL),SigmaA(npG+1,npL), SigmaS(npG+1,npL), &
        Tsub(npG), abund(npG,npY), TAUmax, xC(10), xCuser(10), &
        SigExfid, TAUfid, taufid0,lamfid, qsd, a1, a2, aveV, aveA
