@@ -1,5 +1,5 @@
 all:
-	gfortran -O3 -o dusty common3.10.f90 Dusty3.10.f90
+	gfortran -O3 -o dusty common3.10.f90 Dusty3.10.f90 -fbounds-check
 #	gfortran -g -o dusty common3.10.f90 Dusty3.10.f90
 
 openmp:

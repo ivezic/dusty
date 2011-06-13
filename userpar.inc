@@ -19,6 +19,7 @@
 !c      PARAMETER (npL=118)
       PARAMETER (npL=125)
       PARAMETER (npR=90)
+      PARAMETER (npG=10)
 
 !c     spatial grids definitions:
        

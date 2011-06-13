@@ -58,7 +58,7 @@ module common
 
   integer  npY,npP,npX, npL, npG, npR
   include 'userpar.inc'
-  parameter (npG=1)
+!  parameter (npG=1)
   integer nY, nYprev, nP, nPcav, nL
   double precision Y(npY), Yprev(npY),P(npP),bOut(npP+2),lambda(npL)
 ! =============================================================================
@@ -165,7 +165,7 @@ module common
 !  TAUtot(npL)- total opt.depth
 !
 !  These are determined in Subroutine GetOptPr
-!  SigmaA(npG,npL), SigmaS(npG,npL) - absorp. and scatt. cross sections
+!  SigmaA(npG+1,npL), SigmaS(npG+1,npL) - absorp. and scatt. cross sections
 !  SigExfid - the extinction cross section at lamfid
 !  aveV -     for a single grain size it is the single grain volume,
 !             otherwise it is the volume averaged over size distribution.
@@ -180,7 +180,7 @@ module common
 ! -----------------------------------------------------------------------------
   
   integer iLfid, szds, top, Nfiles,noprint
-  double precision TAUtot(npL),SigmaA(npG,npL), SigmaS(npG,npL), &
+  double precision TAUtot(npL),SigmaA(npG+1,npL), SigmaS(npG+1,npL), &
        Tsub(npG), abund(npG,npY), TAUmax, xC(10), xCuser(10), &
        SigExfid, TAUfid, taufid0,lamfid, qsd, a1, a2, aveV, aveA
 ! =============================================================================

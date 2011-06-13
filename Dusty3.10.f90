@@ -53,25 +53,25 @@
 
 
 !!===========================================================================
-  PROGRAM DUSTY
-!============================================================================
-! This program solves the continuum radiative transfer problem for a
-! spherically symmetric envelope or for a plane-parallel slab.
-! It is assumed that all input data are given in files named *.inp,
-! and that the list of these files is given in a master input file 'dusty.mas'.
-!
-! This is Dusty version from summer 2010, with major changes in the numerical
-! method, and greatly improved numerical stability at high optical depth.
-! Input files for older Dusty versions are incompatible with this one.
-! For details see the Manual.
-!               [Zeljko Ivezic, Maia Nenkova, Mridupawan Deka, Frank Heymann]
-!============================================================================
+PROGRAM DUSTY
+  !============================================================================
+  ! This program solves the continuum radiative transfer problem for a
+  ! spherically symmetric envelope or for a plane-parallel slab.
+  ! It is assumed that all input data are given in files named *.inp,
+  ! and that the list of these files is given in a master input file 'dusty.mas'.
+  !
+  ! This is Dusty version from summer 2010, with major changes in the numerical
+  ! method, and greatly improved numerical stability at high optical depth.
+  ! Input files for older Dusty versions are incompatible with this one.
+  ! For details see the Manual.
+  !               [Zeljko Ivezic, Maia Nenkova, Mridupawan Deka, Frank Heymann]
+  !============================================================================
   use common
   implicit none
 
   integer error, length, nG, model, Nmodel, GridType, io1, empty, lpath, &
        Nrec, lambdaOK,n_init_model,iterfbol,fbolOK
-! Nrec is the max number of records for taugrid in a file
+  ! Nrec is the max number of records for taugrid in a file
   parameter (Nrec = 1000)
   double precision value, tau1, tau2, tauIn(Nrec), pstar, us(npL,npY),delta, RDINP
   double precision, allocatable :: tau(:)
@@ -80,23 +80,21 @@
   character*235 dustyinpfile,arg, path, apath, nameIn, nameOut, nameQ(npG), &
        nameNK(10), stdf(7), str , verb
   logical UCASE,equal,initial, Lprint
-!----------------------------------------------------------------------
-!**************************
-!*** ABOUT THIS VERSION ***
-!**************************
-
+  !----------------------------------------------------------------------
+  !**************************
+  !*** ABOUT THIS VERSION ***
+  !**************************
   version= '3.12'
-
-!********************  MAIN  *******************************
+  !********************  MAIN  *******************************
   equal = .true.
-! First read lambda grid
+  ! First read lambda grid
   call ChkLambda(lambdaOK)
   if (lambdaOK.eq.0) then
      goto 999
   end if
-! Open master input file; first determine whether user supplies custom
-! DUSTY input file as the 1st argument on the command line. If yes,
-! use it. Else revert to the default file ./dusty.mas
+  ! Open master input file; first determine whether user supplies custom
+  ! DUSTY input file as the 1st argument on the command line. If yes,
+  ! use it. Else revert to the default file ./dusty.mas
   call getarg(1,dustyinpfile)
   if (trim(dustyinpfile) == "") then
      write(*,*) "No input file name found on command line. Proceeding with default file ./dusty.mas"
@@ -130,6 +128,7 @@
         allocate(tau(Nmodel))
         if (error.eq.0) then
            call GetTau(nG,tau1,tau2,tauIn,Nrec,GridType,Nmodel,tau)
+           print*,nG
            if (iVerb.eq.2) write(*,*) 'Done with GetTau'
            call Kernel(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error,Lprint)
         endif
@@ -140,7 +139,7 @@
         stop
      endif
   endif
-  !!open(13,err=998,file='dusty.mas',status='old')
+  !open input file as unt=13
   open(13,err=998,file=trim(dustyinpfile),status='old')
   ! read the verbose mode
   iVerb = RDINP(Equal,13)
@@ -148,9 +147,7 @@
   do while (io1.ge.0)
      ! read a line from master input file using
 100  read(13,'(a)',iostat=io1) apath
-     if(io1.lt.0) then
-        stop
-     end if
+     if (io1.lt.0) stop
      call clean(apath, path, lpath)
      ! if not eof and if line is not empty, or commented, proceed
      if (empty(path).ne.1) then
@@ -167,7 +164,7 @@
         if (error.eq.3) goto 100
         ! get optical properties
         call getOptPr(nG,nameQ,nameNK,error,stdf)
-! if an error reading files go to the next input file
+        ! if an error reading files go to the next input file
         if (error.eq.3) goto 100
         if (iVerb.eq.2) write(*,*) 'Done with getOptPr'
         if(allocated(tau)) deallocate(tau)
@@ -180,63 +177,60 @@
         if(allocated(tau)) deallocate(tau)
         if (error.ne.0) go to 100
      end if
-! end of the loop over input files
+     ! end of the loop over input files
   end do
   if (iVerb.gt.0.and.Lprint) write(*,*) ' End of input files '
   close(13)
-! end this run
+  ! end this run
   goto 999
-! to execute if the master input file is missing
+  ! to execute if the master input file is missing
 998 write(*,*)' *********** Fatal Error in DUSTY ********************'
   write(*,*)' * Problem finding input file ',dustyinpfile,'!? '
   write(*,*)' *****************************************************'
-!----------------------------------------------------------------------
-
+  !----------------------------------------------------------------------
 999 stop
 end program DUSTY
 !**********************************************************************
-
 
 !!=======================================================================
 ! Routines and funcitons related to the RADIATIVE TRANSFER CALCULATION,
 ! arranged in alphabetical order.                        [MN, Aug.2010]
 !!=======================================================================
 
-
 !***********************************************************************
 subroutine Emission(nG,T4_ext,emiss)
-!=======================================================================
-! This subroutine calculates emission term from the temperature and abund
-! arrays for flag=0, and adds U to it for flag=1.
-!                                                      [Z.I., Mar. 1996]
-!=======================================================================
+  !=======================================================================
+  ! This subroutine calculates emission term from the temperature and abund
+  ! arrays for flag=0, and adds U to it for flag=1.
+  !                                                      [Z.I., Mar. 1996]
+  !=======================================================================
   use common, only: nY,npY,nL,npL,lambda,Td, abund,dynrange
   implicit none
 
   integer iG, iY, iL, nG
   double precision  emiss(npL,npY),emig, tt, xP,Planck,T4_ext(npY)
-! -----------------------------------------------------------------------
+  ! -------------------------------------------------------------------
 
-! first initialize Emiss
+  ! first initialize Emiss
   emiss = 0.0d0
-! calculate emission term for each component and add it to emiss
-! loop over wavelengths
+  ! calculate emission term for each component and add it to emiss
+  ! loop over wavelengths
   do iL = 1, nL
-! loop over radial coordinate
+     ! loop over radial coordinate
      do iY = 1, nY
-!   loop over grains
+        ! loop over grains
         do iG = 1, nG
            xP = 14400.0d0/(lambda(iL)*Td(iG,iY))
            tt = (Td(iG,iY)**4.0d0) / T4_ext(iY)
            emig = abund(iG,iY)*tt*Planck(xP)
            if (emig.lt.dynrange*dynrange) emig = 0.0d0
-!     add contribution for current grains
+           ! add contribution for current grains
            emiss(iL,iY) = emiss(iL,iY) + emig
         end do
         if (emiss(iL,iY).lt.dynrange*dynrange) emiss(iL,iY) = 0.0d0
      end do
   end do
-! -----------------------------------------------------------------------
+  ! --------------------------------------------------------------------
   return
 end subroutine Emission
 !***********************************************************************
@@ -915,7 +909,7 @@ subroutine Rad_Transf(nG,Lprint,initial,pstar,y_incr,us,fs,em,omega, &
            iOut, istop
   integer, intent(in)::nG, y_incr,iterfbol
   double precision  em(npL,npY), tauaux(npY), pstar, result1, omega(npG,npL),&
-       fs(npL,npY), us(npL,npY), T4_ext(npY), T_old(nG,npY), u_old(npL,npY), &
+       fs(npL,npY), us(npL,npY), T4_ext(npY), T_old(npG,npY), u_old(npL,npY), &
        maxerrT,maxerrU, aux1,aux2, x1,x2, eta, &
        fDebol(npY), fDsbol(npY), Usbol(npY), Udebol(npY), Udsbol(npY), &
 	   U_prev(npL,npY), Ubol_old(npY), xx, JL, JR,maxFerr
@@ -993,24 +987,24 @@ subroutine Rad_Transf(nG,Lprint,initial,pstar,y_incr,us,fs,em,omega, &
            end do
         end do
      end if
-!  find T_external for the new y-grid if T(1) given in input
+     ! find T_external for the new y-grid if T(1) given in input
      if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
         call find_Text(nG,T4_ext)
      elseif (.not.initial.and.typentry(1).eq.5) then
         call find_Text(nG,T4_ext)
      end if
-!!** this is to check convergence on U [MN]
+     !!** this is to check convergence on U [MN]
      U_prev = Utot
-!  find emission term
+     ! find emission term
      call Emission(nG,T4_ext,em)
-!  moment = 1 is for finding total energy density only
+     ! moment = 1 is for finding total energy density only
      moment = 1
      call Find_Diffuse(initial,iter,iterfbol,T4_ext,us,em,omega,error)
-!  assign previus Td to T_old
+     ! assign previus Td to T_old
      T_old = Td
-!  find Td
+     ! find Td
      call Find_Temp(nG,T4_ext)
-!  check convergence for dust temperature
+     ! check convergence for dust temperature
      maxerrT = 0.0d0
      aux1 = 0.0d0
      do iG = 1,nG
@@ -1141,7 +1135,7 @@ subroutine SLBdiff(flag,om,grid,T4_ext,mat1,nL,nY,mat2,fp,fm)
   implicit none
   integer npY, npP, npX, npL, npG, npR
   include 'userpar.inc'
-  parameter (npG=1)
+!  parameter (npG=1)
   integer iL, iY, j, nL, nY, flag
   double precision mat1(npL,npY), mat2(npL,npY), grid(npL,npY), &
        om(npG,npL), fp(npL,npY), fm(npL,npY), tau(npY), &
@@ -1871,10 +1865,10 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
 
   character*235 nameQ(npG), nameNK(10), fname, dummy*132
   integer iG, nG, io1, iL, nLin, iiLaux,Nprop,nA, iiA, iiC,iCuser,er, Nmax, npA
-! Nmax is the number of records in user supplied file with opt.prop.
-! and npA is the dimension of the array of grain sizes
+  ! Nmax is the number of records in user supplied file with opt.prop.
+  ! and npA is the dimension of the array of grain sizes
   parameter (Nmax=10000, npA=100)
-! parameter (Nmax=10000, npA=1000)
+  ! parameter (Nmax=10000, npA=1000)
   double precision aa,bb,cc,lambdain(Nmax),Qain(Nmax),Qsin(Nmax), &
        n(npL),k(npL), aQabs(npA,npL),aQsca(npA,npL), amax,       &
        nsd(npA), a(npA), faux1(npA), faux2(npA), f(npA), int,    &
@@ -1882,17 +1876,17 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
        aQa(Nmax), aQs(Nmax),  Cnorm, a3ave, a2ave,               &
        n_int(npL), k_int(npL)
   character stdf(7)*235
-! ----------------------------------------------------------------
-! this should never change
+  ! ---------------------------------------------------------------
+  ! this should never change
   nL = npL
   Nprop = 7
-!----------------------------------------------------------------
+  !----------------------------------------------------------------
   er = 0
-! first check that the user supplied wavelength grid is
-! monotonously increasing
+  ! first check that the user supplied wavelength grid is
+  ! monotonously increasing
   if (top.lt.3) then
-! calculate efficiencies from n and k by mie theory
-! generate the size array
+     ! calculate efficiencies from n and k by mie theory
+     ! generate the size array
      if (szds.gt.2) then
         amax = 5.0d0*a2
      else
@@ -1903,16 +1897,16 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
      else
         nA =50
      end if
-! build-up the array of sizes a(nA)
+     ! build-up the array of sizes a(nA)
      call getSizes(npA,nA,a1,amax,a)
-! evaluate the normalization constant for the size
-! distribution nsd(nA)
+     ! evaluate the normalization constant for the size
+     ! distribution nsd(nA)
      do iiA = 1, nA
         nsd(iiA) = sizedist(qsd,a(iiA),szds,a2)
      end do
      call powerint(npA,1,nA,a,nsd,Cnorm)
-! find the average grain volume aveV and average grain  eff.
-! area aveA (needed in dynamics)
+     ! find the average grain volume aveV and average grain  eff.
+     ! area aveA (needed in dynamics)
      if(dabs(a1-a2).le.1.d-3) then
         aveV = 4.0d0/3.0d0*pi*a1**3
         print*,'aveV:',aveV,'a1:',a1
@@ -1930,15 +1924,15 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
         call powerint(npA,1,nA,a,faux1,a2ave)
         aveA = pi*a2ave/Cnorm
      end if
-!--  loop over supported components --
+     !--  loop over supported components --
      do iiC= 1, Nprop
         f(iiC) = xC(iiC)
         fname = stdf(iiC)
         call getprop(npL,lambda,nL,fname,n,k,er)
         if (er.eq.3) goto 999
-! calculate qabs and qsca for supported grains
+        ! calculate qabs and qsca for supported grains
         call mie(npL,nL,lambda,n,k,npA,nA,a,1,aQabs,aQsca)
-! for each lambda integrate pi*a^2*qext with n(a)da
+        ! for each lambda integrate pi*a^2*qext with n(a)da
         do iL = 1, nL
            do iiA = 1, nA
               faux1(iiA)=nsd(iiA)*aQabs(iiA,iL)*pi*a(iiA)**2.0d0
@@ -1951,17 +1945,17 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
         end do
      end do
      if (top.eq.2) then
-!--  loop over user supplied components --
+        !--  loop over user supplied components --
         do iCuser = 1, nfiles
            iiC = Nprop + iCuser
            f(iiC) = xCuser(iCuser)
-! read in optical properties
+           ! read in optical properties
            fname = nameNK(iCuser)
            call getprop(npL,lambda,nL,fname,n,k,er)
            if (er.eq.3) goto 999
-! calculate qabs and qsca
+           ! calculate qabs and qsca
            call mie(npL,nL,lambda,n,k,npA,nA,a,1,aQabs,aQsca)
-! for each lambda integrate pi*a^2*qext with n(a)da
+           ! for each lambda integrate pi*a^2*qext with n(a)da
            do iL = 1, nL
               do iiA = 1, nA
                  faux1(iiA)=nsd(iiA)*aQabs(iiA,iL)*pi*a(iiA)**2.0d0
@@ -1976,21 +1970,31 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
      else
         nfiles = 0
      end if
-! mix them together (syntetic grain model)
+     ! mix them together and store in sigmaA(1,*) sigmaS(1,*)
+     ! as well as storing them individually in sigmaA(iG+1,*) sigmaS(iG,*)
      do iL = 1, nL
         sigmaA(1,iL) = 0.0d0
         sigmaS(1,iL) = 0.0d0
+        iG = 1
         do iiC= 1, Nprop+nfiles
            sigmaA(1,iL) = sigmaA(1,iL) + f(iiC) * sigAbs(iiC,iL)
            sigmaS(1,iL) = sigmaS(1,iL) + f(iiC) * sigSca(iiC,iL)
+           if (f(iic).gt.0.0) then 
+              sigmaA(iG+1,iL) = f(iiC) * sigAbs(iiC,iL)
+              sigmaS(iG+1,iL) = f(iiC) * sigSca(iiC,iL)
+              iG = iG +1
+           elseif (iL.eq.1) then
+              nG = nG - 1
+              print*,nG
+           end if
         end do
      end do
   else
-! this is for top.ge.3 - [Sigma/V] from a file
-! initialize aveV and aveA for this case
+     ! this is for top.ge.3 - [Sigma/V] from a file
+     ! initialize aveV and aveA for this case
      aveV = 1.0d0
      aveA = 1.0d0
-! read in lambda grid and optical properties
+     ! read in lambda grid and optical properties
      do iG = 1, nG
         open(1,err=998,file=nameQ(iG),status='old')
         read(1,'(a)',err=998)dummy
@@ -2010,7 +2014,7 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
 900     close(1)
         if (iL.lt.2) goto 998
         nLin = iL
-! if input wavelengths in descending order turn them around
+        ! if input wavelengths in descending order turn them around
         if (lambdain(1).gt.lambdain(2)) then
            do iL = 1, nLin
               ala(iL) = lambdain(iL)
@@ -2023,11 +2027,11 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
               Qsin(iL) = aQs(nLin+1-iL)
            end do
         end if
-! interpolate to dusty's wavelength grid
+        ! interpolate to dusty's wavelength grid
         do iL = 1, nL
            call powerinter(Nmax,nLin,lambdain,Qain,lambda(iL),iiLaux,aa)
            sigmaA(iG,iL) = aa
-! call lininter(Nmax,nLin,lambdain,Qsin,lambda(iL),iiLaux,aa)
+           ! call lininter(Nmax,nLin,lambdain,Qsin,lambda(iL),iiLaux,aa)
            call powerinter(Nmax,nLin,lambdain,Qsin,lambda(iL),iiLaux,aa)
            sigmaS(iG,iL) = aa
         end do
@@ -2157,8 +2161,7 @@ subroutine GetTau(nG,tau1,tau2,tauIn,Nrec,GridType,Nmodel,tau)
 !-----------------------------------------------------------------------
 
   if (ng.gt.1) then
-     write(18,*)'fix GetTau, ng>1 !'
-     stop
+     print*,'fix GetTau, ng>1 !'
   end if
   taumax = 0.0d0
   do model = 1, Nmodel
@@ -2227,8 +2230,7 @@ subroutine GetTauMax(tau0,nG)
   double precision faux1(npL), faux2(npL), tau0, sigAfid, sigSfid
 !-----------------------------------------------------------------------
   if (nG.gt.1) then
-     write(18,*)'nG>1 is not implemented yet!'
-     stop
+     print*,'nG>1 is not implemented yet!'
   end if
   taumax = 0.0d0
   taufid0 = tau0
@@ -2716,7 +2718,7 @@ end subroutine pgrid
   integer iterfbol, nY, iY, nL, iL
   integer npY, npP, npX, npL, npG, npR
   include 'userpar.inc'
-  parameter (npG=1)
+!  parameter (npG=1)
   double precision TAUslb(npL,npY),tautot(npL),tau(npY),Y(npY)
   logical initial
 ! ----------------------------------------------------------------------
@@ -3548,8 +3550,7 @@ EXTERNAL IntETA
 ! -----------------------------------------------------------------------
 !     temporary
       IF (nG.GT.1.AND.iX.GE.1) THEN
-         write(18,*)' FindInt should be fixed, nG>1 !'
-         stop
+         print*, ' FindInt should be fixed, nG>1 !'
       END IF
 !     find impact parameter tangential to the stellar disk
 !     first find the Planck averaged absorption efficiencies at Y=1
@@ -4922,12 +4923,18 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
   call rdinps2(Equal,1,str,L,UCASE)
   if (str(1:L).eq.'COMMON_GRAIN') then
    top = 1
+   nG = 6
+  elseif (str(1:L).eq.'COMMON_GRAIN_COMPOSITE') then
+   top = 1
+   nG = 1
   elseif (str(1:L).eq.'COMMON_AND_ADDL_GRAIN') then
    top = 2
+  elseif (str(1:L).eq.'COMMON_AND_ADDL_GRAIN_COMPOSITE') then
+   top = 4
   elseif (str(1:L).eq.'TABULATED') then
    top = 3
   end if
-  if (top.ne.1.and.top.ne.2.and.top.ne.3) then
+  if (top.ne.1.and.top.ne.2.and.top.ne.3.and.top.ne.4) then
    call msg(9)
    error = 1
    goto 999
@@ -4963,8 +4970,10 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
    if (i.eq.7) write(stdf(i),'(a)')"stnd_dust_lib/SiC-peg.nk"
   enddo
 ! user supplied n and k:
-  if (top.eq.2) then
+  if ((top.eq.2).or.(top.eq.4)) then
      nfiles = RDINP(Equal,1)
+     if (top.eq.2) nG = nfiles + 7
+     if (top.eq.4) nG = 1
 ! File names
    strg = 'optical constants:'
    do i = 1, nfiles
@@ -7008,6 +7017,10 @@ subroutine OPPEN(model,rootname,length)
 ! set up the status indicators
   iError = 0
   iWarning = 0
+
+  call attach(rootname,length,'.ext',fname)
+  open(855,file=fname,status='unknown')
+
   if (model.eq.1) iCumm = 0
 ! the following files pertain to all models and are open if model.eq.1
   if (model.eq.1) then
@@ -7193,8 +7206,32 @@ subroutine PrOut(model,nG,delta)
   double precision, allocatable::Elems(:,:)
   character*120 STemp,Serr,hdint, hdcon,hdvis, s1, su1, s2, su2, tstr*10
   character*132 hdsp1,hdsp2,hdrslb1,hdrslb2,hdrsph1,hdrsph2,hdrdyn
+  character*255 crossfilename
   double precision sigmaVs,sigmaVa,sigmaVe
 !----------------------------------------------------------------------
+
+  if(allocated(Elems)) deallocate(Elems)
+  if (nG.gt.1) allocate(Elems(npL,3+2*nG))
+  if (nG.eq.1) allocate(Elems(npL,3))
+  call lininter(npL,nL,lambda,sigmaS(1,:),lamfid,iLV,sigmaVs)
+  call lininter(npL,nL,lambda,sigmaA(1,:),lamfid,iLV,sigmaVa)
+  Elems(:,1) = lambda(:)
+  Elems(:,2) = SigmaA(1,:)/(sigmaVa+sigmaVs)
+  Elems(:,3) = SigmaS(1,:)/(sigmaVa+sigmaVs)
+  hdrdyn = '  lambda    <abs>/<V>  <sca>/<V>'
+  if (nG.gt.1) then 
+     do iG=1,nG
+        hdrdyn = hdrdyn + '  <abs>/<V>  <sca>/<V>'
+        Elems(:,2+2*iG) = SigmaA(iG+1,:)/(sigmaVa+sigmaVs)
+        Elems(:,3+2*iG) = SigmaS(iG+1,:)/(sigmaVa+sigmaVs)
+     end do
+     write(855,'(A)') hdrdyn
+     call maketable(Elems,npL,3+2*nG,855)
+  else
+     write(855,*) hdrdyn
+     call maketable(Elems,npL,3,855)
+  end if
+  close(855)
 
   call Simpson(npL,1,nL,lambda,fsL(:,1)/lambda,FbolIL)
   call Simpson(npL,1,nL,lambda,fsR(:,nY)/lambda,FbolIR)
@@ -7241,8 +7278,8 @@ subroutine PrOut(model,nG,delta)
 
   ! calculation of radiation pressure
   do iG = 1, nG
-     call lininter(npL,nL,lambda,sigmaS(iG,:),0.55d0,iLV,sigmaVs)
-     call lininter(npL,nL,lambda,sigmaA(iG,:),0.55d0,iLV,sigmaVa)
+     call lininter(npL,nL,lambda,sigmaS(iG,:),lamfid,iLV,sigmaVs)
+     call lininter(npL,nL,lambda,sigmaA(iG,:),lamfid,iLV,sigmaVa)
      sigmaVe = sigmaVa+sigmaVs
      do iY=1,nY
         call Simpson(npL,1,nL,lambda,(sigmaS(iG,:)+sigmaA(iG,:))*ftot(:,iY)/lambda(:),temp1)
@@ -7408,9 +7445,10 @@ subroutine PrOut(model,nG,delta)
    end if
    write(unt,'(A90)') hdsp1
    if(slb) then
-write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',FbolR,' ',xAttTotR,' ',xDsTotR,' ',xDeTotR,' ',FbolIL
+      write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3,A)')  '    -1      ',FbolR,' ',xAttTotR,' ',&
+           xDsTotR,' ',xDeTotR,' ',FbolIL,'     -1.       -1.'
    else
-    write(hdsp1,'(A,E9.3,A,E9.3,A)')  '   -1        ',FbolR,'                                   ',FbolIL,'   '
+      write(hdsp1,'(A,E9.3,A,E9.3,A)')  '   -1.       ',FbolR,'                                   ',FbolIL,'      -1.         -1.'
    end if
    write(unt,'(A90)') hdsp1
    call maketable(Elems,npL,8,unt)
@@ -7453,7 +7491,8 @@ write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',Fbol
     write(unt,'(a13,1p,e9.2)') '# Fbol[W/m2]=',FbolL 
     call line(1,1,unt)
     write(unt,'(a)')'#   lambda     fLeft      xAtt       xDs        xDe        fInp_R     TauTot     albedo'
-write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3)')  '    -1      ',FbolL,' ',xAttTotL,' ',xDsTotL,' ',xDeTotL,' ',FbolIR
+    write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3,A)')  '    -1      ',&
+         FbolL,' ',xAttTotL,' ',xDsTotL,' ',xDeTotL,' ',FbolIR,'     -1.       -1.'
     write(unt,'(A)') hdsp1
     call maketable(Elems,nL,8,unt)
    end if
@@ -8437,7 +8476,7 @@ end subroutine WriteOut
   implicit none
   integer npY, npP, npX, npL, npG, npR
   include 'userpar.inc'
-  parameter (npG=1)
+!  parameter (npG=1)
   integer nG, nY, iY, itr, ETAconv, uconv, err, iX, itmax, ver
   double precision eta(npY), etaold(npY), u(npY), uold(npY),  &
        phi_loc(npY), zeta(npG,npY), Y(npY), eps_loc, f, acc, gmax, &
@@ -8503,7 +8542,7 @@ end subroutine Dynamics
       IMPLICIT none
       INTEGER npY, npP, npX, npL, npG, npR
       INCLUDE 'userpar.inc'
-      PARAMETER (npG=1)
+!      PARAMETER (npG=1)
       INTEGER ver, nY, iY
       DOUBLE PRECISION eps_loc, f, wold(npY), w(npY), phi_loc(npY), &
            zeta(npG,npY), Y(npY), z(npY), zz(npY), gmax, g,        &
@@ -8585,7 +8624,7 @@ end subroutine Dynamics
       IMPLICIT none
       INTEGER npY, npP, npX, npL, npG, npR
       INCLUDE 'userpar.inc'
-      PARAMETER (npG=1)
+!      PARAMETER (npG=1)
       INTEGER iY, nY
       DOUBLE PRECISION w(npY), Eta(npY), zeta(npG,npY), Y(npY), EtaINT
 ! ======================================================================
@@ -8611,7 +8650,7 @@ end subroutine Dynamics
       IMPLICIT none
       INTEGER npY, npP, npX, npL, npG, npR
       INCLUDE 'userpar.inc'
-      PARAMETER (npG=1)
+!      PARAMETER (npG=1)
       INTEGER nY, iY
       DOUBLE PRECISION phi_loc(npY), w(npY), zeta(npG,npY)
 ! -----------------------------------------------------------------------
@@ -8641,7 +8680,7 @@ subroutine add(np1,nr1,np2,nr2,q1,q2,q3,qout)
   implicit none
   integer npY, npP, npX, npL, npG, npR
   include 'userpar.inc'
-  parameter (npG=1)
+!  parameter (npG=1)
 
   integer  np1, nr1, np2, nr2, i2, i1
   double precision  q1(np2,np1), q2(np2,np1), q3(np2,np1),qout(np2,np1)
@@ -8668,7 +8707,7 @@ subroutine add2(flxs,flxe,fbsum,nY)
   implicit none
   integer npY, npP, npX, npL, npG, npR
   include 'userpar.inc'
-  parameter (npG=1)
+!  parameter (npG=1)
 
   integer nY, iY
   double precision flxs(npL,npY), flxe(npL,npY), flxsb(npY),flxeb(npY), fbsum(npY)
