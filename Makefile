@@ -1,6 +1,10 @@
+F90=gfortran -O3 -fbounds-check
+#F90=gfortran -pg -fbounds-check
+#F90=/opt/ekopath-4.0.10/bin/pathf90 -O3 -openmp
+#F90=/opt/ekopath-4.0.10/bin/pathf90 -O3
+
 all:
-	gfortran -O3 -o dusty common3.10.f90 Dusty3.10.f90 -fbounds-check
-#	gfortran -g -o dusty common3.10.f90 Dusty3.10.f90
+	$(F90) -o dusty common3.10.f90 Dusty3.10.f90 
 
 openmp:
-	gfortran -O3 -fopenmp -o dusty common3.10.f90 Dusty3.10.f90
+	$(F90) -fopenmp -o dusty common3.10.f90 Dusty3.10.f90
