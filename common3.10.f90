@@ -176,11 +176,11 @@ module common
 ! The following arrays carry an extra y-dependence as a preparation for the
 ! mutigrain code, and are determined in subroutine GetOmega:
 !  abund(npG,npY) - relative abundances of grain types, currently 1
-!  omega(npL,npY) - scattering albedo
+!  omega(npG+1,npL) - scattering albedo
 ! -----------------------------------------------------------------------------
   
   integer iLfid, ifidG, szds, top, Nfiles,noprint
-  double precision TAUtot(npL),SigmaA(npG+1,npL), SigmaS(npG+1,npL), &
+  double precision TAUtot(npL),SigmaA(npG+1,npL), SigmaS(npG+1,npL),&
        Tsub(npG), abund(npG,npY), TAUmax, xC(10), xCuser(10), &
        SigExfid, TAUfid, taufid0,lamfid, qsd, a1, a2, aveV, aveA
 ! =============================================================================
