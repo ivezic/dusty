@@ -4330,13 +4330,13 @@ subroutine CLLOSE(error,model,Nmodel)
 ! close the default output file:
   if (iError.ne.0) then
    write(12,'(a42,i4)') ' There are some error messages for model:',model
-   write(12,*) ' Please check m## file (if not produced then rerun)'
-   if (iverb.gt.0) print*, 'There are some error messages for model:',model,' (check m## file)'
+   write(12,*) ' Please check m### file (if not produced then rerun)'
+   if (iverb.gt.0) print*, 'There are some error messages for model:',model,' (check m### file)'
   end if
   if (iWarning.ne.0.and.iError.eq.0) then
    write(12,'(a36,i4)') ' There are some warnings for model:',model
-   write(12,*)' Please check m## file (if not produced then rerun)'
-   if (iverb.gt.0) print*, 'There are some warnings for model:',model,' (check m## file)'
+   write(12,*)' Please check m### file (if not produced then rerun)'
+   if (iverb.gt.0) print*, 'There are some warnings for model:',model,' (check m### file)'
   end if
   iCumm = iCumm + iError + iWarning
   if (model.eq.Nmodel.or.error.eq.3.or.error.eq.4) then
@@ -4347,14 +4347,14 @@ subroutine CLLOSE(error,model,Nmodel)
     else
      if(sph) then
      write(12,'(a)') &
-         ' ========================================================================================'
+         ' ============================================================================================================'
      else
      write(12,'(a)') &
-         ' ======================================================================================='
+         ' ============================================================================================================'
      end if
     end if
     write(12,'(a22,1p,e8.1,a8)')'  (1) optical depth at',lamfid,' microns'
-    write(12,'(a69,1p,e9.2)')'  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0=', Psi0
+    write(12,'(a70,1p,e9.2)')'  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0 =', Psi0
 !  ----------  for slab output ----------------------------
     if(slb) then
      write(12,'(a)')'  (3) input bol.flux (in W/m2) of the left-side source at the left slab boundary'
@@ -4394,9 +4394,9 @@ subroutine CLLOSE(error,model,Nmodel)
       write(12,*)' All spectra are in file *.stb'
      else
       if (slb.and.iA.eq.3) then
-       write(12,*)' Spectra are in files *.s## and *.z##'
+       write(12,*)' Spectra are in files *.s### and *.z###'
       else
-       write(12,*)' Spectra are in files *.s##'
+       write(12,*)' Spectra are in files *.s###'
       end if
      end if
     end if
@@ -4410,14 +4410,14 @@ subroutine CLLOSE(error,model,Nmodel)
       end if
      else
       if(slb) then
-        write(12,*)' Intensities are in files *.i##'
+        write(12,*)' Intensities are in files *.i###'
       else
-        write(12,*)' Images are in files *.i##'
+        write(12,*)' Images are in files *.i###'
       end if
-      if (iV.ne.0.and.abs(ic).eq.3) write(12,*)' Visibility curves are in files *.v##'
+      if (iV.ne.0.and.abs(ic).eq.3) write(12,*)' Visibility curves are in files *.v###'
      end if
      if (iC.eq.-3.and.iPsf.ne.0) then
-       write(12,*)' Convolved images are in files *.c##'
+       write(12,*)' Convolved images are in files *.c###'
        if (psftype.lt.3) write(12,*)' Point spread functions are in file *.psf'
      end if
     end if
@@ -4427,7 +4427,7 @@ subroutine CLLOSE(error,model,Nmodel)
       if (iJ.eq.1) then
         write(12,*)' All energy density profiles are in file *.jtb'
       else
-        write(12,*)' Energy density profiles are in files *.j##'
+        write(12,*)' Energy density profiles are in files *.j###'
       end if
      end if
     end if
@@ -4436,12 +4436,12 @@ subroutine CLLOSE(error,model,Nmodel)
      if (iB.eq.1) then
        write(12,*)' All radial profiles are in file *.rtb'
      else
-       write(12,*)' Radial profiles are in files *.r##'
+       write(12,*)' Radial profiles are in files *.r###'
      end if
     end if
 !------------------------- messages ------------------
     if (iX.eq.1) write(12,*)' All run-time messages are in file *.mtb'
-    if (iX.gt.1) write(12,*)' Run-time messages are in files *.m##'
+    if (iX.gt.1) write(12,*)' Run-time messages are in files *.m###'
    else   
      write(12,*)' Ending calculations for this input file.'
    end if  !end if for error.ne.3
@@ -4890,7 +4890,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
         if (startyp(2).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,1,error)
         call rdinps2(Equal,1,str,L,UCASE)
         if (str(1:L).eq.'DIRECTIONAL') then
-           write(12,'(a41)') ' Directional illumination from the left.'
+           write(12,'(a41)') ' Directional illumination from the right.'
            ! enter incident theta_in:
            ! th1 the left illumination angle (in degrees) measured from the normal
            th2 = RDINP(Equal,1)
@@ -4899,7 +4899,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
            mu2 = dcos(th2)
         elseif (str(1:L).eq.'ISOTROPIC') then
            th2 = -1.0d0
-           write(12,'(a40)') ' Isotropic illumination from the left.'
+           write(12,'(a41)') ' Isotropic illumination from the right.'
            mu2 = -1.0d0
         end if
         ! ksi is the relative bol.flux of the second source
@@ -7287,16 +7287,16 @@ subroutine PrOut(model,nG,delta)
    write(12,*)' --------'
    if (slb) then
 !    slab output 
-      s1=' ###   Tau0   Psi/Psi0    FiL     FiR      FbolL   FbolR    r1(cm)   TdL(K)   TdR(K)   RPr(1)  e(%)'
-     su1=' ###     1       2         3       4         5       6        7         8        9      10     11'
+      s1=' ###   Tau0     Psi/Psi0    FiL      FiR       FbolL    FbolR     r1(cm)    TdL(K)    TdR(K)    RPr(1)   e(%)'
+     su1=' ###     1         2         3        4          5        6         7          8         9       10       11'
      write(12,'(a)') s1
      write(12,'(a)') su1
      write(12,'(a)') &
-         ' ==================================================================================================='
+         ' ============================================================================================================'
 !  output for sphere 
    elseif(sph) then
-      s1= ' ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1   T1(K)    Td(K)    RPr(1)  e(%)'
-     su1= ' ###     1       2        3        4        5        6        7        8        9      10'
+      s1= ' ###   tau0     Psi/Psi0 Fi(W/m2)   r1(cm)    r1/rc     theta1    T1(K)     Td(K)     RPr(1)   e(%)'
+     su1= ' ###     1         2        3         4         5         6         7         8         9       10'
      if(rdwa.or.rdw) then
       s2='  Mdot      Ve       M> '
      su2='   11       12       13 '        
@@ -7324,14 +7324,17 @@ subroutine PrOut(model,nG,delta)
 ! print output tables for ea.model
 !---------------- Output for slab: ---------------------------
   if(slb) then
-    write(12,'(i4,1p,10e9.2,a3)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
+!    write(12,'(i4,1p,10e9.2,a3)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
+    write(12,'(i4,10(1x,1p,e9.2),1x,a3)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
 !---------- for spherical shell ------------------------------
   elseif(sph) then
    if (rdwa.or.rdw.or.rdwpr) then
-    write(12,'(i4,1p,9e9.2,a1,a3,a1,1p,3e9.2)') &
+!    write(12,'(i4,1p,9e9.2,a1,a3,a1,1p,3e9.2)') &
+    write(12,'(i4,9(1x,1p,e9.2),1x,a1,1x,a3,1x,a1,1x,3(1x,1p,e9.2))') &
          model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr,' ',CMdot, CVe, CM
    else
-    write(12,'(i4,1p,9e9.2,a1,a3)') &
+!    write(12,'(i4,1p,9e9.2,a1,a3)') &
+    write(12,'(i4,9(1x,1p,e9.2),1x,a1,1x,a3)') &
          model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr
    end if
 !!!  if (left.eq.1) then
