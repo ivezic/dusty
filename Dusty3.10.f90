@@ -3317,7 +3317,8 @@ end subroutine Analysis
       DOUBLE PRECISION flux(npY), maxFerr, fmin, fmax, aux, accFbol
 ! -----------------------------------------------------------------------
       !accFbol = 1e-3 of input flux
-      accFbol = max(Ji,Jo)*4*pi*1.0d-03
+      !accFbol = max(Ji,Jo)*4*pi*1.0d-03
+      accFbol = max(Ji,Jo)*4*pi*accuracy
 
 !     Find the min and max of fbol values
 !     The abs and lower limit on fbol are protection for the case
