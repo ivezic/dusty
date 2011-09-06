@@ -7571,8 +7571,7 @@ subroutine PrOut(model,nG,delta)
         do iL = 1, nL
            Elems(iL,1) = lambda(iL)
            do imu = 1, nmu
-              !if(iPhys.eq.1) SLBintm(imu,iL) = SLBintm(imu,iL)*Jext(nY)
-              Elems(iL,imu+1) = SLBintm(imu,iL)
+              Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(nY)
            end do
            Elems(iL,nmu+2) = istR(iL)
         end do
@@ -7592,8 +7591,7 @@ subroutine PrOut(model,nG,delta)
         do iL = 1, nL
            Elems(iL,1) = lambda(iL)
            do imu = 1, nmu
-              if(iPhys.eq.1) SLBintp(imu,iL) = SLBintp(imu,iL)*Jext(1)
-              Elems(iL,imu+1) = SLBintp(imu,iL)
+              Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(1)
            end do
         end do
         !write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
@@ -7624,11 +7622,7 @@ subroutine PrOut(model,nG,delta)
               ! this was the bug in intensity output for sphere,
               ! the missing 4piY^2 factor for intensity output [June 2006]
               ! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
-              IF (iPhys.eq.1) THEN
-                 Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-              ELSE
-                 Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-              END IF
+              Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
            end do
         end do
         write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
