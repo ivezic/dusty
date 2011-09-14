@@ -5337,7 +5337,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
 ! if iInn=1: print err.vs.iter in unt=38 (fname.err) for all models
 ! and additionally list scaled fbol(y) and ubol(y) in m-files.
   iInn = 1
-  iPhys = 0
+  iPhys = 1
 !  spectra
   iA = RDINP(Equal,1)
   iC = RDINP(Equal,1)
@@ -7230,8 +7230,8 @@ subroutine PrOut(model,nG,delta)
      end do
   enddo
   do iL = 1,nL
-     ftotL(iL) = fde(iL,1) + fds(iL,1) - ksi*fsR(iL,1)
-     ftotR(iL) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY)
+     ftotL(iL) = -fsL(iL,1) - fde(iL,1)  - fds(iL,1)  + ksi*fsR(iL,1)
+     ftotR(iL) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY) - ksi*fsR(iL,nY)
   end do
   call Simpson(npL,1,nL,lambda,faux,res)
   call Simpson(npL,1,nL,lambda,ftotL/lambda,temp1)
@@ -7396,9 +7396,9 @@ subroutine PrOut(model,nG,delta)
    call getOmega(nG,omega)
    do iL = 1, nL
     if (ftot(iL,nY).ne.0.0d0) then
-     xs = fsL(iL,nY)/ftot(iL,nY)
-     xds = fds(iL,nY)/ftot(iL,nY)
-     xde = fde(iL,nY)/ftot(iL,nY)
+     xs = fsL(iL,nY)/ftotR(iL)
+     xds = fds(iL,nY)/ftotR(iL)
+     xde = fde(iL,nY)/ftotR(iL)
     else
      xs = 0.0d0
      xds = 0.0d0
@@ -7441,8 +7441,8 @@ subroutine PrOut(model,nG,delta)
     do iL = 1, nL
      if (ftot(iL,1).ne.0.0d0) then
       xs =  fsR(iL,1)/ftot(iL,1)
-      xds = dabs(fds(iL,1)/ftot(iL,1))
-      xde = dabs(fde(iL,1)/ftot(iL,1))
+      xds = dabs(fds(iL,1)/ftotL(iL))
+      xde = dabs(fde(iL,1)/ftotL(iL))
      else
       xs = 0.0d0
       xds = 0.0d0
@@ -7563,7 +7563,7 @@ subroutine PrOut(model,nG,delta)
      if (slb) then
         if(allocated(Elems)) deallocate(Elems)
         allocate(Elems(npL,nmu+2))
-        hdint = '   lambda'
+        hdint = '#  lambda'
         unt = 17
         call line(1,2,unt)
         write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' transmitted i(theta)*cos(theta)'
@@ -7571,7 +7571,7 @@ subroutine PrOut(model,nG,delta)
         do iL = 1, nL
            Elems(iL,1) = lambda(iL)
            do imu = 1, nmu
-              Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(nY)
+              Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(nY)*2*pi
            end do
            Elems(iL,nmu+2) = istR(iL)
         end do
@@ -7583,7 +7583,7 @@ subroutine PrOut(model,nG,delta)
         call maketable(Elems,npL,nmu+1,unt)
         ! adding the column with stellar ints at the end of the table
         !  call maketable(Elems,nL,nmu+2,unt)
-        hdint = '   lambda'
+        hdint = '#  lambda'
         unt = 17
         call line(1,2,unt)
         write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' reflected cos(theta)*i(theta)'
@@ -7591,7 +7591,7 @@ subroutine PrOut(model,nG,delta)
         do iL = 1, nL
            Elems(iL,1) = lambda(iL)
            do imu = 1, nmu
-              Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(1)
+              Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(1)*2*pi
            end do
         end do
         !write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
@@ -7622,6 +7622,8 @@ subroutine PrOut(model,nG,delta)
               ! this was the bug in intensity output for sphere,
               ! the missing 4piY^2 factor for intensity output [June 2006]
               ! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
+              ! 7.83 = 1e26*(4*pi)/((180.*3600./pi)**2.*4*pi)/3e8*1e-6
+              !      = Jy/(1e-26*[W/m^2/Hz]) * (4*pi rad^2)/((180.*3600./pi)**2.*4*pi arcsec^2) / c 
               Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
            end do
         end do

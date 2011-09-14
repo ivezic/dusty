@@ -76,12 +76,12 @@
         - grid type = LOGARITHMIC                % log grid
         - lambda0 = 0.55 micron            % optical depth specified 
         - tau(min) = 1.0; tau(max) = 1000.0   % for the visual wavelength   
-        - number of models = 2
+        - number of models = 10
   ----------------------------------------------------------------------
                                                                         
  III. NUMERICS                                                           
       
-     - accuracy for flux conservation = 0.1
+     - accuracy for flux conservation = 1e-1
      - accuracy for Temperature fluctuation  = 1e-3
      - starting optical depth = 1.00
      - increment in optical depth = 2.0                                                                
@@ -103,9 +103,11 @@
         FILE DESCRIPTION                               FLAG        
        ------------------------------------------------------------     
        - detailed spectra for each model;           fname.s### = 2   
-       - images at specified wavelengths;           fname.i### = 0  
-       - radial profiles for each model;            fname.r### = 0   
-       - detailed run-time messages;                fname.m### = 2
+       - images at specified wavelengths;           fname.i### = 2
+         	angletype = 1
+         	theta_min = 0 theta_max = 80 stepp= 5
+       - radial profiles for each model;            fname.r### = 2
+       - detailed run-time messages;                fname.m### = 0
        ------------------------------------------------------------- 
  
 
