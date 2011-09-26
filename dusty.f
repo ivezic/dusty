@@ -1539,23 +1539,24 @@ c     for top.LT.3 read in abundances for supported grains
         sum = xC(1)                                                                                 
         DO i = 2, 7                                                                                 
 c         special care to be taken of graphite (1/3-2/3 rule):                                      
-          IF (i.NE.5) THEN                                                                          
-            xC(i) = RDINP(NoEqual,1)                                                                
-            IF (xC(i).LT.0.0D+00) xC(i) = 0.0D+00                                                           
+          IF (i.NE.5) THEN
+            xC(i) = RDINP(NoEqual,1)
+            IF (xC(i).LT.0.0D+00) xC(i) = 0.0D+00
 c            this was the graphite bug in old versions                                              
-c             IF (i.EQ.4) xC(i) = 2.0D+00*xC(i)/3.0D+00                                                       
-c            i.eq.4 is data for graphite (parallel to c axis):                                      
-c            graphite (parallel to c axis) :                                                        
-             IF(i.EQ.4) xC(i) = 1.0D+00*xC(i)/3.0D+00                                                           
+c             IF (i.EQ.4) xC(i) = 2.0D+00*xC(i)/3.0D+00
+c            i.eq.4 is data for graphite (parallel to c axis):
+c            graphite (parallel to c axis):
+             IF(i.EQ.4) xC(i) = 2.0D+00*xC(i)/3.0D+00
           ELSE                                                                                      
 c           this was the graphite bug in all previous versions                                      
-c            xC(i) = 1.0D+00 * xC(i-1)/3.0D+00                                                                  
-c           graphite (perpendicular to c axis) :                                                    
-            xC(i) = 2.0D+00 * xC(i-1)/3.0D+00                                                                   
+c            xC(i) = 1.0D+00 * xC(i-1)/3.0D+00
+c           graphite (perpendicular to c axis):
+            xC(i) = 5.0D-01 * xC(i-1)!/3.0D+00 
           END IF                                                                                    
           sum = sum + xC(i)                                                                         
         END DO                                                                                      
-      END IF                                                                                        
+      END IF    
+      print*, xC
 c     user supplied n and k:                                                                        
       IF (top.EQ.2) THEN                                                                            
         Nfiles = RDINP(Equal,1)                                                                     

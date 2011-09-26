@@ -57,7 +57,7 @@
            optical properties index = 1
            Abundances for supported grain types:
                Sil-Ow  Sil-Oc  Sil-DL  grf-DL  amC-Hn  SiC-Pg 
-           x =  1.00    0.00    0.00    0.00    0.00    0.00
+           x =  0.00    0.53    0.00    0.47    0.00    0.00
        
       2.2 Grain size distribution
 
@@ -73,7 +73,7 @@
                                                                         
  III. NUMERICS                                                           
       
-     - accuracy for flux conservation = 0.05                                                                 
+     - accuracy for flux conservation = 1.                                                                 
   ----------------------------------------------------------------------
                                                                         
   IV. OUTPUT PARAMETERS                                                 
@@ -92,7 +92,7 @@
         FILE DESCRIPTION                               FLAG        
        ------------------------------------------------------------     
        - properties of emerging spectra;             fname.spp = 0    
-       - detailed spectra for each model;           fname.s### = 0   
+       - detailed spectra for each model;           fname.s### = 2   
        - images at specified wavelengths;           fname.i### = 0  
        - radial profiles for each model;            fname.r### = 0   
        - detailed run-time messages;                fname.m### = 0
