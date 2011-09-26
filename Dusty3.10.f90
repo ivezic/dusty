@@ -4596,10 +4596,10 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
            dilutn = RDINP(Equal,1)
            Ji = dilutn*spec_scale/(4*pi)
         endif
-        if (typentry(1).eq.5) then
-           !enter dust temperature on inner boundary, T1[K]
-           Tsub(1) = RDINP(Equal,1)
-        end if
+!        if (typentry(1).eq.5) then
+!           !enter dust temperature on inner boundary, T1[K]
+!           Tsub(1) = RDINP(Equal,1)
+!        end if
      else
         typentry(1) = 0
      endif
@@ -4662,10 +4662,10 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
            Ji = dilutn*spec_scale/pi
         endif
         ! var3 = dilutn
-        if (typentry(1).eq.5) then
-           ! enter dust temperature on inner boundary, T1[K]
-           Tsub(1) = RDINP(Equal,1)
-        end if
+!        if (typentry(1).eq.5) then
+!           ! enter dust temperature on inner boundary, T1[K]
+!           Tsub(1) = RDINP(Equal,1)
+!        end if
         write(12,'(a33)') ' Calculation in planar geometry:'
         !find the kind of illumination
         call rdinps2(Equal,1,str,L,UCASE)
@@ -4717,27 +4717,19 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
   ! 2.1 Chemical composition
   ! Type of optical properties
   call rdinps2(Equal,1,str,L,UCASE)
+  ifidG = 1
   if (str(1:L).eq.'COMMON_GRAIN') then
-     ifidG = RDINP(Equal,1)
-     Tsub(ifidG) = Tsub(1)
-     if (ifidG.ne.1) Tsub(1) = 0
      top = 1
      nG = 6
   elseif (str(1:L).eq.'COMMON_GRAIN_COMPOSITE') then
      top = 1
      nG = 1
-     ifidG = 1
   elseif (str(1:L).eq.'COMMON_AND_ADDL_GRAIN') then
      top = 2
-     ifidG = RDINP(Equal,1)
-     Tsub(ifidG) = Tsub(1)
-     if (ifidG.ne.1) Tsub(1) = 0
   elseif (str(1:L).eq.'COMMON_AND_ADDL_GRAIN_COMPOSITE') then
      top = 4
-     ifidG = 1
   elseif (str(1:L).eq.'TABULATED') then
      top = 3
-     ifidG = 1
   end if
   if (top.ne.1.and.top.ne.2.and.top.ne.3.and.top.ne.4) then
    call msg(9)
@@ -4821,6 +4813,16 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
      strg= 'abs. and scatt. cross-sections:'
      do iG = 1, nG
         call filemsg(nameQ(iG),strg)
+     end do
+  end if
+  ! 2.1 Temperatures
+  Tsub(1) = RDINP(Equal,1)
+  print*,Tsub(1),1
+  if (nG.gt.1) then
+     do iG = 2, nG
+        Tsub(iG) = RDINP(noEqual,1)
+        if (Tsub(iG).gt.Tsub(ifidG)) ifidG = iG
+        print*,Tsub(iG),iG
      end do
   end if
   ! 2.2 Grain size distribution
@@ -6990,13 +6992,11 @@ subroutine WriteOut(var1,var2,var3,nG,nameQ,nameNK)
   if(Left.gt.0) then
    if(typEntry(1).eq.5) then
      if (SLB) then
-      write(12,'(a45,1p,e9.2,a2)')  &
-           ' Dust temperature on the slab left boundary:', Tsub(ifidG),' K'
-      write(12,*) ' Fiducial grain number:',ifidG
+      write(12,'(a45,1p,e9.2,a,i2)')  &
+           ' Dust temperature on the slab left boundary:', Tsub(ifidG),' K - Grain:',ifidG
      else
-      write(12,'(a41,1p,e9.2,a2)')  &
-           ' Dust temperature on the inner boundary:', Tsub(ifidG),' K'
-      write(12,*) ' Fiducial grain number:',ifidG
+      write(12,'(a41,1p,e9.2,a,i2)')  &
+           ' Dust temperature on the inner boundary:', Tsub(ifidG),' K - Grain:',ifidG
      end if
    else if (typEntry(1).eq.1) then
     if (slb) then
@@ -7071,6 +7071,10 @@ subroutine WriteOut(var1,var2,var3,nG,nameQ,nameNK)
     call PrHeader(3,nameQ(iG))
    end do
   end if
+  write(12,*)' Sublimation Temperature(s):'
+  do iG=1,nG
+     write(12,'(a8,i2,a3,f10.3)') '  Grain(',iG,'): ',Tsub(iG) 
+  end do
 ! 2.2 Grain size distribution
   if (top.ne.3) then
    if (szds.eq.3) then
