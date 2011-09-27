@@ -451,19 +451,22 @@ subroutine Find_Tran(pstar,T4_ext,us,fs)
         do iY = 1, nY
            if (left.eq.1.and.right.eq.0) then
               if (mu1.eq.-1.0d0) then
-                 T4_ext(iY) = pi*Ji/(2.0d0*sigma)
+!                 T4_ext(iY) = pi*Ji/(2.0d0*sigma)
+                 T4_ext(iY) = pi*Ji/(sigma)
               else
                  T4_ext(iY) = pi*Ji/sigma
               end if
            elseif (left.eq.0.and.right.eq.1) then
               if (mu2.eq.-1.0d0) then
-                 T4_ext(iY) = pi*ksi*Ji/(2.0d0*sigma)
+!                 T4_ext(iY) = pi*ksi*Ji/(2.0d0*sigma)
+                 T4_ext(iY) = pi*ksi*Ji/(sigma)
               else
                  T4_ext(iY) = pi*ksi*Ji/(sigma)
               end if
            elseif (left.eq.1.and.right.eq.1) then
               if (mu1.eq.-1.0d0.and.mu2.eq.-1.0d0) then
-                 T4_ext(iY) = pi*(Ji + ksi*Ji)/(2.0d0*sigma)
+!                 T4_ext(iY) = pi*(Ji + ksi*Ji)/(2.0d0*sigma)
+                 T4_ext(iY) = pi*(Ji + ksi*Ji)/(sigma)
               else
                  T4_ext(iY) = pi*(Ji + ksi*Ji)/sigma
               end if
@@ -3327,8 +3330,8 @@ end subroutine Analysis
       fmin = 1.e5
       fmax = 0.
       DO iY = 1, nY
-         aux = flux(iY)
-         IF (ksi.eq.1.0) aux = dabs(aux)
+         aux = flux(iY)*Jext(iY)
+!         IF (ksi.eq.1.0) aux = dabs(aux)
          IF (dabs(aux).LE.accFbol) aux = accFbol
          IF(aux.LT.fmin) fmin = aux
          IF(aux.GT.fmax) fmax = aux
@@ -3336,8 +3339,10 @@ end subroutine Analysis
       if (fmax.LT.0.) then
 !     bad solution; overall flux cannot be negative
          maxFerr = 1
+      else if ((fmax.eq.fmin).and.(fmax.eq.accFbol)) then
+         maxFerr = accuracy
       else
-         maxFerr = (fmax - dabs(fmin))/(fmax + dabs(fmin))
+         maxFerr = (fmax - fmin)/(fmax + dabs(fmin))
 !         maxFerr = 2*(fmax-(fmax+fmin)*0.5)/(fmax+fmin)
       end if
 ! -----------------------------------------------------------------------
@@ -4856,7 +4861,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
            error = 1
            goto 999
         end if
-        if (typentry(1).eq.1) Ji = RDINP(Equal,1) / 4 / pi
+        if (typentry(1).eq.1) Ji = RDINP(Equal,1) / 2 / pi
         if (typentry(1).eq.3) Ji = RDINP(Equal,1)
         if (typentry(1).eq.4) then
            !entry of dilution (normalization) factor
@@ -7230,8 +7235,8 @@ subroutine PrOut(model,nG,delta)
      end do
   enddo
   do iL = 1,nL
-     ftotL(iL) = -fsL(iL,1) - fde(iL,1)  - fds(iL,1)  + ksi*fsR(iL,1)
-     ftotR(iL) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY) - ksi*fsR(iL,nY)
+     ftotL(iL) = fde(iL,1)  + fds(iL,1)  - ksi*fsR(iL,1)
+     ftotR(iL) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY)
   end do
   call Simpson(npL,1,nL,lambda,faux,res)
   call Simpson(npL,1,nL,lambda,ftotL/lambda,temp1)
