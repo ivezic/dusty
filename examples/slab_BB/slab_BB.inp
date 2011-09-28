@@ -51,8 +51,8 @@
 			  TBB = 1000
 
 %(available options: flux\lum_r1\energy_den\dilutn_fac\t1)
-                         type of entry = T1
-                                    T1 = 1000.
+                         type of entry = flux %T1
+                                    T1 = 5.7e4 %1000
                   kind of illumination = ISOTROPIC
 
           Spectral shape:     Spectrum = black_body
@@ -76,13 +76,13 @@
         - grid type = LOGARITHMIC                % log grid
         - lambda0 = 0.55 micron            % optical depth specified 
         - tau(min) = 1.0; tau(max) = 1000.0   % for the visual wavelength   
-        - number of models = 10
+        - number of models = 4
   ----------------------------------------------------------------------
                                                                         
  III. NUMERICS                                                           
       
      - accuracy for flux conservation = 0.05
-     - accuracy for Temperature fluctuation  = 1e-3
+     - accuracy for Temperature fluctuation  = 1e-5
      - starting optical depth = 1.00
      - increment in optical depth = 2.0                                                                
   ----------------------------------------------------------------------

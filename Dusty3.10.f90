@@ -3325,7 +3325,7 @@ end subroutine Analysis
 
 !     Find the min and max of fbol values
 !     The abs and lower limit on fbol are protection for the case
-!     of completely symmetri! slab illumination. The lower limit
+!     of completely symmetric slab illumination. The lower limit
 !     is bound by the numerical accuracy of the flux calculation
       fmin = 1.e5
       fmax = 0.
@@ -7236,7 +7236,9 @@ subroutine PrOut(model,nG,delta)
   enddo
   do iL = 1,nL
      ftotL(iL) = fde(iL,1)  + fds(iL,1)  - ksi*fsR(iL,1)
+     if (dabs(ftotL(iL)).lt.limval) ftotL(iL)= 0
      ftotR(iL) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY)
+     if (dabs(ftotR(iL)).lt.limval) ftotR(iL)= 0
   end do
   call Simpson(npL,1,nL,lambda,faux,res)
   call Simpson(npL,1,nL,lambda,ftotL/lambda,temp1)
@@ -7260,7 +7262,7 @@ subroutine PrOut(model,nG,delta)
   ! the emerging bolometric flux
   FbolR = fnormR * Jext(nY)
   if (slb) FbolL = fnormL * Jext(1)
-
+  print*,jext(1),fboll,fnorml
   ! calculation of radiation pressure
   do iG = 1, nG
      call lininter(npL,nL,lambda,sigmaS(iG,:),lamfid,iLV,sigmaVs)
@@ -7410,14 +7412,15 @@ subroutine PrOut(model,nG,delta)
      xde = 0.0d0
     end if
 !  no need to print negligible values
-    if (xs.lt.limval) xs = 0.0d0
-    if (xds.lt.limval) xds = 0.0d0
-    if (xde.lt.limval) xde = 0.0d0
-    if (fsL(iL,1).lt.limval) fsL(iL,1) = 0.0d0
+    if (dabs(xs).lt.limval) xs = 0.0d0
+    if (dabs(xds).lt.limval) xds = 0.0d0
+    if (dabs(xde).lt.limval) xde = 0.0d0
+    if (dabs(fsL(iL,1)).lt.limval) fsL(iL,1) = 0.0d0
 !   Printing normalized spectral shapes. Bol. flux values are in the headers. [MN]
-    if(ftot(iL,nY).lt.limval) ftot(iL,nY) = 0.0d0
+    if(dabs(ftot(iL,nY)).lt.limval) ftot(iL,nY) = 0.0d0
     Elems(iL,1) = lambda(iL)
     Elems(iL,2) = ftotR(iL)/fnormR
+    if (dabs(Elems(iL,2)).lt.limval) Elems(iL,2) = 0
     Elems(iL,3) = xs
     Elems(iL,4) = xds
     Elems(iL,5) = xde
@@ -7453,14 +7456,15 @@ subroutine PrOut(model,nG,delta)
       xds = 0.0d0
       xde = 0.0d0
      end if
-     if (xs.lt.limval) xs =0.0d0
-     if (xds.lt.limval) xds =0.0d0
-     if (xde.lt.limval) xde =0.0d0
-     if(fsR(iL,nY).lt.limval) fsR(iL,nY) = 0.0d0
+     if (dabs(xs).lt.limval) xs =0.0d0
+     if (dabs(xds).lt.limval) xds =0.0d0
+     if (dabs(xde).lt.limval) xde =0.0d0
+     if (dabs(fsR(iL,nY)).lt.limval) fsR(iL,nY) = 0.0d0
 !     rescale ftot with the bolom flux for z-spectra
-      if(ftot(iL,1).lt.limval) ftot(iL,1) = 0.0d0
+      if(dabs(ftot(iL,1)).lt.limval) ftot(iL,1) = 0.0d0
       Elems(iL,1) = lambda(iL)
       Elems(iL,2) = ftotL(iL)/fnormL
+      if (dabs(Elems(iL,2)).lt.limval) Elems(iL,2) = 0
       Elems(iL,3) = xs
       Elems(iL,4) = xds
       Elems(iL,5) = xde
@@ -7535,7 +7539,7 @@ subroutine PrOut(model,nG,delta)
 ! check values:
     do i = 1, 7
      do iY = 1, nY
-      if(Elems(iY,i).lt.limval) Elems(iY,i) = 0.0d0
+      if(dabs(Elems(iY,i)).lt.limval) Elems(iY,i) = 0.0d0
      end do
     end do
 ! with dynamics
@@ -7547,7 +7551,7 @@ subroutine PrOut(model,nG,delta)
 ! check values:
      do i = 8, 9
       do iY = 1, nY
-       if(Elems(iY,i).lt.limval) Elems(iY,i) = 0.0d0
+       if(dabs(Elems(iY,i)).lt.limval) Elems(iY,i) = 0.0d0
       end do
      end do
      write(unt,'(a42,a42,a23)') hdrsph1,hdrsph2,hdrdyn
@@ -7576,7 +7580,7 @@ subroutine PrOut(model,nG,delta)
         do iL = 1, nL
            Elems(iL,1) = lambda(iL)
            do imu = 1, nmu
-              Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(nY)*2*pi
+              Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(1)*4*pi
            end do
            Elems(iL,nmu+2) = istR(iL)
         end do
@@ -7596,7 +7600,7 @@ subroutine PrOut(model,nG,delta)
         do iL = 1, nL
            Elems(iL,1) = lambda(iL)
            do imu = 1, nmu
-              Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(1)*2*pi
+              Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(nY)*4*pi
            end do
         end do
         !write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
@@ -7619,7 +7623,7 @@ subroutine PrOut(model,nG,delta)
            Elems(i,2) = tauZout(i)
            do j = 1, nLambdaOut
               ! check values:
-              if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
+              if(IntOut(j,i).ne.IntOut(j,i).or.dabs(IntOut(j,i)).lt.limval) then
                  IntOut(j,i) = 0.0d0
               end if
               Elems(i,j+2) = IntOut(j,i)
@@ -7679,7 +7683,7 @@ subroutine PrOut(model,nG,delta)
    do i = 1, nconv
     Elems(i,1) = offset(i)
     do j = 1, nLambdaOut
-     if(convint(j,i).lt.limval) convint(j,i) = 0.0d0
+     if(dabs(convint(j,i)).lt.limval) convint(j,i) = 0.0d0
      Elems(i,j+1) = convint(j,i)
     end do
    end do
@@ -7720,7 +7724,7 @@ subroutine PrOut(model,nG,delta)
     do i = 1, nvisi
      Elems(i,1) = qtheta1(i)
      do j = 1, nLambdaOut
-      if(visib(j,i).lt.limval) visib(j,i) = 0.0d0
+      if(dabs(visib(j,i)).lt.limval) visib(j,i) = 0.0d0
       Elems(i,j+1) = visib(j,i)
      end do
     end do
@@ -7753,7 +7757,7 @@ subroutine PrOut(model,nG,delta)
 !   normalize en. density profiles
     do iOut = 1, nJOut
       do iL = 1, nL
-        if(JOut(iL,iOut).lt.limval) JOut(iL,iOut) = 0.0d0
+        if(dabs(JOut(iL,iOut)).lt.limval) JOut(iL,iOut) = 0.0d0
         faux(iL) = JOut(iL,iOut) / lambda(iL)
       end do
       call Simpson(npL,1,nL,lambda,faux,res)
