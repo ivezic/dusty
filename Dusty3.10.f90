@@ -7571,7 +7571,7 @@ subroutine PrOut(model,nG,delta)
      if (slb) then
         if(allocated(Elems)) deallocate(Elems)
         allocate(Elems(npL,nmu+2))
-        hdint = '#  lambda'
+        hdint = '  lambda'
         unt = 17
         call line(1,2,unt)
         write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' transmitted i(theta)*cos(theta)'
@@ -7591,7 +7591,7 @@ subroutine PrOut(model,nG,delta)
         call maketable(Elems,npL,nmu+1,unt)
         ! adding the column with stellar ints at the end of the table
         !  call maketable(Elems,nL,nmu+2,unt)
-        hdint = '#  lambda'
+        hdint = '  lambda'
         unt = 17
         call line(1,2,unt)
         write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' reflected cos(theta)*i(theta)'
