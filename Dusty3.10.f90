@@ -451,22 +451,22 @@ subroutine Find_Tran(pstar,T4_ext,us,fs)
         do iY = 1, nY
            if (left.eq.1.and.right.eq.0) then
               if (mu1.eq.-1.0d0) then
-!                 T4_ext(iY) = pi*Ji/(2.0d0*sigma)
-                 T4_ext(iY) = pi*Ji/(sigma)
+                 T4_ext(iY) = pi*Ji/(2.0d0*sigma)
+!                 T4_ext(iY) = pi*Ji/(sigma)
               else
                  T4_ext(iY) = pi*Ji/sigma
               end if
            elseif (left.eq.0.and.right.eq.1) then
               if (mu2.eq.-1.0d0) then
-!                 T4_ext(iY) = pi*ksi*Ji/(2.0d0*sigma)
-                 T4_ext(iY) = pi*ksi*Ji/(sigma)
+                 T4_ext(iY) = pi*ksi*Ji/(2.0d0*sigma)
+!                 T4_ext(iY) = pi*ksi*Ji/(sigma)
               else
                  T4_ext(iY) = pi*ksi*Ji/(sigma)
               end if
            elseif (left.eq.1.and.right.eq.1) then
               if (mu1.eq.-1.0d0.and.mu2.eq.-1.0d0) then
-!                 T4_ext(iY) = pi*(Ji + ksi*Ji)/(2.0d0*sigma)
-                 T4_ext(iY) = pi*(Ji + ksi*Ji)/(sigma)
+                 T4_ext(iY) = pi*(Ji + ksi*Ji)/(2.0d0*sigma)
+!                 T4_ext(iY) = pi*(Ji + ksi*Ji)/(sigma)
               else
                  T4_ext(iY) = pi*(Ji + ksi*Ji)/sigma
               end if
@@ -4861,7 +4861,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
            error = 1
            goto 999
         end if
-        if (typentry(1).eq.1) Ji = RDINP(Equal,1) / 2 / pi
+        if (typentry(1).eq.1) Ji = RDINP(Equal,1) / 4.d0 / pi
         if (typentry(1).eq.3) Ji = RDINP(Equal,1)
         if (typentry(1).eq.4) then
            !entry of dilution (normalization) factor
@@ -7262,7 +7262,6 @@ subroutine PrOut(model,nG,delta)
   ! the emerging bolometric flux
   FbolR = fnormR * Jext(nY)
   if (slb) FbolL = fnormL * Jext(1)
-  print*,jext(1),fboll,fnorml
   ! calculation of radiation pressure
   do iG = 1, nG
      call lininter(npL,nL,lambda,sigmaS(iG,:),lamfid,iLV,sigmaVs)
