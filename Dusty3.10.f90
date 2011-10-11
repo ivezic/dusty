@@ -3317,11 +3317,14 @@ end subroutine Analysis
       IMPLICIT none
 
       INTEGER iY
-      DOUBLE PRECISION flux(npY), maxFerr, fmin, fmax, aux, accFbol
+      DOUBLE PRECISION flux(npY), maxFerr, fmin, fmax, aux, accFbol, tune_acc
 ! -----------------------------------------------------------------------
       !accFbol = 1e-3 of input flux
       !accFbol = max(Ji,Jo)*4*pi*1.0d-03
-      accFbol = max(Ji,Jo)*4*pi*accuracy
+      !tune accuracy to account for Fbol=0 case where tests show that 
+      !tune_acc=1e-1 is pretty close to the solution
+      tune_acc = 0.1
+      accFbol = min(Ji,Jo)*4*pi*accuracy*tune_acc
 
 !     Find the min and max of fbol values
 !     The abs and lower limit on fbol are protection for the case
@@ -3331,6 +3334,7 @@ end subroutine Analysis
       fmax = 0.
       DO iY = 1, nY
          aux = flux(iY)*Jext(iY)
+         print*,iY,aux,flux(iY),Jext(iY)
 !         IF (ksi.eq.1.0) aux = dabs(aux)
          IF (dabs(aux).LE.accFbol) aux = accFbol
          IF(aux.LT.fmin) fmin = aux
@@ -3340,8 +3344,9 @@ end subroutine Analysis
 !     bad solution; overall flux cannot be negative
          maxFerr = 1
       else if ((fmax.eq.fmin).and.(fmax.eq.accFbol)) then
-         maxFerr = accuracy
+         maxFerr = accuracy*tune_acc
       else
+         print*,'---',fmax,fmin,(fmax-fmin)
          maxFerr = (fmax - fmin)/(fmax + dabs(fmin))
 !         maxFerr = 2*(fmax-(fmax+fmin)*0.5)/(fmax+fmin)
       end if
@@ -4726,7 +4731,6 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
 ! Open input file
   open(1,err=998,file=nameIn,status='old')
   rewind(1)
-
 !********************************************
 !** I. Geometry **
 !********************************************
@@ -4740,8 +4744,6 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
    sph = .false.
    geom = 0
   end if
-
-
 !********************************************
 !** II. Physical parameters **
 !********************************************
@@ -4757,7 +4759,6 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
         left = 1
      end if
   end if
-
   call rdinps2(Equal,1,str,L,UCASE)
   if(str(1:L).eq.'ON') right = 1
   if(str(1:L).eq.'OFF') right = 0
@@ -4765,7 +4766,6 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
      left=1
      right=0
   endif
-
   !FOR SPHERE
   if (sph) then
      if (left.gt.0) then 
@@ -4842,7 +4842,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
         end if
      end if
   end if
-!FOR SLAB
+  !FOR SLAB
   if (slb) then
      if (left.gt.0) then
         call inp_rad(error,1,nameIn)
@@ -4917,116 +4917,112 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
      endif
   endif
   write(12,*) ' --------------------------------------------'
-
 !=========  END READING OF SOURCE PARAMETERS ===================
-
-! (2) DUST PROPERTIES
-! # of different dust grains, to be used in a future version
+  ! (2) DUST PROPERTIES
+  ! # of different dust grains, to be used in a future version
   nG = 1
-! 2.1 Chemical composition
-! Type of optical properties
+  ! 2.1 Chemical composition
+  ! Type of optical properties
   call rdinps2(Equal,1,str,L,UCASE)
   if (str(1:L).eq.'COMMON_GRAIN') then
-   top = 1
+     top = 1
   elseif (str(1:L).eq.'COMMON_AND_ADDL_GRAIN') then
-   top = 2
+     top = 2
   elseif (str(1:L).eq.'TABULATED') then
-   top = 3
+     top = 3
   end if
   if (top.ne.1.and.top.ne.2.and.top.ne.3) then
-   call msg(9)
-   error = 1
-   goto 999
+     call msg(9)
+     error = 1
+     goto 999
   end if
-! For top.lt.3 read in abundances for supported grains
+  ! For top.lt.3 read in abundances for supported grains
   if (top.lt.3) then
      xC(1) = RDINP(Equal,1)
      if (xC(1).lt.0.0d0) xC(1) = 0.0d0
      sum = xC(1)
      do i = 2, 7
-! Special care to be taken of graphite (1/3-2/3 rule):
-       if (i.ne.5) then
-          xC(i) = RDINP(noEqual,1)
-          if (xC(i).lt.0.0d0) xC(i) = 0.0d0
-!        i Equal 4 is data for graphite (parallel to c axis):
-          if(i.eq.4) xC(i) = 1.0d0*xC(i)/3.0d0
-      else
-! graphite (perpendicular to c axis) :
-          xC(i) = 2.0d0 * xC(i-1)
-      end if
-      sum = sum + xC(i)
+        ! Special care to be taken of graphite (1/3-2/3 rule):
+        if (i.ne.5) then
+           xC(i) = RDINP(noEqual,1)
+           if (xC(i).lt.0.0d0) xC(i) = 0.0d0
+          ! i Equal 4 is data for graphite (parallel to c axis):
+           if(i.eq.4) xC(i) = 1.0d0*xC(i)/3.0d0
+        else
+           ! graphite (perpendicular to c axis) :
+           xC(i) = 2.0d0 * xC(i-1)
+        end if
+        sum = sum + xC(i)
      end do
   end if
-
-! Assign supported dust filenames to stdf
+  ! Assign supported dust filenames to stdf
   do i = 1,7
-   if (i.eq.1) write(stdf(i),'(a)')"stnd_dust_lib/OssOdef.nk"
-   if (i.eq.2) write(stdf(i),'(a)')"stnd_dust_lib/OssOrich.nk"
-   if (i.eq.3) write(stdf(i),'(a)')"stnd_dust_lib/sil-dlee.nk"
-   if (i.eq.4) write(stdf(i),'(a)')"stnd_dust_lib/gra-par-draine.nk"
-   if (i.eq.5) write(stdf(i),'(a)')"stnd_dust_lib/gra-perp-draine.nk"
-   if (i.eq.6) write(stdf(i),'(a)')"stnd_dust_lib/amC-hann.nk"
-   if (i.eq.7) write(stdf(i),'(a)')"stnd_dust_lib/SiC-peg.nk"
+     if (i.eq.1) write(stdf(i),'(a)')"stnd_dust_lib/OssOdef.nk"
+     if (i.eq.2) write(stdf(i),'(a)')"stnd_dust_lib/OssOrich.nk"
+     if (i.eq.3) write(stdf(i),'(a)')"stnd_dust_lib/sil-dlee.nk"
+     if (i.eq.4) write(stdf(i),'(a)')"stnd_dust_lib/gra-par-draine.nk"
+     if (i.eq.5) write(stdf(i),'(a)')"stnd_dust_lib/gra-perp-draine.nk"
+     if (i.eq.6) write(stdf(i),'(a)')"stnd_dust_lib/amC-hann.nk"
+     if (i.eq.7) write(stdf(i),'(a)')"stnd_dust_lib/SiC-peg.nk"
   enddo
-! user supplied n and k:
+  ! user supplied n and k:
   if (top.eq.2) then
      nfiles = RDINP(Equal,1)
-! File names
-   strg = 'optical constants:'
-   do i = 1, nfiles
-    call filemsg(nameNK(i),strg)
-   end do
-   if(error.ne.0) goto 996
-! Abundances
-   xCuser(1) = RDINP(Equal,1)
-   if (xCuser(1).lt.0.0d0) xCuser(1) = 0.0d0
-   sum = sum + xCuser(1)
-   if (nfiles.gt.1) then
-    do i = 2, nfiles
-     xCuser(i) = RDINP(noEqual,1)
-     if (xCuser(i).lt.0.0d0) xCuser(i) = 0.0d0
-     sum = sum + xCuser(i)
-    end do
-   end if
+     ! File names
+     strg = 'optical constants:'
+     do i = 1, nfiles
+        call filemsg(nameNK(i),strg)
+     end do
+     if(error.ne.0) goto 996
+     ! Abundances
+     xCuser(1) = RDINP(Equal,1)
+     if (xCuser(1).lt.0.0d0) xCuser(1) = 0.0d0
+     sum = sum + xCuser(1)
+     if (nfiles.gt.1) then
+        do i = 2, nfiles
+           xCuser(i) = RDINP(noEqual,1)
+           if (xCuser(i).lt.0.0d0) xCuser(i) = 0.0d0
+           sum = sum + xCuser(i)
+        end do
+     end if
   end if
   if (top.lt.3) then
-   if (sum.le.0.0d0) then
-    call msg(5)
-    error = 1
-    goto 999
-   end if
-! Normalize abundances for supported grains:
-   do i = 1, 7
-    xC(i) = xC(i) / sum
-   end do
-! Normalize abundances for user supplied grains
-   if (top.eq.2) then
-    do i = 1, nfiles
-     xCuser(i) = xCuser(i) / sum
-    end do
-   end if
+     if (sum.le.0.0d0) then
+        call msg(5)
+        error = 1
+        goto 999
+     end if
+     ! Normalize abundances for supported grains:
+     do i = 1, 7
+        xC(i) = xC(i) / sum
+     end do
+     ! Normalize abundances for user supplied grains
+     if (top.eq.2) then
+        do i = 1, nfiles
+           xCuser(i) = xCuser(i) / sum
+        end do
+     end if
   end if
-! user supplied cross-sections:
+  ! user supplied cross-sections:
   if (top.eq.3) then
-! filename for qabs and qsca
-   strg= 'abs. and scatt. cross-sections:'
-   do iG = 1, nG
-    call filemsg(nameQ(iG),strg)
-   end do
+     ! filename for qabs and qsca
+     strg= 'abs. and scatt. cross-sections:'
+     do iG = 1, nG
+        call filemsg(nameQ(iG),strg)
+     end do
   end if
-! 2.2 Grain size distribution
+  ! 2.2 Grain size distribution
   if (top.ne.3) then
-! Type of size distribution
-   call rdinps2(Equal,1,str,L,UCASE)
-   if (str(1:L).eq.'MRN') then
-    szds = 1
-   elseif (str(1:L).eq.'MODIFIED_MRN') then
-    szds = 2
-   elseif (str(1:L).eq.'KMH') then
-    szds = 3
-   end if
-
-   if (szds.ne.1.and.szds.ne.2.and.szds.ne.3) then
+     ! Type of size distribution
+     call rdinps2(Equal,1,str,L,UCASE)
+     if (str(1:L).eq.'MRN') then
+        szds = 1
+     elseif (str(1:L).eq.'MODIFIED_MRN') then
+        szds = 2
+     elseif (str(1:L).eq.'KMH') then
+        szds = 3
+     end if
+     if (szds.ne.1.and.szds.ne.2.and.szds.ne.3) then
     call msg(10)
     error = 1
     goto 999
