@@ -3334,7 +3334,6 @@ end subroutine Analysis
       fmax = 0.
       DO iY = 1, nY
          aux = flux(iY)*Jext(iY)
-         print*,iY,aux,flux(iY),Jext(iY)
 !         IF (ksi.eq.1.0) aux = dabs(aux)
          IF (dabs(aux).LE.accFbol) aux = accFbol
          IF(aux.LT.fmin) fmin = aux
@@ -3346,7 +3345,6 @@ end subroutine Analysis
       else if ((fmax.eq.fmin).and.(fmax.eq.accFbol)) then
          maxFerr = accuracy*tune_acc
       else
-         print*,'---',fmax,fmin,(fmax-fmin)
          maxFerr = (fmax - fmin)/(fmax + dabs(fmin))
 !         maxFerr = 2*(fmax-(fmax+fmin)*0.5)/(fmax+fmin)
       end if
