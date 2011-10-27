@@ -3323,8 +3323,12 @@ end subroutine Analysis
       !accFbol = max(Ji,Jo)*4*pi*1.0d-03
       !tune accuracy to account for Fbol=0 case where tests show that 
       !tune_acc=1e-1 is pretty close to the solution
-      tune_acc = 0.1
-      accFbol = min(Ji,Jo)*4*pi*accuracy*tune_acc
+      tune_acc = 1e-1
+      if (slb) then 
+         accFbol = min(Ji,Jo)*4*pi*accuracy*tune_acc
+      else
+         accFbol = max(Ji,Jo)*4*pi*accuracy*tune_acc
+      endif
 
 !     Find the min and max of fbol values
 !     The abs and lower limit on fbol are protection for the case
@@ -4811,7 +4815,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
      if (right.gt.0) then
         call inp_rad(error,2,nameIn)
         if(error.ne.0) goto 996
-        if (startyp(2).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,1,error)
+        if (startyp(2).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,2,error)
         !for one Bbody Tstar=Tbb, for any other shape Dusty's default is Tstar=1e4 K.
         if (startyp(2).eq.1) spec_scale = sigma*Tstar(2)**4.0d0
         !typentry give the scale of input radiation
@@ -4891,7 +4895,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
      if (right.gt.0) then
         call inp_rad(error,2,nameIn)
         if(error.ne.0) goto 996
-        if (startyp(2).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,1,error)
+        if (startyp(2).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,2,error)
         call rdinps2(Equal,1,str,L,UCASE)
         if (str(1:L).eq.'DIRECTIONAL') then
            write(12,'(a41)') ' Directional illumination from the right.'
