@@ -736,6 +736,7 @@ subroutine Init_Temp(nG,T4_ext,us)
      do iG = 1, nG
         ! loop over radial positions
         do iY = 1, nY
+           Td(iG,iY) = T4_ext(iY)**(1.0d0/4.0d0)
            ! calculate fnum1 and qP integrals
            do iL = 1, nL
               fnum(iL) = sigmaA(iG,iL)*us(iL,iY)/lambda(iL)
@@ -1247,6 +1248,12 @@ subroutine Solve(model,Lprint,initial,nG,error,delta,iterfbol,fbolOK)
      END IF
      ! check for flux conservation, and if there is no conservation
      ! increase number of grid points
+     call BOLOM(fs,fsbol)
+     call BOLOM(fde,fDebol)
+     call BOLOM(fds,fDsbol)
+     DO iY = 1, nY
+        fbol(iY) = fDebol(iY)+fDsbol(iY)+fsbol(iY)
+     END DO
      call Flux_Consv(fbol,fbol,fbolOK,error,Lprint)
      if (iVerb.eq.2) write(*,'(a20,i3)') ' After Flux_Cons nY=', nY
      ! initialize flag, y_incr, which records whether there is an increase in
@@ -3157,7 +3164,15 @@ SUBROUTINE FindErr(flux,maxFerr)
   DOUBLE PRECISION flux(npY), maxFerr, fmin, fmax, aux, accFbol
 !---------------------------------------------------------------------
   ! accFbol = 1e-3 of input flux
-  accFbol = max(Ji,Jo)*4*pi*1.0d-03
+  ! accFbol = max(Ji,Jo)*4*pi*1.0d-03
+  tune_acc = 1e-1
+  if (slb) then 
+     accFbol = min(Ji,Jo)*4*pi*accuracy*tune_acc
+  else if (sph)
+     ! in the spherical case the flux is only zero if there is zero no
+     ! central source (Ji=0) therefor accFbok is changed!
+     accFbol = max(Ji,Jo)*4*pi*accuracy*tune_acc
+  endif
   ! Find the min and max of fbol values
   ! The abs and lower limit on fbol are protection for the case
   ! of completely symmetri! slab illumination. The lower limit
@@ -3165,8 +3180,8 @@ SUBROUTINE FindErr(flux,maxFerr)
   fmin = 1.e5
   fmax = 0.
   DO iY = 1, nY
-     aux = flux(iY)
-     IF (ksi.eq.1.0) aux = dabs(aux)
+     aux = flux(iY)*Jext(iY)
+!     IF (ksi.eq.1.0) aux = dabs(aux)
      IF (dabs(aux).LE.accFbol) aux = accFbol
      IF(aux.LT.fmin) fmin = aux
      IF(aux.GT.fmax) fmax = aux
@@ -3174,6 +3189,8 @@ SUBROUTINE FindErr(flux,maxFerr)
   if (fmax.LT.0.) then
      ! bad solution; overall flux cannot be negative
      maxFerr = 1
+  else if ((fmax.eq.fmin).and.(fmax.eq.accFbol)) then
+     maxFerr = accuracy*tune_acc
   else
      maxFerr = (fmax - dabs(fmin))/(fmax + dabs(fmin))
      ! maxFerr = 2*(fmax-(fmax+fmin)*0.5)/(fmax+fmin)
@@ -4606,7 +4623,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
      if (right.gt.0) then
         call inp_rad(error,2,nameIn)
         if(error.ne.0) goto 996
-        if (startyp(2).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,1,error)
+        if (startyp(2).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,2,error)
         !for one Bbody Tstar=Tbb, for any other shape Dusty's default is Tstar=1e4 K.
         if (startyp(2).eq.1) spec_scale = sigma*Tstar(2)**4.0d0
         !typentry give the scale of input radiation
@@ -4654,7 +4671,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
            error = 1
            goto 999
         end if
-        if (typentry(1).eq.1) Ji = RDINP(Equal,1) / 4 / pi
+        if (typentry(1).eq.1) Ji = RDINP(Equal,1) / 4.d0 / pi
         if (typentry(1).eq.3) Ji = RDINP(Equal,1)
         if (typentry(1).eq.4) then
            ! entry of dilution (normalization) factor
@@ -4686,10 +4703,10 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
      if (right.gt.0) then
         call inp_rad(error,2,nameIn)
         if(error.ne.0) goto 996
-        if (startyp(2).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,1,error)
+        if (startyp(2).gt.3) call readspectar(lambdas,Llamstar,spec_scale,nLs,2,error)
         call rdinps2(Equal,1,str,L,UCASE)
         if (str(1:L).eq.'DIRECTIONAL') then
-           write(12,'(a41)') ' Directional illumination from the left.'
+           write(12,'(a41)') ' Directional illumination from the right.'
            ! enter incident theta_in:
            ! th1 the left illumination angle (in degrees) measured from the normal
            th2 = RDINP(Equal,1)
@@ -4698,7 +4715,7 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
            mu2 = dcos(th2)
         elseif (str(1:L).eq.'ISOTROPIC') then
            th2 = -1.0d0
-           write(12,'(a40)') ' Isotropic illumination from the left.'
+           write(12,'(a40)') ' Isotropic illumination from the right.'
            mu2 = -1.0d0
         end if
         ! ksi is the relative bol.flux of the second source
@@ -6098,6 +6115,7 @@ subroutine PrOut(model,nG,delta)
   if (slb) FbolL = fnormL * Jext(1)
 
   ! calculation of radiation pressure
+  ! nG + 1 contains the sum of all sigma(iG) 1<=iG<=nG
   call lininter(npL,nL,lambda,sigmaS(nG+1,:),lamfid,iLV,sigmaVs)
   call lininter(npL,nL,lambda,sigmaA(nG+1,:),lamfid,iLV,sigmaVa)
   sigmaVe = sigmaVa+sigmaVs
@@ -6220,21 +6238,21 @@ subroutine PrOut(model,nG,delta)
    call getOmega(nG,omega)
    do iL = 1, nL
     if (ftot(iL,nY).ne.0.0d0) then
-     xs = fsL(iL,nY)/ftot(iL,nY)
-     xds = fds(iL,nY)/ftot(iL,nY)
-     xde = fde(iL,nY)/ftot(iL,nY)
+     xs = fsL(iL,nY)/ftotR(iL)
+     xds = fds(iL,nY)/ftotR(iL)
+     xde = fde(iL,nY)/ftotR(iL)
     else
      xs = 0.0d0
      xds = 0.0d0
      xde = 0.0d0
     end if
 !  no need to print negligible values
-    if (xs.lt.limval) xs = 0.0d0
-    if (xds.lt.limval) xds = 0.0d0
-    if (xde.lt.limval) xde = 0.0d0
-    if (fsL(iL,1).lt.limval) fsL(iL,1) = 0.0d0
+    if (dabs(xs).lt.limval) xs = 0.0d0
+    if (dabs(xds).lt.limval) xds = 0.0d0
+    if (dabs(xde).lt.limval) xde = 0.0d0
+    if (dabs(fsL(iL,1)).lt.limval) fsL(iL,1) = 0.0d0
 !   Printing normalized spectral shapes. Bol. flux values are in the headers. [MN]
-    if(ftot(iL,nY).lt.limval) ftot(iL,nY) = 0.0d0
+    if (dabs(ftot(iL,nY)).lt.limval) ftot(iL,nY) = 0.0d0
     Elems(iL,1) = lambda(iL)
     Elems(iL,2) = ftotR(iL)/fnormR
     Elems(iL,3) = xs
@@ -6242,7 +6260,7 @@ subroutine PrOut(model,nG,delta)
     Elems(iL,5) = xde
     Elems(iL,6) = fsL(iL,1)/fsLbol(1)
     Elems(iL,7) = tautot(iL)
-    Elems(iL,8) = omega(1,iL)
+    Elems(iL,8) = omega(nG+1,iL)
    end do
 !------ tabulate the spectra in the desired form ----------
    if(slb) then
@@ -6263,36 +6281,36 @@ subroutine PrOut(model,nG,delta)
    if (slb) then
     call getOmega(nG,omega)
     do iL = 1, nL
-     if (ftot(iL,1).ne.0.0d0) then
-      xs =  fsR(iL,1)/ftot(iL,1)
-      xds = dabs(fds(iL,1)/ftot(iL,1))
-      xde = dabs(fde(iL,1)/ftot(iL,1))
-     else
-      xs = 0.0d0
-      xds = 0.0d0
-      xde = 0.0d0
-     end if
-     if (xs.lt.limval) xs =0.0d0
-     if (xds.lt.limval) xds =0.0d0
-     if (xde.lt.limval) xde =0.0d0
-     if(fsR(iL,nY).lt.limval) fsR(iL,nY) = 0.0d0
-!     rescale ftot with the bolom flux for z-spectra
-      if(ftot(iL,1).lt.limval) ftot(iL,1) = 0.0d0
-      Elems(iL,1) = lambda(iL)
-      Elems(iL,2) = ftotL(iL)/fnormL
-      Elems(iL,3) = xs
-      Elems(iL,4) = xds
-      Elems(iL,5) = xde
-      if (ksi.gt.0) then
-        Elems(iL,6) = fsR(iL,nY)/fsRbol(nY)
-      else
-        Elems(iL,6) = 0.0d0
-      end if
-      Elems(iL,7) = tautot(iL)
-      Elems(iL,8) = omega(2,iL)
+       if (ftot(iL,1).ne.0.0d0) then
+          xs =  fsR(iL,1)/ftotL(iL)
+          xds = dabs(fds(iL,1)/ftotL(iL)
+          xde = dabs(fde(iL,1)/ftotL(iL)
+       else
+          xs = 0.0d0
+          xds = 0.0d0
+          xde = 0.0d0
+       end if
+       if (dabs(xs).lt.limval) xs =0.0d0
+       if (dabs(xds).lt.limval) xds =0.0d0
+       if (dabs(xde).lt.limval) xde =0.0d0
+       if (dabs(fsR(iL,nY)).lt.limval) fsR(iL,nY) = 0.0d0
+       ! rescale ftot with the bolom flux for z-spectra
+       if (dabs(ftot(iL,1)).lt.limval) ftot(iL,1) = 0.0d0
+       Elems(iL,1) = lambda(iL)
+       Elems(iL,2) = ftotL(iL)/fnormL
+       Elems(iL,3) = xs
+       Elems(iL,4) = xds
+       Elems(iL,5) = xde
+       if (ksi.gt.0) then
+          Elems(iL,6) = fsR(iL,nY)/fsRbol(nY)
+       else
+          Elems(iL,6) = 0.0d0
+       end if
+       Elems(iL,7) = tautot(iL)
+       Elems(iL,8) = omega(nG+1,iL)
     end do
     if (iA.eq.3) unt=25
-! append to the .s## file or write in a separate .z## file (if iA=3)
+    ! append to the .s## file or write in a separate .z## file (if iA=3)
     call line(1,1,unt)
     write(unt,'(a7,i3,a8,f8.3,a33)') '# model',model,' taufid=',taufid,' spectrum from the left slab side'
     write(unt,'(a13,1p,e9.2)') '# Fbol[W/m2]=',FbolL
@@ -6400,7 +6418,8 @@ subroutine PrOut(model,nG,delta)
            Elems(iL,1) = lambda(iL)
            do imu = 1, nmu
               !if(iPhys.eq.1) SLBintm(imu,iL) = SLBintm(imu,iL)*Jext(nY)
-              Elems(iL,imu+1) = SLBintm(imu,iL)
+              !4pi comes from slbintp since it is divided by 4pi need to be changed!!
+              Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(1)*4*pi
            end do
            Elems(iL,nmu+2) = istR(iL)
         end do
@@ -6420,8 +6439,10 @@ subroutine PrOut(model,nG,delta)
         do iL = 1, nL
            Elems(iL,1) = lambda(iL)
            do imu = 1, nmu
-              if(iPhys.eq.1) SLBintp(imu,iL) = SLBintp(imu,iL)*Jext(1)
-              Elems(iL,imu+1) = SLBintp(imu,iL)
+!              if(iPhys.eq.1) SLBintp(imu,iL) = SLBintp(imu,iL)*Jext(1)
+               !4pi comes from slbintp since it is divided by 4pi need to be changed!!
+
+              Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(nY)*4*pi !4pi comes from slbintp
            end do
         end do
         !write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
