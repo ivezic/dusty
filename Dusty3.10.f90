@@ -7445,7 +7445,7 @@ subroutine PrOut(model,nG,delta)
     call getOmega(nG,omega)
     do iL = 1, nL
      if (ftot(iL,1).ne.0.0d0) then
-      xs =  fsR(iL,1)/ftot(iL,1)
+      xs =  fsR(iL,1)/ftotL(iL)
       xds = dabs(fds(iL,1)/ftotL(iL))
       xde = dabs(fde(iL,1)/ftotL(iL))
      else
@@ -7577,6 +7577,7 @@ subroutine PrOut(model,nG,delta)
         do iL = 1, nL
            Elems(iL,1) = lambda(iL)
            do imu = 1, nmu
+               !4pi comes from slbintp since it is divided by 4pi need to be changed!!
               Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(1)*4*pi
            end do
            Elems(iL,nmu+2) = istR(iL)
@@ -7597,6 +7598,7 @@ subroutine PrOut(model,nG,delta)
         do iL = 1, nL
            Elems(iL,1) = lambda(iL)
            do imu = 1, nmu
+               !4pi comes from slbintp since it is divided by 4pi need to be changed!!
               Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(nY)*4*pi
            end do
         end do
