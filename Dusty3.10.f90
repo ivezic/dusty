@@ -365,7 +365,10 @@ subroutine Find_Text(nG,T4_ext)
         Tsub(iG) = (T4_ext(1)*qU1/qPT1)**(1.0d0/4.0d0)
      end if
   end do
-  if (typentry(1).eq.5) Ji = sigma/pi*T4_ext(1)
+  if (typentry(1).eq.5) then
+     Ji = sigma/pi*T4_ext(1)
+     Jo = ksi * Ji
+  endif
 !-----------------------------------------------------------------------
   return
 end subroutine Find_Text
@@ -3161,17 +3164,17 @@ SUBROUTINE FindErr(flux,maxFerr)
   use common
   IMPLICIT none
   INTEGER iY
-  DOUBLE PRECISION flux(npY), maxFerr, fmin, fmax, aux, accFbol
+  DOUBLE PRECISION flux(npY), maxFerr, fmin, fmax, aux, accFbol, tune_acc
 !---------------------------------------------------------------------
   ! accFbol = 1e-3 of input flux
   ! accFbol = max(Ji,Jo)*4*pi*1.0d-03
   tune_acc = 1e-1
   if (slb) then 
-     accFbol = min(Ji,Jo)*4*pi*accuracy*tune_acc
-  else if (sph)
+     accFbol = min(Ji,Jo)*4*pi*accuracy*tune_acc / Jext(1)
+  else if (sph) then
      ! in the spherical case the flux is only zero if there is zero no
      ! central source (Ji=0) therefor accFbok is changed!
-     accFbol = max(Ji,Jo)*4*pi*accuracy*tune_acc
+     accFbol = max(Ji,Jo)*4*pi*accuracy*tune_acc / max(Jext(1),Jext(nY))
   endif
   ! Find the min and max of fbol values
   ! The abs and lower limit on fbol are protection for the case
@@ -3180,7 +3183,7 @@ SUBROUTINE FindErr(flux,maxFerr)
   fmin = 1.e5
   fmax = 0.
   DO iY = 1, nY
-     aux = flux(iY)*Jext(iY)
+     aux = flux(iY)
 !     IF (ksi.eq.1.0) aux = dabs(aux)
      IF (dabs(aux).LE.accFbol) aux = accFbol
      IF(aux.LT.fmin) fmin = aux
@@ -4724,6 +4727,13 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
         if (ksi.gt.1.0) ksi = 1.0d0
         write(12,'(a49,F5.2)') ' Relative bol.flux fraction of right source: R =',ksi
         Jo = Ji*ksi
+     endif
+     ! Sab case isotropic ilumination:
+     ! The input flux is the half flux of the sphere and therfore 
+     ! F = pi*J -> J = F/pi instead of J = F/(4pi)
+     if (typentry(1).eq.1) then
+        if (th1.eq.-1.0d0) Ji = Ji*4
+        if (th2.eq.-1.0d0) Jo = Jo*4
      endif
   endif
   write(12,*) ' --------------------------------------------'
@@ -6283,8 +6293,8 @@ subroutine PrOut(model,nG,delta)
     do iL = 1, nL
        if (ftot(iL,1).ne.0.0d0) then
           xs =  fsR(iL,1)/ftotL(iL)
-          xds = dabs(fds(iL,1)/ftotL(iL)
-          xde = dabs(fde(iL,1)/ftotL(iL)
+          xds = fds(iL,1)/ftotL(iL)
+          xde = fde(iL,1)/ftotL(iL)
        else
           xs = 0.0d0
           xds = 0.0d0
@@ -6302,7 +6312,7 @@ subroutine PrOut(model,nG,delta)
        Elems(iL,4) = xds
        Elems(iL,5) = xde
        if (ksi.gt.0) then
-          Elems(iL,6) = fsR(iL,nY)/fsRbol(nY)
+          Elems(iL,6) = ksi*fsR(iL,nY)/fsRbol(nY)
        else
           Elems(iL,6) = 0.0d0
        end if
