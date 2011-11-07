@@ -394,7 +394,10 @@ subroutine Find_Text(nG,T4_ext)
            T4_ext(iY) = Tsub(1)**4.0d0*(qPT1/qU1)
         end do
      end if
-     if (typentry(1).eq.5) Ji = sigma/pi*T4_ext(1)
+     if (typentry(1).eq.5) then 
+        Ji = sigma/pi*T4_ext(1)
+        Jo = ksi * Ji
+     endif
   end do
 !-----------------------------------------------------------------------
   return
@@ -3325,9 +3328,9 @@ end subroutine Analysis
       !tune_acc=1e-1 is pretty close to the solution
       tune_acc = 1e-1
       if (slb) then 
-         accFbol = min(Ji,Jo)*4*pi*accuracy*tune_acc
+         accFbol = min(Ji,Jo)*4*pi*accuracy*tune_acc / Jext(1)
       else
-         accFbol = max(Ji,Jo)*4*pi*accuracy*tune_acc
+         accFbol = max(Ji,Jo)*4*pi*accuracy*tune_acc / max(Jext(1),Jext(nY))
       endif
 
 !     Find the min and max of fbol values
@@ -3337,7 +3340,7 @@ end subroutine Analysis
       fmin = 1.e5
       fmax = 0.
       DO iY = 1, nY
-         aux = flux(iY)*Jext(iY)
+         aux = flux(iY)
 !         IF (ksi.eq.1.0) aux = dabs(aux)
          IF (dabs(aux).LE.accFbol) aux = accFbol
          IF(aux.LT.fmin) fmin = aux
@@ -4916,6 +4919,13 @@ subroutine Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,tauIn, &
         if (ksi.gt.1.0) ksi = 1.0d0
         write(12,'(a49,F5.2)') ' Relative bol.flux fraction of right source: R =',ksi
         Jo = Ji*ksi
+     endif
+     ! Sab case isotropic ilumination:
+     ! The input flux is the half flux of the sphere and therfore 
+     ! F = pi*J -> J = F/pi instead of J = F/(4pi)
+     if (typentry(1).eq.1) then
+        if (th1.eq.-1.0d0) Ji = Ji*4
+        if (th2.eq.-1.0d0) Jo = Jo*4
      endif
   endif
   write(12,*) ' --------------------------------------------'
@@ -7466,7 +7476,7 @@ subroutine PrOut(model,nG,delta)
       Elems(iL,4) = xds
       Elems(iL,5) = xde
       if (ksi.gt.0) then
-        Elems(iL,6) = fsR(iL,nY)/fsRbol(nY)
+        Elems(iL,6) = ksi*fsR(iL,nY)/fsRbol(nY)
       else
         Elems(iL,6) = 0.0d0
       end if
