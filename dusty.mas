@@ -6,7 +6,8 @@
    verbose =  2
 % -------------------------------
 
-examples/slab_BB/slab_BB
+/home/fheymann/work/dusty_benchmark/new/ivezic97
+%examples/slab_multi/slab_multi
 %examples/sphere_BB/sphere_BB
 
 % -------------------------------
