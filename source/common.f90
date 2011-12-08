@@ -30,7 +30,7 @@ module common
   ! ---------------------------------------------------------------------------
   integer Ncav, Nins
   double precision accuracy, accConv, dtau, init_tau, dynrange, accRomb
-  parameter (accRomb=1e-3)
+  parameter (accRomb=1e-4)
   ! ===========================================================================
   ! Common statements for the grids. /grids1/ is for integers, /grids2/ for reals.
   !                                                      [ZI'95-97; MN'99; MD'07]
@@ -280,5 +280,6 @@ module common
   
   double precision TAUslb(npL,npY), fpbol(npY), fmbol(npY), fmed, &
        SLBIntm(npR,npL), SLBIntp(npR,npL), IstR(npL),maxrat
+
   !=============================================================================
 end module common

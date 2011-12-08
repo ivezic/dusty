@@ -72,11 +72,11 @@ PROGRAM DUSTY
               ALLOCATE(tau(Nmodel))
               CALL GetTau(nG,tau1,tau2,tauIn,Nrec,GridType,Nmodel,tau)
               IF (iVerb.ge.2) print*,'Done with GetTau'
-              IF (SPH) THEN 
+!              IF (SPH) THEN 
                  CALL Kernel_matrix(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error)
-              ELSE
-                 CALL Kernel(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error)
-              END IF
+!              ELSE
+!                 CALL Kernel(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error)
+!              END IF
            END IF
         ELSE
            PRINT*,

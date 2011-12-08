@@ -2822,8 +2822,8 @@ SUBROUTINE SPH_Int(nG,omega,fs)
   END IF
   ! find impact parameter tangential to the stellar disk
   ! first find the Planck averaged absorption efficiencies at Y=1
-  print*,'still single grain line 3529'
-  stop
+  ! print*,'still single grain line 3529'
+  ! stop
   DO iL = 1, nL
      qaux(iL) = SigmaA(1,iL) * Utot(iL,1) / lambda (iL)
      xP = 14400.0 / Td(1,1) / lambda(iL)
@@ -2932,7 +2932,7 @@ SUBROUTINE SPH_Int(nG,omega,fs)
            pT = dlog(Td(1,iW)/Td(1,iW-1)) / lw12
            ! for albedo
            print*,'omega is (iG,iL) not iL,iW'
-           stop
+           ! stop
            IF (omega(iL,iW-1).GT.0.0.AND.omega(iL,iW).GT.0.0) THEN
               palb = dlog(omega(iL,iW)/omega(iL,iW-1)) / lw12
            ELSE
@@ -3742,3 +3742,39 @@ DOUBLE PRECISION FUNCTION PSFN(x)
   RETURN
 END FUNCTION PSFN
 ! ***********************************************************************
+
+!***********************************************************************
+SUBROUTINE GetbOut(npP,nP,P,pstar,bOut,k)
+!=======================================================================
+! This subroutine inserts two impact parameters corresponding to pstar,
+! producing bOut(nP+2) from P(nP). The inserted elements are bOut(k) and
+! bOut(k+1)                                            [Z.I., Aug. 1996]
+! =======================================================================
+  IMPLICIT none
+  INTEGER npP, nP, k, kstop, i
+  DOUBLE PRECISION P(npP), bOut(npP+2), pstar
+! -----------------------------------------------------------------------
+  k = 0
+  kstop = 0
+  DO WHILE (kstop.NE.1)
+     k = k + 1
+     bOut(k) = P(k)
+     IF (1.001D+00*pstar.LE.P(k).OR.k.EQ.nP) kstop = 1
+  END DO
+  IF (0.999D+00*pstar.GT.P(k-1)) THEN
+     bOut(k) = 0.999D+00*pstar
+  ELSE
+     bOut(k) = 0.5D+00*(P(k-1)+1.001D+00*pstar)
+  END IF
+  IF (1.001D+00*pstar.LT.P(k)) THEN
+     bOut(k+1) = 1.001D+00*pstar
+  ELSE
+     bOut(k+1) = 0.5D+00*(P(k)+0.999D+00*pstar)
+  END IF
+  DO i = k, nP
+     bOut(i+2) = P(i)
+  END DO
+  ! -----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE GetbOut
+!***********************************************************************

@@ -1,6 +1,6 @@
 #F90=gfortran -fbounds-check
-F90=gfortran -O3 -fbounds-check -lgomp
-#F90=gfortran -pg -fbounds-check
+#F90=gfortran -O3 -fbounds-check -lgomp
+F90=gfortran -pg -fbounds-check -lgomp
 #F90=/opt/ekopath-4.0.10/bin/pathf90 -O3 -openmp
 #F90=/opt/ekopath-4.0.10/bin/pathf90 -O3
 

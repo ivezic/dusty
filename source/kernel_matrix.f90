@@ -290,13 +290,12 @@ SUBROUTINE RADTRANSF(pstar,iPstar,TAUlim,nG,FbolOK,deviat,error,iterFbol,model)
   IF (iterETA.EQ.1.OR.iterFbol.GT.1) THEN
      IF (iterFbol.EQ.1) THEN
         ! first time generate grids
-        CALL SetGrids(pstar,iPstar,error,TAUlim)
+        CALL SetGrids_matrix(pstar,iPstar,error,TAUlim)
         IF (error.NE.0) goto 999
         IF (iVerb.EQ.2) write(*,*) 'Done with SetGrids'
      ELSE
         ! or improve the grid from previous iteration
-        ! CALL ChkFlux(fBol,accuracy,iaux,error,ETAzp) --**--
-        call Flux_Consv(fbol,fbol,fbolOK,error)
+        CALL ChkFlux(fBol,accuracy,iaux,error)
         ! added in ver.2.06
         ! IF (maxFerr.GT.0.5D+00) CALL DblYgrid(error) --**--
         IF (error.NE.0) goto 999
@@ -327,9 +326,9 @@ SUBROUTINE RADTRANSF(pstar,iPstar,TAUlim,nG,FbolOK,deviat,error,iterFbol,model)
   ! generate spline coefficients for ETA
   CALL setupETA
   ! evaluate ETAzp
-  CALL getETAzp(ETAzp)
+  CALL getETAzp
   ! generate albedo through the envelope
-  CALL getOmega(nG)
+  CALL getOmega(nG,omega)
   ! generate stellar moments
   ! CALL Star(pstar,ETAzp,error) --**--
   call Find_Tran(pstar,T4_ext,us,fs)
@@ -369,7 +368,7 @@ SUBROUTINE RADTRANSF(pstar,iPstar,TAUlim,nG,FbolOK,deviat,error,iterFbol,model)
      ! find emission term
      ! because there is no alpha now, y^2 appears explicitly in
      ! Emission and we need the flag for geometry (1-for sphere).
-     CALL Emission(1,0,nG,Td,abund,Us,Em)
+     CALL Emission_matrix(1,0,nG,Us,Em)
      ! solve for Utot
      CALL Invert(nG,mat0,Us,Em,omega,Uold,error)
      IF(error.NE.0) goto 999
@@ -431,7 +430,7 @@ SUBROUTINE RADTRANSF(pstar,iPstar,TAUlim,nG,FbolOK,deviat,error,iterFbol,model)
      END IF
   END IF
   ! calculate the emission term for the converged Td
-  CALL Emission(1,0,nG,Td,abund,Us,Em)
+  CALL Emission_matrix(1,0,nG,Us,Em)
   ! calculate flux
   CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
   CALL Multiply(0,npY,nY,npL,nL,mat1,Em,omega,0,fs,fde,dynrange)
@@ -1079,7 +1078,7 @@ SUBROUTINE Kint4(TAUaux,iP,iL,nZ,K1p,K2p,K3p,K4p,K1m,K2m,K3m,K4m)
      ! delTAUzp is needed in PHIn fun's
      delTAUzp = TAUaux(iL,iP,iZ+1)-TAUaux(iL,iP,iZ)
      ! integrate this step for all 8 cases
-     CALL ROMBERG2(z1,z2,Rresult)
+     CALL ROMBERG2(z1,z2,Rresult,w1,wl,iW1,iLaux,delTAUzp,paux)
      ! generate output values
      DO ic= 1, 4
         Kaux(iC) = Rresult(iC) * deltrton(iC)
@@ -1109,7 +1108,7 @@ END SUBROUTINE Kint4
 !***********************************************************************
 
 !***********************************************************************
-SUBROUTINE ROMBERG2(a,b,ss8)
+SUBROUTINE ROMBERG2(a,b,ss8,w1,wl,iW1,iLaux,delTAUzp,paux)
 !=======================================================================
 !This subroutine performs Romberg integration of 8 functions calculated
 !in trapzd2 (by calling subroutine TWOFUN) on interval [a,b].
@@ -1121,10 +1120,10 @@ SUBROUTINE ROMBERG2(a,b,ss8)
 !=======================================================================
   use common
   IMPLICIT NONE
-  INTEGER fconv(8),JMAX,JMAXP,K,KM, J, idone, kaux
+  INTEGER fconv(8),JMAX,JMAXP,K,KM, J, idone, kaux, iW1,iLaux
   PARAMETER (JMAX=50, JMAXP=JMAX+1, K=5, KM=K-1)
   DOUBLE PRECISION ss, ss8(8), S2D(8,JMAXP), h(JMAXP), sjKM(JMAXP),&
-       a, b, h0, EPS_romb, dss, s8(8), chk(8)
+       a, b, h0, EPS_romb, dss, s8(8), chk(8), w1,wl,delTAUzp,paux
 !-----------------------------------------------------------------------
   EPS_romb = accRomb
   h0 = 0.0D+00
@@ -1139,7 +1138,7 @@ SUBROUTINE ROMBERG2(a,b,ss8)
   DO WHILE(idone.NE.1.and.j.LE.JMAX)
      j = j + 1
      ! integrate with j division points
-     call trapzd2(a,b,s8,j)
+     call trapzd2(a,b,s8,j,w1,wl,iW1,iLaux,delTAUzp,paux)
      DO ic = 1, 8
         S2D(iC,j) = S8(iC)
      END DO
@@ -1177,27 +1176,27 @@ END SUBROUTINE ROMBERG2
 
 
 !***********************************************************************
-SUBROUTINE trapzd2(a,b,s,n)
+SUBROUTINE trapzd2(a,b,s,n,w1,wl,iW1,iLaux,delTAUzp,paux)
 !=======================================================================
 !This function integrates prescribed 8 functions from z=a to z=b with n
 !divisions and stores the results to s(1..8). It is a heavily modified
 !version of subroutine 'trapzd' (Num.Rec.'92).        [MN & ZI, Aug'96]
 !=======================================================================
   IMPLICIT none
-  INTEGER it,iC,i,n,j
+  INTEGER it,iC,i,n,j,iW1,iLaux
   DOUBLE PRECISION s(8),a,b,funcx(8),funca(8),funcb(8),del,summ(8),&
-       tnm, x, ff, gp, gm
+       tnm, x, ff, gp, gm, w1,wl,delTAUzp,paux
 !-----------------------------------------------------------------------
   IF (n.eq.1) then
      ! calculate auxiliary functions at a and at b
-     CALL TWOFUN()
+     CALL TWOFUN(a,ff,gp,gm,w1,wl,iW1,iLaux,delTAUzp,paux)
      funca(1) =  gm
      funca(5) =  gp
      DO iC= 2, 4
         funca(iC) = funca(iC-1) * ff
         funca(4+iC) = funca(3+iC) * ff
      END DO
-     CALL TWOFUN()
+     CALL TWOFUN(b,ff,gp,gm,w1,wl,iW1,iLaux,delTAUzp,paux)
      funcb(1) =  gm
      funcb(5) =  gp
      DO iC= 2, 4
@@ -1219,7 +1218,7 @@ SUBROUTINE trapzd2(a,b,s,n)
      ! calculate contributions of all 'it' divisions
      DO j = 1, it
         ! auxiliary functions at x
-        CALL TWOFUN()
+        CALL TWOFUN(x,ff,gp,gm,w1,wl,iW1,iLaux,delTAUzp,paux)
         ! generate (8) integrated functions at x
         funcx(1) = gm
         funcx(5) = gp
@@ -1244,14 +1243,18 @@ END SUBROUTINE trapzd2
 !***********************************************************************
 
 !***********************************************************************
-SUBROUTINE TWOFUN()
+SUBROUTINE TWOFUN(z,ff,gp,gm,w1,wl,iW1,iLaux,delTAUzp,paux)
 !=======================================================================
 !This function evaluates auxiliary functions needed in trapzd2.
 !               [MN & ZI,Aug'96; MN,Sep'97]
 !=======================================================================
 !-----------------------------------------------------------------------
   use common
-  DOUBLE PRECISION w,paux,z
+  implicit none
+  DOUBLE PRECISION w,w1,wl,paux,z,auxw,delTAUzp,etaloc,ff,gm,gm1,gp,gp1,pp,&
+       IntETA_matrix
+  INTEGER iLaux,iW1
+
 
   ! local radius
   w = dsqrt(paux*paux + z*z)
@@ -1265,15 +1268,48 @@ SUBROUTINE TWOFUN()
   END DO
   ! ff, i.e. radial optical depth:
   pp = 0.0D+00
-  ff = IntETA(pp,iW1,wL,w)*TAUtot(iLaux)
+  ff = IntETA_matrix(pp,iW1,wL,w)*TAUtot(iLaux)
   ! g functions:
-  gp1 = dexp(IntETA(paux,iW1,w1,w)*TAUtot(iLaux)-delTAUzp)
-  gm1 = dexp(-IntETA(paux,iW1,w1,w)*TAUtot(iLaux))
+  gp1 = dexp(IntETA_matrix(paux,iW1,w1,w)*TAUtot(iLaux)-delTAUzp)
+  gm1 = dexp(-IntETA_matrix(paux,iW1,w1,w)*TAUtot(iLaux))
   gp = etaloc/w/w * gp1
   gm = etaloc/w/w * gm1
   !-----------------------------------------------------------------------
   RETURN
 END SUBROUTINE TWOFUN
+!***********************************************************************
+
+!***********************************************************************
+DOUBLE PRECISION FUNCTION IntETA_matrix(p2,iW1,w1,w)
+!=======================================================================
+!This function calculates the integral over the normalized dens. prof.
+!along the line of sight with impact parameter p and between the points
+!corresponding to y=w1 and y=w. The method used is spline approximation
+!for normalized density distribution ETA and subsequent integration
+!performed analytically by MAPLE (these results are given through
+!soubroutine Maple3).                         [ZI,Feb'96,MN,Aug'97]
+!=======================================================================
+  use common
+  IMPLICIT none
+  INTEGER iW1
+  DOUBLE PRECISION  p2, w1, w, aux(4), z, z1, aux1(4)
+  !-----------------------------------------------------------------------
+
+  z = dsqrt(w*w-p2*p2)
+  z1 = dsqrt(w1*w1-p2*p2)
+  !    integrals calculated by MAPLE
+  CALL Maple3(w,z,p2,aux)
+  CALL Maple3(w1,z1,p2,aux1)
+  DO iC = 1, 4
+     aux(iC) = aux(iC) - aux1(iC)
+  END DO
+  IntETA_matrix = 0.0D+00
+  DO iC = 1, 4
+     IntETA_matrix = IntETA_matrix + ETAcoef(iW1,iC) * aux(iC)
+  END DO
+  !-----------------------------------------------------------------------
+  RETURN
+END FUNCTION IntETA_matrix
 !***********************************************************************
 
 !***********************************************************************
@@ -1526,4 +1562,387 @@ SUBROUTINE ANALYSIS_matrix(model,error)
   !-----------------------------------------------------------------------
   RETURN
 END SUBROUTINE ANALYSIS_matrix
+!***********************************************************************
+
+! ***********************************************************************
+SUBROUTINE SetGrids_matrix(pstar,iPstar,error,TAU)
+! =======================================================================
+! Sets the Y and P grids based on GrayBody flux conservation.
+!                                                     [MN & ZI, July'96]
+! =======================================================================
+  use common
+  IMPLICIT none
+  INTEGER error, iPstar, consfl
+  DOUBLE PRECISION pstar, Ugb(npY), fgb(npY), albedo,&
+       aux, faccs, TAU, accur, delTAUin, delTAUsc, facc
+
+! -----------------------------------------------------------------------
+  ! store the default value for delTAUsc and facc
+  faccs = facc
+  delTAUin = delTAUsc
+  ! change the delTAUsc seed for the initial Y grid if TAU is large
+  IF (TAU.LT.1.0D+00) delTAUsc = delTAUin * 2.0D+00
+  IF (TAU.GE.1.0D+00.and.TAU.LT.5.0D+00)delTAUsc = delTAUin*1.5D+00
+  IF (TAU.EQ.5.0D+00) delTAUsc = delTAUin
+  IF (TAU.GT.5.0D+0.and.TAU.LT.10.0D+0) delTAUsc = delTAUin/1.2D+00
+  IF (TAU.GE.10.0D+0.and.TAU.LT.20.0D+0)delTAUsc = delTAUin/1.3D+00
+  ! The grid is set with TAU=min{TAUlim,TAUmax}, so the lines below are obsol
+  ! IF (TAU.GE.20.0.and.TAU.LT.30.0) delTAUsc = delTAUin / 1.4
+  ! IF (TAU.GE.30.0.and.TAU.LT.50.0) delTAUsc = delTAUin / 1.5
+  ! IF (TAU.GE.50.0) delTAUsc = delTAUin / 2.0
+  ! for steep density distributions (RDW, including analyt.approximation):
+  IF (RDWA.OR.RDW) delTAUsc = delTAUin / 1.2D+00
+  ! change the facc seed for the initial Y grid if Yout is very small
+  IF (Yout.LT.1000.0D+00) facc = dsqrt(faccs)
+  IF (Yout.LT.100.0D+00) facc = dsqrt(facc)
+  IF (Yout.LT.10.0D+00) facc = dsqrt(facc)
+  IF (Yout.LT.2.0D+00) facc = dsqrt(facc)
+  IF (Yout.LT.1.2D+00) facc = dsqrt(facc)
+  IF (Yout.LT.1.05D+00) facc = dsqrt(facc)
+
+  albedo = 1.0D+00
+  aux = 1.0D+00
+  ! generate initial grids
+  CALL Ygrid(pstar,iPstar,error)
+!!$  ! increase the grid if large tau and external illumination only
+!!$  IF(Left.eq.0.AND.taumax.ge.99.0D+00) CALL DblYgrid(error)
+  IF (error.NE.0) goto 101
+  CALL Pgrid(pstar,iPstar,error)
+  IF (error.NE.0) goto 101
+  IF (iX.GE.1) THEN
+     write(18,'(a24,i3)')' Y grid generated, nY =',nY
+     write(18,'(a24,i3)')'                   nP =',nP
+     write(18,'(a24,i3)')'                 Nins =',Nins
+     write(18,'(a24,i3)')'                 Ncav =',Ncav
+  END IF
+  ! solve for gray body (i.e. pure scattering)
+  CALL GrayBody(albedo,TAU,Ugb,fgb)
+  IF (iVerb.EQ.2) write(*,*) 'Done with GrayBody'
+  ! find the max deviation of fgb (FindRMS called with flag 1)
+  ! (for grid generation purpose aux is set to 1.)
+  CALL FindRMS(1,fgb,aux,accur,nY)
+  IF (iX.GE.1) THEN
+     IF (accur.GT.accuracy) THEN
+        write(18,'(a25)')' Grids need improvement:'
+        write(18,'(a29,1p,e10.3)') &
+             '                   fTot(nY):',fgb(nY)
+        write(18,'(a29,1p,e10.3)')'      Single wavelength TAU:',TAU
+        write(18,'(a29,1p,e10.3)') &
+             '          Required accuracy:',accuracy
+     END IF
+     write(18,'(a29,1p,e10.3)')' Single wavelength accuracy:',accur
+  END IF
+  IF(accur.GT.accuracy) THEN
+     ! ChkFlux checks the bolometric flux conservation for the given
+     ! grid and decreases the step if conservation is not satisfactory
+     consfl = 5
+     CALL ChkFlux(fgb,accuracy,consfl,error)
+     IF (error.NE.0) goto 101
+     ! consfl=5 means everything was fine in ChkFlux
+     IF (consfl.EQ.5) THEN
+        IF (iX.GE.1) write(18,'(a23,i3)')' Y grid improved, nY =',nY
+        ! generate new impact parameter grid
+        CALL Pgrid(pstar,iPstar,error)
+        ! if P grid is not OK end this model
+        IF (error.NE.0) goto 101
+     ELSE
+        IF (iX.GE.1) THEN
+           write(18,'(a59,i3)') &
+                ' Although single wavelength accuracy was not satisfactory,'
+           write(18,'(a56,i3)') &
+                ' Y grid could not be improved because npY is too small.'
+           write(18,'(a58,i3)') &
+                ' Continuing calculation with a hope that it will be fine.'
+        END IF
+     END IF
+  END IF
+  ! return the default value for facc
+101 facc = faccs
+  delTAUsc = delTAUin
+  ! -----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE SetGrids_matrix
+! ***********************************************************************
+
+
+!***********************************************************************
+SUBROUTINE GrayBody(albedo,TAUgbTot,Ugb,fgb)
+!=======================================================================
+!This subroutine solves the gray body problem for albedo=1 (or
+!equivalently pure scattering) and scattering with absorption (but no
+!emission) for albedo<1, in a spherically symmetri!envelope. Total
+!optical depth is TAUtot, and density law is specified elsewhere.
+!This subroutine was designed to be a part of Dusty and to use already
+!existing subroutines as much as possible, so some parts might seem to
+!be a little awkward.                           [ZI,Jul'96;MN,Sep'97]
+!=======================================================================
+  use common
+  IMPLICIT none
+  DOUBLE PRECISION Us(npL,npY),fs(npL,npY),Em(npG,npL,npY),omega(npL,npY), &
+       Ugb(npY), fgb(npY), albedo, Dummy1(npL,npP,npY),&
+       Dummy2(npL,npP,npY), Dummy3(npL,npY), TAUgbTot, TAUstore,&
+       mat0(npL,npY,npY), mat1(npL,npY,npY), pGB
+  INTEGER iPGB, iY, nLstore, error
+
+!----------------------------------------------------------------------
+!    Values needed in this subroutine only
+  pGB = 0.0D+00
+  iPGB = 0
+  nLstore = nL
+  nL = 1
+  TAUstore = TAUtot(1)
+  TAUtot(1) = TAUgbTot
+  ! generate spline coefficients for ETA
+  CALL setupETA
+  ! evaluate ETAzp
+  CALL getETAzp(ETAzp)
+  ! generate some temporary arrays
+  DO iY = 1, nY
+     Us(1,iY) = dexp(-ETAzp(1,iY)*TAUgbTot)
+     fs(1,iY) = Us(1,iY)
+     Em(1,1,iY) = 0.0D+00
+     fde(1,iY) = 0.0D+00
+     omega(1,iY) = albedo
+  END DO
+  ! find radiative transfer matrices
+  CALL Matrix(pGB,iPGB,mat0,mat1,Dummy1,Dummy2)
+  ! solve for Utot
+  CALL Invert(1,mat0,Us,Em,omega,Utot,error)
+  ! calculate flux, ftot
+  CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omega,1,fs,ftot,dynrange)
+  ! store to the output arrays
+  DO iY = 1, nY
+     Ugb(iY) = Utot(1,iY)
+     fgb(iY) = ftot(1,iY)
+  END DO
+  nL = nLstore
+  TAUtot(1) = TAUstore
+  !-----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE GrayBody
+!***********************************************************************
+
+
+!***********************************************************************
+SUBROUTINE FindRMS(typ,X,val,accur,N)
+!=======================================================================
+!Finds relative deviations 'accur' of an array X(N) from a given value val.
+!For typ=1 accur is maximal deviation, and for typ=2 the rms deviation.
+!                                                        [ZI'95; MN'99]
+!=======================================================================
+  IMPLICIT NONE
+  INTEGER N, i, typ
+  DOUBLE PRECISION X(N), val, accur, ss, dev
+!-----------------------------------------------------------------------
+  IF (typ.EQ.1) THEN
+     accur = 0.0D+00
+     DO i = 1, N
+        dev = (X(i)-val)/val
+        IF (DABS(dev).GT.accur) accur = DABS(dev)
+     END DO
+  ELSE
+     ss = 0.0D+00
+     DO i = 1, N
+        dev = X(i)-val
+        ss = ss + dev*dev
+     END DO
+     accur = dsqrt(ss/N/(N-1.0D+00))
+  END IF
+  !-----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE FindRMS
+!***********************************************************************
+
+
+!***********************************************************************
+SUBROUTINE ChkFlux(flux,tolern,consfl,error)
+!=======================================================================
+!Checks the bolometri!flux conservation at any point of a given Ygrid.
+!In case of nonconservation increases the number of points at certain
+!places. The current criterion is increasing the flux difference from
+!tolern to its maximum value.                         [MN & ZI,July'96]
+!=======================================================================
+  use common
+  IMPLICIT none
+  integer iY,iYins(npY),k,kins,consfl,error,flag,istop,iDm
+  DOUBLE PRECISION EtaTemp(npY),Yins(npY),flux(npY),tolern,delTAUMax,&
+       devfac,devmax,ee,ff,ffold,fmax,Yloc,ETA
+!-----------------------------------------------------------------------
+  ! save old grid and values of Eta (important for denstyp = 5 or 6)
+  IF (RDW) THEN
+     DO iY = 1, nY
+        Yprev(iY) = Y(iY)
+        EtaTemp(iY) = ETAdiscr(iY)
+     END DO
+     nYprev = nY
+  END IF
+  IF(Right.gt.0) THEN
+     ! Find fmed - the median value of the bol.flux
+     ! (if there is an external source fbol < 1)
+     ! CALL SLBmisc(flux,fmax,fmed,AveDev,RMS,nY)
+     print*,'! CALL SLBmisc(flux,fmax,fmed,AveDev,RMS,nY)'
+  ELSE
+     fmed = 1.0D+00
+  END IF
+  error = 0
+  kins = 0
+  devmax = 0.0D+00
+  ! maximal delTAU is no more than 2 times the average value
+  delTAUmax = 2.0D+00*TAUtot(1)*ETAzp(1,nY)/nY
+  ! maximal deviation from fmed
+  DO iY = 2, nY
+     IF (dabs(flux(iY)-fmed).GT.devmax) devmax = dabs(flux(iY)-fmed)
+  END DO
+  ff = 0.0D+00
+  istop = 0
+  devfac = 0.1D+00
+  ! search for places to improve the grid
+  DO WHILE (istop.NE.1)
+     DO iY = 2, nY
+        ffold = ff
+        ff = dabs(flux(iY) - fmed)
+        flag = 0
+        ! if any of these criteria is satisfied insert a point:
+        ! 1) if error is increasing too fast
+        IF (abs(ff-ffold).GT.devfac*devmax) flag = 1
+        ! 2) if delTAU is too large
+        IF (TAUtot(1)*(ETAzp(1,iY)-ETAzp(1,iY-1)).GT. &
+             delTAUmax) flag = 1
+        IF(flag.EQ.1.AND.devmax.GE.tolern) THEN
+           kins = kins + 1
+           Yins(kins) = Y(iY-1)+0.5D+00*(Y(iY)-Y(iY-1))
+           iYins(kins) = iY-1
+        END IF
+     END DO
+     IF (devmax.LT.tolern.OR.devfac.LT.0.01D+00) THEN
+        istop = 1
+     ELSE
+        IF (kins.GT.0) istop = 1
+     END IF
+     devfac = devfac / 2.0D+00
+  END DO
+  IF (kins.EQ.0) THEN
+     IF (consfl.NE.5) consfl = 1
+  ELSE
+     ! Add all new points to Y(nY). This gives the new Y(nY+kins).
+     ! However, check if npY is large enough to insert all points:
+     IF ((nY+kins).GT.npY) THEN
+        ! consfl.EQ.5 is a signal that Chkflux was called from SetGrids,
+        ! in this case continue without inserting new points. If this is
+        ! full problem then give it up.
+        IF (consfl.NE.5) THEN
+           consfl = 1
+        ELSE
+           consfl = 7
+           goto 777
+        END IF
+        IF (iX.GE.1) THEN
+           write(18,*)' ****************     WARNING   ******************'
+           write(18,*)'  The new Y grid can not accomodate more points!'
+           write(18,'(a,i3)')'   Specified accuracy would require',nY+kins
+           write(18,'(a,i3,a)')'   points, while npY =',npY,'.'
+           write(18,*)'  For the required accuracy npY must be increased,'
+           write(18,*)'  (see the manual S3.5 Numerical Accuracy).'
+           write(18,*)' *************************************************'
+        END IF
+        kins = npY - nY
+        iWARNING = iWARNING + 1
+        error = 2
+     END IF
+     DO k = 1, kins
+        CALL SHIFT(Y,npY,nY+k-1,Yins(k),iYins(k)+k-1)
+     END DO
+  END IF
+  ! new size of the Y grid
+  nY = nY + kins
+  ! intepolate ETAdiscr to new Y grid for denstyp = 5 or 6
+  DO iY = 1, nY
+     Yloc = Y(iY)
+     IF (iterETA.GT.1) THEN
+        CALL LinInter(npY,nYprev,Yprev,EtaTemp,Yloc,iDm,ee)
+        ETAdiscr(iY) = ee
+     ELSE
+        ETAdiscr(iY) = ETA(Yloc)
+     END IF
+  END DO
+  !-----------------------------------------------------------------------
+777 RETURN
+END SUBROUTINE ChkFlux
+!***********************************************************************
+
+!***********************************************************************
+SUBROUTINE SHIFT(X,Nmax,N,Xins,i)
+!=======================================================================
+!Rearranges a vector X by inserting a new element Xins.    [MN, Aug'96]
+!=======================================================================
+  implicit none
+  integer Nmax, N, i,j
+  DOUBLE PRECISION X(Nmax),Xins
+!-----------------------------------------------------------------------
+  DO j = N+1, i+2, -1
+     x(j) = x(j-1)
+  END DO
+  x(i+1) = xins
+  !-----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE SHIFT
+!***********************************************************************
+
+!***********************************************************************
+SUBROUTINE Emission_matrix(geom,flag,nG,Uin,Emiss)
+!=======================================================================
+!This subroutine calculates emission term from the temperature and abund
+!arrays for flag=0, and adds U to it for flag=1.
+!                                                     [Z.I., Mar. 1996]
+!=======================================================================
+  use common
+  IMPLICIT none
+  INTEGER iL,iY,iG,nG, flag, geom
+  DOUBLE PRECISION TT,Emiss(npL,npY), EmiG, xP, Planck, Uin(npL,npY), &
+       Tei, Teo
+!-----------------------------------------------------------------------
+  Tei = Ji*4*pi/sigma
+  Teo = Jo*4*pi/sigma
+  ! first initialize Emiss
+  ! loop over wavelengths
+  DO iL = 1, nL
+     ! loop over radial coordinate
+     DO iY = 1, nY
+        Emiss(iL,iY) = 0.0D+00
+     END DO
+  END DO
+  ! calculate emission term for each component and add it to Emiss
+  ! loop over wavelengths
+  DO iL = 1, nL
+     ! loop over radial coordinate
+     DO iY = 1, nY
+        ! loop over grains
+        DO iG = 1, nG
+           xP = 14400.0D+00 / lambda(iL) / Td(iG,iY)
+           IF(geom.NE.0) THEN
+              IF(Left.eq.0) THEN
+                 TT = (Td(iG,iY)**4.0D+00)/&
+                      (0.25D+00*Tei**4.0D+00+Y(nY)*Y(nY)*Teo**4.0D+00)
+              ELSE
+                 TT = (Td(iG,iY)**4.0D+00)/&
+                      (0.25D+00*Tei**4.0D+00+Teo**4.0D+00)
+              END IF
+              TT = TT * Y(iY)**2.0D+00
+           ELSE
+              TT = 4.0D+00 * (Td(iG,iY)/Tei)**4.0D+00
+           END IF
+           EmiG = abund(iG,iY) * TT * Planck(xP)
+           ! add contribution for current grains
+           Emiss(iL,iY) = Emiss(iL,iY) + EmiG
+        END DO
+        ! if needed add Uin
+        IF (flag.EQ.1) THEN
+           Emiss(iL,iY) = Emiss(iL,iY) + Uin(iL,iY)
+        END IF
+        IF (Emiss(iL,iY).LT.dynrange*dynrange) Emiss(iL,iY) = 0.0D+00
+     END DO
+  END DO
+  !-----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE Emission_matrix
 !***********************************************************************
