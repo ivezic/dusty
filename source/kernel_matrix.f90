@@ -125,7 +125,7 @@ SUBROUTINE solve_matrix(model,nG,error)
              END IF
              IF (iVerb.EQ.2) write(*,*) iterFbol,'. iteration over Fbol'
              ! solve the radiative transfer problem
-             CALL RADTRANSF(pstar,iPstar,TAUlim,nG,FbolOK,deviat,&
+             Call RADTRANSF(pstar,iPstar,TAUlim,nG,FbolOK,deviat,&
                   error,iterFbol,model)
              IF (iVerb.EQ.2) write(*,*) 'Done with RadTransf'
              ! error.EQ.3 : file with stellar spectrum not available
@@ -251,7 +251,7 @@ SUBROUTINE solve_matrix(model,nG,error)
 !          iWARNING = iWARNING + 1
 !          goto 999
 !       END IF
-       PRINT*,'Slab cas is not implemented for the matrix method!'
+       PRINT*,'Slab case is not implemented for the matrix method!'
        STOP
     END IF
     ! analyze the solution and calculate some auxiliary quantities
@@ -274,18 +274,20 @@ SUBROUTINE RADTRANSF(pstar,iPstar,TAUlim,nG,FbolOK,deviat,error,iterFbol,model)
 !=======================================================================
   use common
   IMPLICIT none
-  integer iPstar, nG, FbolOK, error, iterFbol, model, BolConv, Conv, iaux, &
-       Fconv, iter,itnum, iY, itlim, uconv
-  double precision pstar,taulim, us(npL,npY),comp_fdiff_bol(npY), &
+  integer iPstar, nG, FbolOK, error, iterFbol, model, &
+       BolConv, Conv, iaux, Fconv, iter,itnum, iY, itlim, uconv
+  double precision pstar,taulim,deviat, &
+       us(npL,npY),comp_fdiff_bol(npY), &
        comp_fdiff_bol1(npY),calc_fdiff(npY), &
        delta, em(npG,npL,npY), omega(npG+1,npL), iauxl(npL),iauxr(npL), &
        fdsp(npL,npY),fdsm(npL,npY), fdep(npL,npY),fdem(npL,npY),fs(npL,npY), &
        T4_ext(npY), accfbol, fbol_max, fbol_min, aux, &
-       Udbol(npY), Usbol(npY), fDebol(npY),fDsbol(npY), maxFerr, deviat, &
+       Udbol(npY), Usbol(npY), fDebol(npY),fDsbol(npY), maxFerr,  &
        dmaxF, dmaxU, fbolold(npY), mat0(npL,npY,npY), mat1(npL,npY,npY), &
        miback(npL,npP,npY), mifront(npL,npP,npY), Tei, UbolChck(npY), &
        Uchck(npL,npY), Uold(npL,npY), fdbol(npY)
 
+  print*,'blubb radtransf'
   ! generate, or improve, or do not touch the Y and P grids
   IF (iterETA.EQ.1.OR.iterFbol.GT.1) THEN
      IF (iterFbol.EQ.1) THEN
@@ -403,11 +405,11 @@ SUBROUTINE RADTRANSF(pstar,iPstar,TAUlim,nG,FbolOK,deviat,error,iterFbol,model)
         CALL Converg2(Uold,Utot,Uconv,dmaxU)
         ! find maximal fbol error
         CALL FindErr(fbol,maxFerr,nY)
-!------  printout of errors and convergence with iter.(inner flag): -------
+        !------  printout of errors and convergence with iter.(inner flag): -------
         IF(iInn.EQ.1) THEN
            write(38,'(i7,1p,5e12.4)') iter,maxFerr,dmaxU,dmaxF,Td(1,1),sigma*Tei**4.0D+00
         END IF
-!--------------------------------------------------------------
+        !--------------------------------------------------------------
         IF (maxFerr.LE.accuracy) THEN
            BolConv = 1
         ELSE
@@ -492,8 +494,8 @@ SUBROUTINE RADTRANSF(pstar,iPstar,TAUlim,nG,FbolOK,deviat,error,iterFbol,model)
      IF (iVerb.GE.1) write(*,*) 'No disk option in this version'
   END IF
   !---------------------------------------------------------------------
-999   RETURN
-      END
+999 RETURN
+END SUBROUTINE RADTRANSF
 !***********************************************************************
 
 !***********************************************************************
