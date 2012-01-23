@@ -2,21 +2,19 @@ PROGRAM DUSTY
   USE COMMON
   IMPLICIT NONE
   INTEGER :: clock_rate, clock_start, clock_end, io_status, lpath
-  INTEGER :: empty, nG, nameNK(10), GridType, Nrec
+  INTEGER :: empty, GridType, Nrec
   INTEGER :: Nmodel
   PARAMETER (NREC = 1000)
   DOUBLE PRECISION :: RDINP, tau1, tau2, tauIn(Nrec)
   DOUBLE PRECISION, allocatable :: tau(:)
-  CHARACTER*4   :: suffix,verbosity
-  CHARACTER*12  :: version
-  CHARACTER*235 :: dustyinpfile, path, apath, nameIn, nameOut, stdf(7)
-  CHARACTER*235 :: nameQ(100)
+  CHARACTER(len=4)   :: suffix,verbosity
+  CHARACTER(len=235) :: dustyinpfile, path, apath, nameIn, nameOut, stdf(7)
   INTEGER iL
   !-------------------------------------------------------
-  !**************************
-  !*** ABOUT THIS VERSION ***
-  !**************************
-  version= '4.00'
+  ! **************************
+  ! *** ABOUT THIS VERSION ***
+  ! **************************
+  ! version= '4.00' set in common as parameter
   CALL ReadLambda()
   IF (error.ne.0) THEN 
      PRINT*,'something wrong with lambda grid!'
@@ -56,33 +54,31 @@ PROGRAM DUSTY
   READ(13,'(a)',iostat=io_status) apath
   DO WHILE (io_status.ge.0)
      CALL clean(apath,path,lpath)
-!!$     IF (empty(path).ne.1) THEN
-!!$        CALL attach(path,lpath,'.inp',nameIn)
-!!$        CALL attach(path,lpath,'.out',nameOut)
-!!$        CALL Input(nameIn,nG,nameOut,nameQ,nameNK,tau1,tau2,&
-!!$             tauIn,Nrec,GridType,Nmodel,error,version,stdf)
-!!$        IF (iVerb.gt.0) THEN
-!!$           print*,'working on input file: ',TRIM(nameIn)
-!!$           IF (iVerb.ge.2) print*,'Done with reading input'
-!!$        ENDIF
-!!$        IF (error.ne.3) THEN 
-!!$           call getOptPr(nG,nameQ,nameNK,error,stdf)
-!!$           IF (error.eq.0) THEN 
-!!$              IF (iVerb.ge.2) print*,'Done with getOptPr'
-!!$              IF(ALLOCATED(tau)) DEALLOCATE(tau)
-!!$              ALLOCATE(tau(Nmodel))
-!!$              CALL GetTau(nG,tau1,tau2,tauIn,Nrec,GridType,Nmodel,tau)
-!!$              IF (iVerb.ge.2) print*,'Done with GetTau'
-!!$!              IF (SPH) THEN 
-!!$!                 CALL Kernel_matrix(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error)
-!!$!              ELSE
-!!$              CALL Kernel(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error)
-!!$!              END IF
-!!$           END IF
-!!$        ELSE
-!!$           PRINT*,
-!!$        END IF
-!!$     END IF
+     IF (empty(path).ne.1) THEN
+        CALL attach(path,lpath,'.inp',nameIn)
+        CALL attach(path,lpath,'.out',nameOut)
+        CALL Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
+        IF (iVerb.gt.0) THEN
+           print*,'working on input file: ',TRIM(nameIn)
+           IF (iVerb.ge.2) print*,'Done with reading input'
+        ENDIF
+        IF (error.ne.3) THEN 
+           IF (error.eq.0) THEN 
+              IF (iVerb.ge.2) print*,'Done with getOptPr'
+              IF(ALLOCATED(tau)) DEALLOCATE(tau)
+              ALLOCATE(tau(Nmodel))
+!              CALL GetTau(nG,tau1,tau2,tauIn,Nrec,GridType,Nmodel,tau)
+              IF (iVerb.ge.2) print*,'Done with GetTau'
+!              IF (SPH) THEN 
+!                 CALL Kernel_matrix(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error)
+!              ELSE
+!              CALL Kernel(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error)
+!              END IF
+           END IF
+        ELSE
+           PRINT*,
+        END IF
+     END IF
      READ(13,'(a)',iostat=io_status) apath
   END DO
   CLOSE(13)
@@ -112,15 +108,15 @@ subroutine ReadLambda()
   error = 0
   ! first open the file with lambda grid
   open(4, file='lambda_grid.dat', status = 'old')
-  nLam = RDINP(Equal,4)
-  allocate(lambda(nLam))
+  nL = RDINP(Equal,4)
+  allocate(lambda(nL))
   ! initialize lambda array
-  do iL = 1, nLam
+  do iL = 1, nL
      read(4,*,end=99) lambda(iL)
   end do
 99 close(4)
-  call sort(lambda,nLam)
-  do iL = 2, nLam
+  call sort(lambda,nL)
+  do iL = 2, nL
      if (lambda(iL)/lambda(iL-1).gt.1.51d0) then
         write(*,*)' ***************** WARNING!  *******************'
         write(*,*)' the ratio of two consecutive wavelengths in the'

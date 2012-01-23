@@ -1,5 +1,5 @@
 !**********************************************************************
-subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
+subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
 !=====================================================================
 ! This subroutine calculates the absorption and scattering efficiences
 ! Qabs and Qsca in the wavelength range of the code or in case of
@@ -8,24 +8,32 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
 !=====================================================================
   use common
   implicit none
-  character*235 nameQ(npG), nameNK(10), fname, dummy*132
-  integer iG, nG, io1, iL, nLin, iiLaux,Nprop,nA, iiA, iiC,iCuser,er, Nmax, npA
+  character*235 nameQ(:), nameNK(10), fname, dummy*132
+  integer iG, io1, iL, nLin, iiLaux,Nprop,nA, iiA, iiC,iCuser,er, Nmax, npA,&
+       top,szds,nFiles
   ! Nmax is the number of records in user supplied file with opt.prop.
   ! and npA is the dimension of the array of grain sizes
   parameter (Nmax=10000, npA=100)
   ! parameter (Nmax=10000, npA=1000)
+  double precision,allocatable:: n(:),k(:),aQabs(:,:),aQsca(:,:), &
+       sigAbs(:,:), sigSca(:,:),n_int(:), k_int(:)
   double precision aa,bb,cc,lambdain(Nmax),Qain(Nmax),Qsin(Nmax), &
-       n(npL),k(npL), aQabs(npA,npL),aQsca(npA,npL), amax,       &
-       nsd(npA), a(npA), faux1(npA), faux2(npA), f(npA), int,    &
-       ala(Nmax), sigAbs(npA,npL), sigSca(npA,npL), sizedist,    &
-       aQa(Nmax), aQs(Nmax),  Cnorm, a3ave, a2ave,               &
-       n_int(npL), k_int(npL)
+       amax, nsd(npA), a(npA), faux1(npA), faux2(npA), f(npA), int,&
+       ala(Nmax),  sizedist, aQa(Nmax), aQs(Nmax),  Cnorm, a3ave, a2ave,&
+       qsd,a1,a2,aveA,aveV,xC(10),xCuser(10)
   character stdf(7)*235
 ! -------------------------------------------------------------------
   ! this should never change
-  nL = npL
   Nprop = 7
   !----------------------------------------------------------------
+  allocate(n(nL))
+  allocate(k(nL))
+  allocate(aQabs(npA,nL))
+  allocate(aQsca(npA,nL))
+  allocate(SigAbs(npA,nL))
+  allocate(SigSca(npA,nL))
+  allocate(n_int(nL))
+  allocate(k_int(nL))
   er = 0
   ! first check that the user supplied wavelength grid is
   ! monotonously increasing
@@ -73,10 +81,10 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
      do iiC= 1, Nprop
         f(iiC) = xC(iiC)
         fname = stdf(iiC)
-        call getprop(npL,lambda,nL,fname,n,k,er)
+        call getprop(nL,lambda,nL,fname,n,k,er)
         if (er.eq.3) goto 999
         ! calculate qabs and qsca for supported grains
-        call mie(npL,nL,lambda,n,k,npA,nA,a,1,aQabs,aQsca)
+        call mie(nL,nL,lambda,n,k,npA,nA,a,1,aQabs,aQsca)
         ! for each lambda integrate pi*a^2*qext with n(a)da
         do iL = 1, nL
            do iiA = 1, nA
@@ -96,10 +104,10 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
            f(iiC) = xCuser(iCuser)
            ! read in optical properties
            fname = nameNK(iCuser)
-           call getprop(npL,lambda,nL,fname,n,k,er)
+           call getprop(nL,lambda,nL,fname,n,k,er)
            if (er.eq.3) goto 999
            ! calculate qabs and qsca
-           call mie(npL,nL,lambda,n,k,npA,nA,a,1,aQabs,aQsca)
+           call mie(nL,nL,lambda,n,k,npA,nA,a,1,aQabs,aQsca)
            ! for each lambda integrate pi*a^2*qext with n(a)da
            do iL = 1, nL
               do iiA = 1, nA
@@ -207,7 +215,15 @@ subroutine getOptPr(nG,nameQ,nameNK,er,stdf)
 ! close(12)
   er = 3
 !-----------------------------------------------------------------------
-999 return
+999 deallocate(n)
+  deallocate(k)
+  deallocate(aQabs)
+  deallocate(aQsca)
+  deallocate(SigAbs)
+  deallocate(SigSca)
+  deallocate(n_int)
+  deallocate(k_int)
+  return
 end subroutine getOptPr
 !***********************************************************************
 

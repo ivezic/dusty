@@ -39,7 +39,161 @@ subroutine sort(ra,n)
   goto 10
   ! ---------------------------------------------------------------------
 end subroutine sort
-! ***********************************************************************
+!***********************************************************************
+
+!***********************************************************************
+double precision function Planck(x)
+!=======================================================================
+! This function evaluates the Planck function multiplied by wavelength
+! and normalized by sigma*T^4/Pi.                      [Z.I., Mar. 1996]
+! =======================================================================
+  implicit none
+  double precision x
+  ! ---------------------------------------------------------------------
+  if (x.gt.100.0d0) then
+     Planck = 0.0d0
+  else
+     if (x.lt.0.00001d0) then
+        Planck = 0.155d0*x**3.0d0
+     else
+        Planck = 0.155d0*x**4.0d0/(dexp(x) - 1.0d0)
+     end if
+  end if
+  ! ---------------------------------------------------------------------
+  return
+end function Planck
+!***********************************************************************
+
+!***********************************************************************
+subroutine Simpson(n,n1,n2,x,y,integral)
+!=======================================================================
+! This subroutine calculates integral I(y(x)*dx). Both y and x are
+! 1D arrays, y(i), x(i) with i=1,N (declared with NN). Lower and upper
+! integration limits are x(N1) and x(N2), respectively. The method used
+! is Simpson (trapezoid) approximation. The resulting integral is sum of
+! y(i)*wgth, i=N1,N2.                                  [Z.I., Mar. 1996]
+! =======================================================================
+  implicit none
+  integer i, n, n1, n2
+  double precision x(n), y(n), wgth, integral, dyn2
+  ! ---------------------------------------------------------------------
+  dyn2 = 0.0d0
+  ! set integral to 0 and accumulate result in the loop
+  integral = 0.0d0
+  ! calculate weight, wgth, and integrate in the same loop
+  if ((n2-n1).gt.100) then
+     !$OMP PARALLEL DO reduction(+:integral) private(i,wgth)
+     do i = n1, n2
+        ! weigths
+        if (i.ne.n1.and.i.ne.n2) then
+           wgth = 0.5d0*(x(i+1)-x(i-1))
+        else
+           if (i.eq.n1) wgth = 0.5d0*(x(n1+1)-x(n1))
+           if (i.eq.n2) wgth = 0.5d0*(x(n2)-x(n2-1))
+        end if
+        ! add contribution to the integral
+        integral = integral + y(i)*wgth
+     end do
+     !$OMP END PARALLEL DO
+  else  if (n2.gt.n1) then
+     do i = n1, n2
+        ! weigths
+        if (i.ne.n1.and.i.ne.n2) then
+           wgth = 0.5d0*(x(i+1)-x(i-1))
+        else
+           if (i.eq.n1) wgth = 0.5d0*(x(n1+1)-x(n1))
+           if (i.eq.n2) wgth = 0.5d0*(x(n2)-x(n2-1))
+        end if
+        ! add contribution to the integral
+        integral = integral + y(i)*wgth
+     end do
+  else
+     integral = 0.0d0
+  end if
+  ! --------------------------------------------------------------------
+  return
+end subroutine Simpson
+!***********************************************************************
+
+!***********************************************************************
+subroutine PowerInter(nn,n,x,y,xloc,iNloc,Yloc)
+!=======================================================================
+! This subroutine performs power law interpolation for y(x) such that
+! Yloc = y(xloc). It is assumed that x is monotonously increasing.
+! [based on sub LinInter by ZI'96, modified for power law interp. by MN'03]
+!=======================================================================
+
+  implicit none
+  integer nn, n, i, istop, iNloc
+  double precision x(nn), y(nn), xloc, Yloc, pow
+! -----------------------------------------------------------------------
+
+  if (n.gt.1) then
+   if ((x(1)-xloc)*(x(n)-xloc).le.0.0d0) then
+     istop = 0
+     i = 1
+     do while (istop.ne.1)
+      i = i + 1
+      if (i.gt.n) stop 'powinter ???'
+      if (x(i).ge.xloc) then
+        istop = 1
+        iNloc = i
+        if ((y(i)*y(i-1)).gt.0.0d0) then
+          pow = dlog(y(i)/y(i-1))/dlog(x(i)/x(i-1))
+          Yloc = y(i-1)*((xloc/x(i-1))**pow)
+        else
+          Yloc = 0.0d0
+        end if
+      end if
+     end do
+   else
+     if (xloc.le.x(1)) Yloc = y(1)
+     if (xloc.ge.x(n)) Yloc = y(n)
+   end if
+  else
+    Yloc = y(1)
+  end if
+!-----------------------------------------------------------------------
+  return
+end subroutine PowerInter
+!***********************************************************************
+
+!***********************************************************************
+subroutine PowerInt(n,n1,n2,x,y,integral)
+!=======================================================================
+! This subroutine calculates integral I(y(x)*dx). Both y and x are
+! 1D arrays, y(i), x(i) with i=1,N (declared with NN). Lower and upper
+! integration limits are x(N1) and x(N2), respectively. The method used
+! is a power-law approximation for y(x) between any two points .
+! (This subroutine is used for integration over size distribution) [ZI,'96]
+!=======================================================================
+
+  implicit none
+  integer i, n, n1, n2
+  double precision x(n), y(n), integral, pow, c, delint
+  ! --------------------------------------------------------------------
+  ! set integral to 0 and accumulate result in the loop
+  integral = 0.0d0
+  ! calculate weight, wgth, and integrate in the same loop
+  if (n2.gt.n1) then
+     do i = n1, n2-1
+        pow = dlog(Y(i+1)/Y(i)) / dlog(x(i+1)/x(i))
+        c = Y(i) / x(i)**pow
+        delint=(x(i+1)**(pow+1.0d+0)-x(i)**(pow+1.0d+0))*c/(pow+1.0d+0)
+        ! add contribution to the integral
+        integral = integral + delint
+     end do
+  else
+     integral = 0.0d0
+     ! this was in case of single size grains
+     ! integral = Y(1)
+  end if
+  !---------------------------------------------------------------------
+
+  return
+end subroutine PowerInt
+!***********************************************************************
+
 
 
 !!$!***********************************************************************
@@ -138,56 +292,6 @@ end subroutine sort
 !!$end subroutine shiftIns
 !!$!***********************************************************************
 !!$
-!!$!***********************************************************************
-!!$subroutine Simpson(n,n1,n2,x,y,integral)
-!!$!=======================================================================
-!!$! This subroutine calculates integral I(y(x)*dx). Both y and x are
-!!$! 1D arrays, y(i), x(i) with i=1,N (declared with NN). Lower and upper
-!!$! integration limits are x(N1) and x(N2), respectively. The method used
-!!$! is Simpson (trapezoid) approximation. The resulting integral is sum of
-!!$! y(i)*wgth, i=N1,N2.                                  [Z.I., Mar. 1996]
-!!$! =======================================================================
-!!$  implicit none
-!!$  integer i, n, n1, n2
-!!$  double precision x(n), y(n), wgth, integral, dyn2
-!!$  ! ---------------------------------------------------------------------
-!!$  dyn2 = 0.0d0
-!!$  ! set integral to 0 and accumulate result in the loop
-!!$  integral = 0.0d0
-!!$  ! calculate weight, wgth, and integrate in the same loop
-!!$  if ((n2-n1).gt.100) then
-!!$     !$OMP PARALLEL DO reduction(+:integral) private(i,wgth)
-!!$     do i = n1, n2
-!!$        ! weigths
-!!$        if (i.ne.n1.and.i.ne.n2) then
-!!$           wgth = 0.5d0*(x(i+1)-x(i-1))
-!!$        else
-!!$           if (i.eq.n1) wgth = 0.5d0*(x(n1+1)-x(n1))
-!!$           if (i.eq.n2) wgth = 0.5d0*(x(n2)-x(n2-1))
-!!$        end if
-!!$        ! add contribution to the integral
-!!$        integral = integral + y(i)*wgth
-!!$     end do
-!!$     !$OMP END PARALLEL DO
-!!$  else  if (n2.gt.n1) then
-!!$     do i = n1, n2
-!!$        ! weigths
-!!$        if (i.ne.n1.and.i.ne.n2) then
-!!$           wgth = 0.5d0*(x(i+1)-x(i-1))
-!!$        else
-!!$           if (i.eq.n1) wgth = 0.5d0*(x(n1+1)-x(n1))
-!!$           if (i.eq.n2) wgth = 0.5d0*(x(n2)-x(n2-1))
-!!$        end if
-!!$        ! add contribution to the integral
-!!$        integral = integral + y(i)*wgth
-!!$     end do
-!!$  else
-!!$     integral = 0.0d0
-!!$  end if
-!!$  ! --------------------------------------------------------------------
-!!$  return
-!!$end subroutine Simpson
-!!$!***********************************************************************
 !!$
 !!$!***********************************************************************
 !!$SUBROUTINE Spline(x,y,n,yp1,ypn,y2)
@@ -349,84 +453,7 @@ end subroutine sort
 !!$end subroutine polint
 !!$!***********************************************************************
 !!$
-!!$!***********************************************************************
-!!$subroutine PowerInt(n,n1,n2,x,y,integral)
-!!$!=======================================================================
-!!$! This subroutine calculates integral I(y(x)*dx). Both y and x are
-!!$! 1D arrays, y(i), x(i) with i=1,N (declared with NN). Lower and upper
-!!$! integration limits are x(N1) and x(N2), respectively. The method used
-!!$! is a power-law approximation for y(x) between any two points .
-!!$! (This subroutine is used for integration over size distribution) [ZI,'96]
-!!$!=======================================================================
 !!$
-!!$  implicit none
-!!$  integer i, n, n1, n2
-!!$  double precision x(n), y(n), integral, pow, c, delint
-!!$  ! --------------------------------------------------------------------
-!!$  ! set integral to 0 and accumulate result in the loop
-!!$  integral = 0.0d0
-!!$  ! calculate weight, wgth, and integrate in the same loop
-!!$  if (n2.gt.n1) then
-!!$     do i = n1, n2-1
-!!$        pow = dlog(Y(i+1)/Y(i)) / dlog(x(i+1)/x(i))
-!!$        c = Y(i) / x(i)**pow
-!!$        delint=(x(i+1)**(pow+1.0d+0)-x(i)**(pow+1.0d+0))*c/(pow+1.0d+0)
-!!$        ! add contribution to the integral
-!!$        integral = integral + delint
-!!$     end do
-!!$  else
-!!$     integral = 0.0d0
-!!$     ! this was in case of single size grains
-!!$     ! integral = Y(1)
-!!$  end if
-!!$  !---------------------------------------------------------------------
-!!$
-!!$  return
-!!$end subroutine PowerInt
-!!$!***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$subroutine PowerInter(nn,n,x,y,xloc,iNloc,Yloc)
-!!$!=======================================================================
-!!$! This subroutine performs power law interpolation for y(x) such that
-!!$! Yloc = y(xloc). It is assumed that x is monotonously increasing.
-!!$! [based on sub LinInter by ZI'96, modified for power law interp. by MN'03]
-!!$!=======================================================================
-!!$
-!!$  implicit none
-!!$  integer nn, n, i, istop, iNloc
-!!$  double precision x(nn), y(nn), xloc, Yloc, pow
-!!$! -----------------------------------------------------------------------
-!!$
-!!$  if (n.gt.1) then
-!!$   if ((x(1)-xloc)*(x(n)-xloc).le.0.0d0) then
-!!$     istop = 0
-!!$     i = 1
-!!$     do while (istop.ne.1)
-!!$      i = i + 1
-!!$      if (i.gt.n) stop 'powinter ???'
-!!$      if (x(i).ge.xloc) then
-!!$        istop = 1
-!!$        iNloc = i
-!!$        if ((y(i)*y(i-1)).gt.0.0d0) then
-!!$          pow = dlog(y(i)/y(i-1))/dlog(x(i)/x(i-1))
-!!$          Yloc = y(i-1)*((xloc/x(i-1))**pow)
-!!$        else
-!!$          Yloc = 0.0d0
-!!$        end if
-!!$      end if
-!!$     end do
-!!$   else
-!!$     if (xloc.le.x(1)) Yloc = y(1)
-!!$     if (xloc.ge.x(n)) Yloc = y(n)
-!!$   end if
-!!$  else
-!!$    Yloc = y(1)
-!!$  end if
-!!$!-----------------------------------------------------------------------
-!!$  return
-!!$end subroutine PowerInter
-!!$!***********************************************************************
 !!$
 !!$!***********************************************************************
 !!$subroutine doProduct(nn,yt,pt,p0,j,prd)
@@ -450,28 +477,6 @@ end subroutine sort
 !!$end subroutine doProduct
 !!$!***********************************************************************
 !!$
-!!$!***********************************************************************
-!!$double precision function Planck(x)
-!!$!=======================================================================
-!!$! This function evaluates the Planck function multiplied by wavelength
-!!$! and normalized by sigma*T^4/Pi.                      [Z.I., Mar. 1996]
-!!$! =======================================================================
-!!$  implicit none
-!!$  double precision x
-!!$  ! ---------------------------------------------------------------------
-!!$  if (x.gt.100.0d0) then
-!!$     Planck = 0.0d0
-!!$  else
-!!$     if (x.lt.0.00001d0) then
-!!$        Planck = 0.155d0*x**3.0d0
-!!$     else
-!!$        Planck = 0.155d0*x**4.0d0/(dexp(x) - 1.0d0)
-!!$     end if
-!!$  end if
-!!$  ! ---------------------------------------------------------------------
-!!$  return
-!!$end function Planck
-!!$!***********************************************************************
 !!$
 !!$!***********************************************************************
 !!$subroutine gauleg(x1,x2,xg,wg,n)

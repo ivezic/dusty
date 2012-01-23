@@ -10,9 +10,24 @@ Module common
   integer max_threads
   parameter (max_threads = 16)
 
-  double precision,allocatable :: lambda(:) ! lambda grid
-  integer :: nlam ! size of lambda grid
+  character*4 :: version
+  parameter (version='4.00')
   integer :: error,warn,iverb
+  double precision, allocatable :: lambda(:)  ! lambda grid dusty
+  double precision, allocatable :: shpL(:)  ! shape left side ilumination
+  double precision, allocatable :: shpR(:)  ! shape right side ilumination
+  double precision,allocatable  :: Tsub(:)   !sublimation temperature for each grain
+  integer :: nL                 ! size of lambda grid
+  integer :: nG                 ! number of grain types
+  logical :: slb,sph            ! geometry
+  integer :: TypEntry(2)        ! type of ilumination for (0-left and 1-right)
+  double precision ksi          ! the ratio of the right/left bol. fluxes (<1) for slab
+  double precision Ji,Jo        ! input mean energy density - scaling in dusty
+  double precision Tinner       ! Temperature at the inner boundary
+  double precision mu1,mu2      ! cosine of ilumination anlge slab case
+  integer :: iFidG          ! id number of fiducial grain
+  double precision,allocatable  :: SigmaA(:,:)
+  double precision,allocatable  :: SigmaS(:,:)   
 
 !!$  ! ===========================================================================
 !!$  ! Commons with various parameters related to numerical accuracy.
@@ -124,7 +139,7 @@ Module common
 !!$  !
 !!$  !  chi - relative contribution of the external illumination of spherical shell
 !!$  ! -----------------------------------------------------------------------------
-!!$  integer startyp(2), Nlamtr(2), nBB(2), typEntry(2), Left, Right
+!!$  integer startyp(2), Nlamtr(2), nBB(2), , Left, Right
 !!$  character nameStar(2)*235
 !!$  double precision  lamtr(2,101), klam(2,100), &
 !!$       Tbb(2,10), rellum(2,10), Tstar(2), mu1, ksi, mu2, xSiO, &
