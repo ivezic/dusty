@@ -15,6 +15,119 @@ subroutine attach(root,length,ext,fname)
   !----------------------------------------------------------------------
   return
 end subroutine attach
+
+!***********************************************************************
+subroutine getfs(xx,nm,flag,str)
+!=======================================================================
+! This subroutine writes number xx to a string str according to a format
+! f?.nm. Here ? stands for the number of needed places. A blank is
+! inserted at the beginning, and for flag.NE.1 another one if number is
+! positive. If xx<0 second blank is replaced by '-'. For example, for
+! flag=0 and xx = -0.1234D+02, calling this subroutine with nm=1 will
+! result in str = ' -12.3', while xx = 0.0123 with nm=3 gives '  0.012'.
+! If flag=1 minus will be ignored, for example xx = -0.1234D+02 and nm=1
+! will result in str = ' 12.3',                        [Z.I., Nov. 1996]
+!=======================================================================
+  implicit none
+
+  character ch
+  character*(*) str
+  integer  flag, nm, db, i, d(20), j, k, dnmp1
+  double precision xx, x, rest
+  !----------------------------------------------------------------------
+  do i = 1, len(str)
+     str(i:i) = ' '
+  end do
+  x = xx
+  str(1:1) = ' '
+  i = 2
+  if (flag.ne.1) then
+     if (x.lt.0.0d0) then
+        str(i:i) = '-'
+     else
+        str(i:i) = ' '
+     end if
+     i = i + 1
+  end if
+  if (x.lt.0.0d0) x = -x
+  ! First check if x will have to be rounded up
+  ! Find (nm+1)-th decimal digit
+  dnmp1 = int(x*10.0d0**(nm+1)-int(x*10.0d0**nm)*10.0d0)
+  if (dnmp1.ge.5) x = x + 1./10.0d0**nm
+  if (x.ge.1.0) then
+     ! Number of digits before the decimal sign
+     db = int(log10(x)) + 1
+     ! Copy all these digits to str
+     do j = 1, db
+        rest = x
+        if (j.gt.1) then
+           do k = 1, j-1
+              rest = rest - d(k)*10.0d0**(db-k)
+           end do
+        end if
+        d(j) = int(rest/10.0d0**(db-j))
+        write(ch,'(I1)')d(j)
+        str(i:i) = ch
+        i = i + 1
+     end do
+     rest = rest - d(db)
+     if (nm.gt.0) then
+        str(i:i) = '.'
+        i = i + 1
+     end if
+  else
+     str(i:i) = '0'
+     i = i + 1
+     if (nm.gt.0) then
+        str(i:i) = '.'
+        i = i + 1
+     end if
+     rest = x
+  end if
+  ! Now copy all nm remaining decimal digits to str
+  if (nm.gt.0) then
+     do j = 1, nm
+        d(j) = int(rest*10.0d0**j)
+        if (j.gt.1) then
+           do k = 1, j-1
+              d(j)=d(j)-int(d(k)*10.0d0**(j-k))
+           end do
+        end if
+        write(ch,'(i1)')d(j)
+        str(i:i) = ch
+        i = i + 1
+     end do
+  end if
+  !--------------------------------------------------------------------
+  return
+end subroutine getfs
+!***********************************************************************
+
+!***********************************************************************
+subroutine prHeader(nLines,filenm)
+!=======================================================================
+! This subroutine prints headers of input data files in fname.out
+!=======================================================================
+  implicit none
+
+  character filenm*(*), line*80
+  integer nLines, i
+
+!----------------------------------------------------------------------
+
+  open(28, file=filenm, status = 'old')
+  do i = 1, nLines-1
+   read(28,'(a)') line
+   write(12,'(a2,a80)') '  ', line
+  end do
+  rewind(28)
+  close(28)
+!----------------------------------------------------------------------
+  return
+end subroutine prheader
+!***********************************************************************
+
+
 !************************************************************************
 !!$
 !!$!***********************************************************************
@@ -368,116 +481,7 @@ end subroutine attach
 !!$end subroutine WriteOut
 !!$!***********************************************************************
 !!$
-!!$!***********************************************************************
-!!$subroutine getfs(xx,nm,flag,str)
-!!$!=======================================================================
-!!$! This subroutine writes number xx to a string str according to a format
-!!$! f?.nm. Here ? stands for the number of needed places. A blank is
-!!$! inserted at the beginning, and for flag.NE.1 another one if number is
-!!$! positive. If xx<0 second blank is replaced by '-'. For example, for
-!!$! flag=0 and xx = -0.1234D+02, calling this subroutine with nm=1 will
-!!$! result in str = ' -12.3', while xx = 0.0123 with nm=3 gives '  0.012'.
-!!$! If flag=1 minus will be ignored, for example xx = -0.1234D+02 and nm=1
-!!$! will result in str = ' 12.3',                        [Z.I., Nov. 1996]
-!!$!=======================================================================
-!!$  implicit none
 !!$
-!!$  character ch
-!!$  character*(*) str
-!!$  integer  flag, nm, db, i, d(20), j, k, dnmp1
-!!$  double precision xx, x, rest
-!!$  !----------------------------------------------------------------------
-!!$  do i = 1, len(str)
-!!$     str(i:i) = ' '
-!!$  end do
-!!$  x = xx
-!!$  str(1:1) = ' '
-!!$  i = 2
-!!$  if (flag.ne.1) then
-!!$     if (x.lt.0.0d0) then
-!!$        str(i:i) = '-'
-!!$     else
-!!$        str(i:i) = ' '
-!!$     end if
-!!$     i = i + 1
-!!$  end if
-!!$  if (x.lt.0.0d0) x = -x
-!!$  ! First check if x will have to be rounded up
-!!$  ! Find (nm+1)-th decimal digit
-!!$  dnmp1 = int(x*10.0d0**(nm+1)-int(x*10.0d0**nm)*10.0d0)
-!!$  if (dnmp1.ge.5) x = x + 1./10.0d0**nm
-!!$  if (x.ge.1.0) then
-!!$     ! Number of digits before the decimal sign
-!!$     db = int(log10(x)) + 1
-!!$     ! Copy all these digits to str
-!!$     do j = 1, db
-!!$        rest = x
-!!$        if (j.gt.1) then
-!!$           do k = 1, j-1
-!!$              rest = rest - d(k)*10.0d0**(db-k)
-!!$           end do
-!!$        end if
-!!$        d(j) = int(rest/10.0d0**(db-j))
-!!$        write(ch,'(I1)')d(j)
-!!$        str(i:i) = ch
-!!$        i = i + 1
-!!$     end do
-!!$     rest = rest - d(db)
-!!$     if (nm.gt.0) then
-!!$        str(i:i) = '.'
-!!$        i = i + 1
-!!$     end if
-!!$  else
-!!$     str(i:i) = '0'
-!!$     i = i + 1
-!!$     if (nm.gt.0) then
-!!$        str(i:i) = '.'
-!!$        i = i + 1
-!!$     end if
-!!$     rest = x
-!!$  end if
-!!$  ! Now copy all nm remaining decimal digits to str
-!!$  if (nm.gt.0) then
-!!$     do j = 1, nm
-!!$        d(j) = int(rest*10.0d0**j)
-!!$        if (j.gt.1) then
-!!$           do k = 1, j-1
-!!$              d(j)=d(j)-int(d(k)*10.0d0**(j-k))
-!!$           end do
-!!$        end if
-!!$        write(ch,'(i1)')d(j)
-!!$        str(i:i) = ch
-!!$        i = i + 1
-!!$     end do
-!!$  end if
-!!$  !--------------------------------------------------------------------
-!!$  return
-!!$end subroutine getfs
-!!$!***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$subroutine prHeader(nLines,filenm)
-!!$!=======================================================================
-!!$! This subroutine prints headers of input data files in fname.out
-!!$!=======================================================================
-!!$  implicit none
-!!$
-!!$  character filenm*(*), line*80
-!!$  integer nLines, i
-!!$
-!!$!----------------------------------------------------------------------
-!!$
-!!$  open(28, file=filenm, status = 'old')
-!!$  do i = 1, nLines-1
-!!$   read(28,'(a)') line
-!!$   write(12,'(a2,a80)') '  ', line
-!!$  end do
-!!$  rewind(28)
-!!$  close(28)
-!!$!----------------------------------------------------------------------
-!!$  return
-!!$end subroutine prheader
-!!$!***********************************************************************
 !!$
 !!$! ***********************************************************************
 !!$SUBROUTINE LINE(com,typ,unt)

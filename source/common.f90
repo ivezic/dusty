@@ -1,14 +1,17 @@
 Module common
   implicit none
   double precision pi, sigma, Gconst, r_gd, clight, mprot
-  parameter (pi=3.141592653589793116)
-  parameter (sigma=5.67D-08)
-  parameter (Gconst= 6.67D-11)
-  parameter (r_gd = 2.0D+02)
-  parameter (clight = 3.0D+08)
-  parameter (mprot = 1.67D-27)
+  parameter (pi=3.141592653589793116)   ! pi
+  parameter (sigma=5.67D-08)            ! Stefan-Boltzman constant
+  parameter (Gconst= 6.67D-11)          ! gravitational constant
+  parameter (r_gd = 2.0D+02)            ! gas to dust ratio
+  parameter (clight = 3.0D+08)          ! speed of light
+  parameter (mprot = 1.67D-27)          ! proton mass
   integer max_threads
-  parameter (max_threads = 16)
+  parameter (max_threads = 16)          ! max number of threads if parallel
+  integer NREC
+  PARAMETER (NREC = 1000)
+
 
   character*4 :: version
   parameter (version='4.00')
@@ -20,14 +23,17 @@ Module common
   integer :: nL                 ! size of lambda grid
   integer :: nG                 ! number of grain types
   logical :: slb,sph            ! geometry
+  ! remove TypEntry ???? --- not necessary ??? 
   integer :: TypEntry(2)        ! type of ilumination for (0-left and 1-right)
   double precision ksi          ! the ratio of the right/left bol. fluxes (<1) for slab
   double precision Ji,Jo        ! input mean energy density - scaling in dusty
-  double precision Tinner       ! Temperature at the inner boundary
+  double precision Tinner       ! Temperature at the inner boundary for fiducial grain
   double precision mu1,mu2      ! cosine of ilumination anlge slab case
-  integer :: iFidG          ! id number of fiducial grain
-  double precision,allocatable  :: SigmaA(:,:)
-  double precision,allocatable  :: SigmaS(:,:)   
+  integer :: iFidG              ! id number of fiducial grain
+  double precision :: lamfid    ! fiducial wavelength [micron]
+  double precision,allocatable  :: SigmaA(:,:) ! absorbtion crosssection
+  double precision,allocatable  :: SigmaS(:,:) ! scattering crosssection
+  integer :: ver                ! RDW variable
 
 !!$  ! ===========================================================================
 !!$  ! Commons with various parameters related to numerical accuracy.

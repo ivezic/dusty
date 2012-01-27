@@ -9,12 +9,17 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   use common
   implicit none
   logical ::  Equal, noEqual, UCASE
-  character(len=235) :: stdf(7),str,nameIn,nameOut
+  character(len=235) :: stdf(7),str,nameIn,nameOut,strpow,nameEta,& 
+       nameTau,strg
   character(len=235),allocatable :: nameNK(:),nameQ(:)
-  double precision :: tau1,tau2,Lum,dist,RDINP,spec_scale, &
+  integer :: i, istop, GridType,Nmodel,L,right,left,top,iG,iFiles, &
+       nFiles,szds, denstyp, EtaOK, Ntr, nYetaf
+  double precision :: a,b,tau1,tau2,Lum,dist,RDINP,spec_scale, &
        dilutn,Tstar(2),th1,th2,xC(10),xCuser(10),sum,qsd,a1,a2,&
-       var1,var2,var3
-  integer :: GridType,Nmodel,L,right,left,top,iG,iFiles,nFiles,szds
+       var1,var2,var3,Yout, pow, x1, ceta, tauIn(Nrec)
+  double precision, allocatable :: Ytr(:),ptr(:),aa(:),bb(:),xx(:),e(:),&
+       yetaf(:), etaf(:)
+  
 
   interface
      subroutine inp_rad(shp,spec_scale)
@@ -392,259 +397,266 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   ! WriteOut prints all input data, read so far, in fname.out
   ! var1 is t1,fe1,luminosity or teff; var2 is r1; var3 is ext.rad. input
   ! call WriteOut(var1,var2,var3,nG,nameQ,nameNK)
-!!$  ! (3) Density distribution
-!!$  ! For sphere only:
-!!$  if(sph) then
-!!$     powd  = .false.
-!!$     expd  = .false.
-!!$     rdw   = .false.
-!!$     rdwa  = .false.
-!!$     fild  = .false.
-!!$     rdwpr = .false.
-!!$     ! Parameter describing eta function:
-!!$     call rdinps2(Equal,1,str,L,UCASE)
-!!$     if (str(1:L).eq.'POWD') then
-!!$        powd = .true.
-!!$        denstyp = 1
-!!$     elseif (str(1:L).eq.'EXPD') then
-!!$        expd = .true.
-!!$        denstyp = 2
-!!$        ! *** Winds ***
-!!$        ! denstyp.eq.3 is RDW with default values of v1/ve=0.2, GravCor=0.5
-!!$        ! denstyp.eq.6 is a private option with additional input for v1/ve and
-!!$        ! GravCor=max(Fgrav/Frad);
-!!$     elseif (str(1:L).eq.'RDW') then
-!!$        rdw = .true.
-!!$        denstyp = 3
-!!$        ! analytical (gray) approximation for rdw
-!!$     elseif (str(1:L).eq.'RDWA') then
-!!$        rdwa = .true.
-!!$        denstyp = 4
-!!$        ! file with user supplied density distribution
-!!$     elseif (str(1:L).eq.'USER_SUPPLIED') then
-!!$        fild = .true.
-!!$        denstyp = 5
-!!$        ! private option for RDW with additional output
-!!$     elseif (str(1:L).eq.'RDWPR') then
-!!$        rdwpr = .true.
-!!$        denstyp = 6
-!!$     end if
-!!$     ! initialize EtaOK and Ntr
-!!$     EtaOK = 0
-!!$     Ntr = 0
-!!$     ! read parameters for each type of density distribution
-!!$     ! smooth or broken power laws
-!!$     if (powd) then
-!!$        EtaOK = 1
-!!$        Ntr = RDINP(Equal,1)
-!!$        ! changed definition
-!!$        Ntr = Ntr - 1
-!!$        ! read in transition radii
-!!$        if (Ntr.gt.0) then
-!!$           Ytr(1) = RDINP(Equal,1)
-!!$           if (Ntr.gt.1) then
-!!$              do i = 2, Ntr
-!!$                 Ytr(i) = RDINP(NoEqual,1)
-!!$              end do
-!!$           end if
-!!$           Yout = RDINP(noEqual,1)
-!!$        else
-!!$           ! for smooth density power law
-!!$           Yout = RDINP(Equal,1)
-!!$        end if
-!!$        if (Yout.le.1.0d0) Yout = 1.001d0
-!!$        ! read in powers
-!!$        pow = RDINP(Equal,1)
-!!$        if (Ntr.gt.0) then
-!!$           do i = 1, Ntr
-!!$              ptr(i) = RDINP(NoEqual,1)
-!!$           end do
-!!$        end if
-!!$        ! print info to the output file
-!!$        if (Ntr.eq.0) then
-!!$           call getfs(pow,2,0,strpow)
-!!$           write(12,'(a38,a5)') ' density described by 1/r**k with k =',strpow
-!!$           write(12,'(a21,1p,e10.3)')'  relative thickness:',Yout
-!!$        else
-!!$           write(12,*)' density described by a broken power law:'
-!!$           write(12,*)'  power   Ytransition'
-!!$           write(12,*)'  -------------------'
-!!$           write(12,*)'              1.0'
-!!$           call getfs(pow,2,0,strpow)
-!!$           write(12,'(a2,a5)')'  ',strpow
-!!$           do i = 1, Ntr
-!!$              write(12,'(a10,1p,e10.3)')'          ',Ytr(i)
-!!$              call getfs(ptr(i),2,0,strpow)
-!!$              write(12,'(a2,a5)')'  ',strpow
-!!$           end do
-!!$           write(12,'(a10,1p,e10.3)')'          ',Yout
-!!$        end if
-!!$     end if
-!!$     ! exponential law
-!!$     if (expd) then
-!!$        EtaOK = 1
-!!$        Yout = RDINP(Equal,1)
-!!$        if (Yout.le.1.0d0) Yout = 1.001d0
-!!$        pow = RDINP(Equal,1)
-!!$        if (pow.le.0.0d0) then
-!!$           EtaOK = 0
-!!$        else
-!!$           write(12,*)' density described by exponential distribution'
-!!$           write(12,'(a21,1p,e10.3)')'               sigma:',pow
-!!$           write(12,'(a21,1p,e10.3)')'  relative thickness:',Yout
-!!$        end if
-!!$     end if
-!!$     ! default approximation and default numerics for rad. driven winds
-!!$     if (rdwa.or.rdw) then
-!!$        EtaOK = 1
-!!$        Yout = RDINP(Equal,1)
-!!$        if (Yout.le.1.0d0) Yout = 1.001d0
-!!$        ! ** default ** for epsilon = v1/ve = u1/ue:
-!!$        pow = 0.2d0
-!!$        if(rdw) then
-!!$           ! ** default ** for max(gravcor = fgrav/frad_press):
-!!$           ptr(1) = 0.5d0
-!!$           ! convergence criterion:
-!!$           ptr(2) = 1.0d0
-!!$           ! default linear version of the eq. for velocity
-!!$           ver = 1
-!!$        end if
-!!$        write(12,*)' Density for radiatively driven winds from'
-!!$        if (rdwa) then
-!!$           write(12,*)' Analytic approximation for gray dust.'
-!!$        else
-!!$           write(12,*)' Full dynamic calculation.'
-!!$        end if
-!!$        write(12,'(a21,1p,e10.3)')'  Relative thickness:',Yout
-!!$     end if
-!!$     ! full dynamical calculation for radiatively driven winds (private option)
-!!$     ! the user can specify parameters that have default values in denstyp=3
-!!$     ! user specified table for eta
-!!$     if(fild) then
-!!$        EtaOK = 1
-!!$        strg = 'Dust density distribution:'
-!!$        call filemsg(nameeta,strg)
-!!$        write(12,*)' Density distribution supplied from file:'
-!!$        write(12,'(2x,a100)') nameeta
-!!$        call prHeader(3,nameeta)
-!!$        ! read in the density
-!!$        open(26,err=997,file=nameeta,status='old')
-!!$        ! three lines in the header:
-!!$        do i = 1, 3
-!!$           read(26,*,err=997) strpow
-!!$        end do
-!!$        istop = 0
-!!$        i = 0
-!!$        do while (istop.ge.0)
-!!$           read(26,*,end=900,err=997,iostat=istop) a, b
-!!$           if (istop.ge.0) then
-!!$              i = i + 1
-!!$              xx(i) = a
-!!$              e(i) = b
-!!$              if (i.eq.1) x1 = xx(i)
-!!$              yetaf(i) = xx(i) / x1
-!!$           end if
-!!$        end do
-!!$900     close(26)
-!!$        nYetaf = i
-!!$        if (nYetaf.lt.2) goto 997
-!!$        ! if input positions in descending order turn them around
-!!$        if (yetaf(1).gt.yetaf(2)) then
-!!$           do i = 1, nYetaf
-!!$              aa(i) = yetaf(i)
-!!$              bb(i) = e(i)
-!!$           end do
-!!$           do i = 1, nYetaf
-!!$              yetaf(i) = aa(nYetaf+1-i)
-!!$              e(i) = bb(nYetaf+1-i)
-!!$           end do
-!!$        end if
-!!$        ! relative thickness
-!!$        Yout = yetaf(nYetaf)
-!!$        write(12,'(a21,1p,e10.3)')'  relative thickness:',Yout
-!!$        if (Yout.le.1.0d0) Yout = 1.001d0
-!!$        ! integrate and ...
-!!$        call Simpson(Nmax,1,nYetaf,yetaf,e,ceta)
-!!$        ! ... renormalize
-!!$        do i = 1, nYetaf
-!!$           etaf(i) = e(i) / ceta
-!!$        end do
-!!$     end if
-!!$     ! Done with the reading of density distribution
-!!$     if (EtaOK.ne.1) then
-!!$        call msg(3)
-!!$        error = 1
-!!$        goto 999
-!!$     end if
-!!$     write(12,*)' --------------------------------------------'
-!!$  end if
-!!$  !=========  End reading density distribution ===================
-!!$  ! 4) Optical depth
-!!$  ! Grid type
-!!$  call rdinps2(Equal,1,str,L,UCASE)
-!!$  if (str(1:L).eq.'LINEAR') then
-!!$     GridType = 1
-!!$  elseif (str(1:L).eq.'LOGARITHMIC') then
-!!$     GridType = 2
-!!$  elseif (str(1:L).eq.'USER_SUPPLIED') then
-!!$     GridType = 3
-!!$  end if
-!!$  if (GridType.eq.3) then
-!!$     ! tau-grid from a file
-!!$     strg = 'user supplied tau-grid:'
-!!$     call filemsg(nametau,strg)
-!!$     ! read optical depths
-!!$     open(27,err=992,file=nametau,status='old')
-!!$     ! fiducial wavelength
-!!$     ! (the second argument of rdinp is the unit)
-!!$     lamfid = RDINP(Equal,27)
-!!$     ! number of models in the list
-!!$     Nmodel = RDINP(Equal,27)
-!!$     do i = 1, Nmodel
-!!$        read(27,*) tauIn(i)
-!!$     end do
-!!$902  close(27)
-!!$     ! Sort the tau-grid if there is more than one model:
-!!$     if(Nmodel.gt.1) then
-!!$        call sort(tauIn,Nmodel)
-!!$     end if
-!!$     tau1 = tauIn(1)
-!!$     if (tau1.le.0.0d0) tau1 = 0.0001d0
-!!$     tau2 = tauIn(Nmodel)
-!!$  else
-!!$     ! fiducial wavelength
-!!$     lamfid = RDINP(Equal,1)
-!!$     ! total optical depths at lamfid
-!!$     TAU1 = RDINP(Equal,1)
-!!$     if (tau1.le.0.0d0) tau1 = 0.0001d0
-!!$     TAU2 = RDINP(Equal,1)
-!!$     if (tau2.le.tau1) then
-!!$        tau2 = tau1
-!!$        Nmodel = 1
-!!$     end if
-!!$     ! read number of models
-!!$     Nmodel = RDINP(Equal,1)
-!!$     ! Nrec = 1000, initialized in MAIN
-!!$     if (Nmodel.gt.(Nrec-1)) Nmodel = Nrec-1
-!!$     if (Nmodel.lt.1) Nmodel = 1
-!!$  end if
-!!$  if (Nmodel.gt.1) then
-!!$     write(12,'(a19,1p,e8.1,a8)')' Optical depths at',lamfid, 'microns'
-!!$     write(12,'(a14,1p,e9.2,a3,e9.2)')' ranging from',tau1,' to',tau2
-!!$     if (GridType.eq.1) strg=' models with linear grid    '
-!!$     if (GridType.eq.2) strg=' models with logarithmic grid'
-!!$     if (GridType.eq.3) strg=' models with grid from file  '
-!!$     write(12,'(a1,i4,a)')' ', Nmodel, strg
-!!$     if (GridType.eq.3) write(12,'(a4,a70)')'    ',nametau
-!!$  else
-!!$     write(12,'(a18,1p,e8.1,a9,e9.2)')' Optical depth at',lamfid, ' microns:',tau1
-!!$  end if
-!!$  ! 5) disk
-!!$  ! for disk calculations make sure you have npX>1 in 'userpar.inc' !!
+  ! (3) Density distribution
+  ! For sphere only:
+  if(sph) then
+     ! Parameter describing eta function:
+     call rdinps2(Equal,1,str,L,UCASE)
+     if (str(1:L).eq.'POWD') then
+        denstyp = 1
+     elseif (str(1:L).eq.'EXPD') then
+        denstyp = 2
+     elseif (str(1:L).eq.'RDW') then
+        ! *** Winds ***
+        ! denstyp.eq.3 is RDW with default values of v1/ve=0.2, GravCor=0.5
+        ! denstyp.eq.6 is a private option with additional input for v1/ve and
+        ! GravCor=max(Fgrav/Frad);
+        denstyp = 3
+     elseif (str(1:L).eq.'RDWA') then
+        ! analytical (gray) approximation for rdw
+        denstyp = 4
+     elseif (str(1:L).eq.'USER_SUPPLIED') then
+        ! file with user supplied density distribution
+        denstyp = 5
+     elseif (str(1:L).eq.'RDWPR') then
+        ! private option for RDW with additional output
+        denstyp = 6
+     end if
+     ! initialize EtaOK and Ntr
+     EtaOK = 0
+     Ntr = 0
+     ! read parameters for each type of density distribution
+     ! smooth or broken power laws
+     if (denstyp.eq.1) then
+        EtaOK = 1
+        Ntr = RDINP(Equal,1)
+        ! changed definition
+        Ntr = Ntr - 1
+        ! read in transition radii
+        if (Ntr.gt.0) then
+           allocate(Ytr(Ntr))
+           Ytr(1) = RDINP(Equal,1)
+           if (Ntr.gt.1) then
+              do i = 2, Ntr
+                 Ytr(i) = RDINP(NoEqual,1)
+              end do
+           end if
+           Yout = RDINP(noEqual,1)
+        else
+           ! for smooth density power law
+           Yout = RDINP(Equal,1)
+        end if
+        if (Yout.le.1.0d0) Yout = 1.001d0
+        ! read in powers
+        pow = RDINP(Equal,1)
+        if (Ntr.gt.0) then
+           allocate(ptr(Ntr))
+           do i = 1, Ntr
+              ptr(i) = RDINP(NoEqual,1)
+           end do
+        end if
+        ! print info to the output file
+        if (Ntr.eq.0) then
+           call getfs(pow,2,0,strpow)
+           write(12,'(a38,a5)') ' density described by 1/r**k with k =',strpow
+           write(12,'(a21,1p,e10.3)')'  relative thickness:',Yout
+        else
+           write(12,*)' density described by a broken power law:'
+           write(12,*)'  power   Ytransition'
+           write(12,*)'  -------------------'
+           write(12,*)'              1.0'
+           call getfs(pow,2,0,strpow)
+           write(12,'(a2,a5)')'  ',strpow
+           do i = 1, Ntr
+              write(12,'(a10,1p,e10.3)')'          ',Ytr(i)
+              call getfs(ptr(i),2,0,strpow)
+              write(12,'(a2,a5)')'  ',strpow
+           end do
+           write(12,'(a10,1p,e10.3)')'          ',Yout
+        end if
+     end if
+     ! exponential law
+     if (denstyp.eq.2) then
+        EtaOK = 1
+        Yout = RDINP(Equal,1)
+        if (Yout.le.1.0d0) Yout = 1.001d0
+        pow = RDINP(Equal,1)
+        if (pow.le.0.0d0) then
+           EtaOK = 0
+        else
+           write(12,*)' density described by exponential distribution'
+           write(12,'(a21,1p,e10.3)')'               sigma:',pow
+           write(12,'(a21,1p,e10.3)')'  relative thickness:',Yout
+        end if
+     end if
+     ! default approximation and default numerics for rad. driven winds
+     if (denstyp.eq.3.or.denstyp.eq.4) then
+        EtaOK = 1
+        Yout = RDINP(Equal,1)
+        if (Yout.le.1.0d0) Yout = 1.001d0
+        ! ** default ** for epsilon = v1/ve = u1/ue:
+        pow = 0.2d0
+        if(denstyp.eq.3) then !RDW
+           ! ** default ** for max(gravcor = fgrav/frad_press):
+           ptr(1) = 0.5d0
+           ! convergence criterion:
+           ptr(2) = 1.0d0
+           ! default linear version of the eq. for velocity
+           ver = 1
+        end if
+        write(12,*)' Density for radiatively driven winds from'
+        if (denstyp.eq.4) then !RDWA
+           write(12,*)' Analytic approximation for gray dust.'
+        else
+           write(12,*)' Full dynamic calculation.'
+        end if
+        write(12,'(a21,1p,e10.3)')'  Relative thickness:',Yout
+     end if
+     ! full dynamical calculation for radiatively driven winds (private option)
+     ! the user can specify parameters that have default values in denstyp=3
+     ! user specified table for eta
+     if(denstyp.eq.5) then
+        EtaOK = 1
+        call filemsg(nameeta,'Dust density distribution:')
+        write(12,*)' Density distribution supplied from file:'
+        write(12,'(2x,a100)') nameeta
+        call prHeader(3,nameeta)
+        ! read in the density
+        open(26,err=997,file=nameeta,status='old')
+        ! three lines in the header:
+        do i = 1, 3
+           read(26,*,err=997) strpow
+        end do
+        istop = 0
+        i = 0
+        do while (istop.ge.0) 
+           read(26,*,iostat=istop) a, b
+           i = i + 1
+        end do
+        nYetaf = i - 1
+        allocate(xx(nYetaf))
+        allocate(aa(nYetaf))
+        allocate(bb(nYetaf))
+        allocate(e(nYetaf))
+        allocate(yetaf(nYetaf))
+        allocate(etaf(nYetaf))
+        rewind(26)
+        ! # Read header again  --- **FH** need function to read header !!!!
+        do i = 1, 3
+           read(26,*,err=997) strpow
+        end do
+        istop = 0
+        i = 0
+        do while (istop.ge.0)
+           read(26,*,end=900,err=997,iostat=istop) a, b
+           if (istop.ge.0) then
+              i = i + 1
+              xx(i) = a
+              e(i) = b
+              if (i.eq.1) x1 = xx(i)
+              yetaf(i) = xx(i) / x1
+           end if
+        end do
+900     close(26)
+        nYetaf = i
+        if (nYetaf.lt.2) goto 997
+        ! if input positions in descending order turn them around
+        if (yetaf(1).gt.yetaf(2)) then
+           do i = 1, nYetaf
+              aa(i) = yetaf(i)
+              bb(i) = e(i)
+           end do
+           do i = 1, nYetaf
+              yetaf(i) = aa(nYetaf+1-i)
+              e(i) = bb(nYetaf+1-i)
+           end do
+        end if
+        ! relative thickness
+        Yout = yetaf(nYetaf)
+        write(12,'(a21,1p,e10.3)')'  relative thickness:',Yout
+        if (Yout.le.1.0d0) Yout = 1.001d0
+        ! integrate and ...
+        call Simpson(nYetaf,1,nYetaf,yetaf,e,ceta)
+        ! ... renormalize
+        do i = 1, nYetaf
+           etaf(i) = e(i) / ceta
+        end do
+     end if
+     ! Done with the reading of density distribution
+     if (EtaOK.ne.1) then
+        call msg(3)
+        error = 1
+        goto 999
+     end if
+     write(12,*)' --------------------------------------------'
+  end if
+  !=========  End reading density distribution ===================
+  ! 4) Optical depth
+  ! Grid type
+  call rdinps2(Equal,1,str,L,UCASE)
+  if (str(1:L).eq.'LINEAR') then
+     GridType = 1
+  elseif (str(1:L).eq.'LOGARITHMIC') then
+     GridType = 2
+  elseif (str(1:L).eq.'USER_SUPPLIED') then
+     GridType = 3
+  end if
+  if (GridType.eq.3) then
+     ! tau-grid from a file
+     call filemsg(nametau,'user supplied tau-grid:')
+     ! read optical depths
+     open(27,err=992,file=nametau,status='old')
+     ! fiducial wavelength
+     ! (the second argument of rdinp is the unit)
+     lamfid = RDINP(Equal,27)
+     ! number of models in the list
+     Nmodel = RDINP(Equal,27)
+     do i = 1, Nmodel
+        read(27,*) tauIn(i)
+     end do
+902  close(27)
+     ! Sort the tau-grid if there is more than one model:
+     if(Nmodel.gt.1) then
+        call sort(tauIn,Nmodel)
+     end if
+     tau1 = tauIn(1)
+     if (tau1.le.0.0d0) tau1 = 0.0001d0
+     tau2 = tauIn(Nmodel)
+  else
+     ! fiducial wavelength
+     lamfid = RDINP(Equal,1)
+     ! total optical depths at lamfid
+     TAU1 = RDINP(Equal,1)
+     if (tau1.le.0.0d0) tau1 = 0.0001d0
+     TAU2 = RDINP(Equal,1)
+     if (tau2.le.tau1) then
+        tau2 = tau1
+        Nmodel = 1
+     end if
+     ! read number of models
+     Nmodel = RDINP(Equal,1)
+     ! Nrec = 1000, set in common
+     if (Nmodel.gt.(Nrec-1)) Nmodel = Nrec-1
+     if (Nmodel.lt.1) Nmodel = 1
+  end if
+  if (Nmodel.gt.1) then
+     write(12,'(a19,1p,e8.1,a8)')' Optical depths at',lamfid, 'microns'
+     write(12,'(a14,1p,e9.2,a3,e9.2)')' ranging from',tau1,' to',tau2
+     if (GridType.eq.1) strg=' models with linear grid    '
+     if (GridType.eq.2) strg=' models with logarithmic grid'
+     if (GridType.eq.3) strg=' models with grid from file  '
+     write(12,'(a1,i4,a)')' ', Nmodel, strg
+     if (GridType.eq.3) write(12,'(a4,a70)')'    ',nametau
+  else
+     write(12,'(a18,1p,e8.1,a9,e9.2)')' Optical depth at',lamfid, ' microns:',tau1
+  end if
+  ! 5) disk
+  ! for disk calculations make sure you have npX>1 in 'userpar.inc' !!
 !!$  if (npX.gt.1) then
 !!$     if (iVerb.ge.1) write(*,*) 'No disk option in this version.'
 !!$     goto 999
 !!$  end if
+
 !!$  !********************************************
 !!$  !** III. Numerical accuracy **
 !!$  !********************************************
@@ -857,7 +869,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
 !!$  iX = RDINP(Equal,1)
 !!$  ! *** DONE READING INPUT PARAMETERS ***
 !!$  ! if everything is ok, close the input file and finish
-!!$999 goto 996
+999 goto 996
 !!$  ! or in the case of err reading files...
 !!$920 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
 !!$    write(12,*)' File with user supplied angular grid:   '
@@ -866,14 +878,14 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
 !!$    write(12,*)' ****************************************'
 !!$    close(12)
 !!$    error = 3
-!!$992 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
-!!$    write(12,*)' File with user supplied TAU-grid:       '
-!!$    write(12,'(2x,a100)') nameTAU
-!!$    write(12,*)' is missing or not properly formatted?!  '
-!!$    write(12,*)' ****************************************'
-!!$    !  close(12)
-!!$    error = 3
-!!$    goto 996
+992 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
+    write(12,*)' File with user supplied TAU-grid:       '
+    write(12,'(2x,a100)') nameTAU
+    write(12,*)' is missing or not properly formatted?!  '
+    write(12,*)' ****************************************'
+    !  close(12)
+    error = 3
+    goto 996
 !!$994 call MSG(12)
 !!$    !  close(12)
 !!$    error = 3
@@ -885,13 +897,14 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
 !!$    write(12,*)' ****************************************'
 !!$    !  close(12)
 !!$    error = 3
-!!$997 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
-!!$    write(12,*)' File with the dust density distribution:'
-!!$    write(12,'(2x,a100)') nameETA
-!!$    write(12,*)' is missing or not properly formatted?!  '
-!!$    write(12,*)' ****************************************'
-!!$    !  close(12)
-!!$    error = 3
+997 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
+    write(12,*)' File with the dust density distribution:'
+    write(12,'(2x,a100)') nameETA
+    write(12,*)' is missing or not properly formatted?!  '
+    write(12,*)' ****************************************'
+    !  close(12)
+    error = 3
+    goto 996
 !!$998 write(12,*)' ***  FATAL ERROR IN DUSTY  ****'
 !!$    write(12,*)' Input file:'
 !!$    write(12,'(2x,a100)') nameIn

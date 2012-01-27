@@ -2,9 +2,8 @@ PROGRAM DUSTY
   USE COMMON
   IMPLICIT NONE
   INTEGER :: clock_rate, clock_start, clock_end, io_status, lpath
-  INTEGER :: empty, GridType, Nrec
+  INTEGER :: empty, GridType
   INTEGER :: Nmodel
-  PARAMETER (NREC = 1000)
   DOUBLE PRECISION :: RDINP, tau1, tau2, tauIn(Nrec)
   DOUBLE PRECISION, allocatable :: tau(:)
   CHARACTER(len=4)   :: suffix,verbosity

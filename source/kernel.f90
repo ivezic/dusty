@@ -1,5 +1,5 @@
 !***********************************************************************
-subroutine Kernel(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error)
+subroutine Kernel(nG,path,lpath,tauIn,tau,Nmodel,GridType,error)
 !=======================================================================
 ! This subroutine generates solution for all optical depth steps starting
 ! with intial optical depth given in the input file. It prints output
@@ -8,7 +8,7 @@ subroutine Kernel(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error)
 !=======================================================================
   use common
   implicit none
-  integer iG, nG, iY, iL, i,j, GridType, model, Nmodel, Nrec, &
+  integer iG, nG, iY, iL, i,j, GridType, model, Nmodel, &
        iterfbol, fbolOK, istop, error, lpath
   double precision tauIn(Nrec),tau(Nmodel), ratio, delta, tau0
   character*235 path
