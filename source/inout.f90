@@ -9,21 +9,23 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   use common
   implicit none
   logical ::  Equal, noEqual, UCASE
-  character(len=235) :: stdf(7),str,nameIn,nameOut,strpow,nameEta,& 
-       nameTau,strg
+  character(len=235) :: stdf(7), str, nameIn, nameOut, nameEta,& 
+       nameTau, strg, namepsf
+  character(len=72) :: strpow,lamstr(nOutput)
   character(len=235),allocatable :: nameNK(:),nameQ(:)
   integer :: i, istop, GridType,Nmodel,L,right,left,top,iG,iFiles, &
-       nFiles,szds, denstyp, EtaOK, Ntr, nYetaf
+       nFiles,szds, EtaOK, Ntr, nYetaf, startyp(2), &
+       ang_type, imu, ioverflw
   double precision :: a,b,tau1,tau2,Lum,dist,RDINP,spec_scale, &
        dilutn,Tstar(2),th1,th2,xC(10),xCuser(10),sum,qsd,a1,a2,&
-       var1,var2,var3,Yout, pow, x1, ceta, tauIn(Nrec)
+       Yout, pow, x1, ceta, Fi, Fo, psf1
   double precision, allocatable :: Ytr(:),ptr(:),aa(:),bb(:),xx(:),e(:),&
        yetaf(:), etaf(:)
   
-
   interface
-     subroutine inp_rad(shp,spec_scale)
+     subroutine inp_rad(shp,spec_scale,startyp)
        double precision :: shp(:),spec_scale
+       integer :: startyp
      end subroutine inp_rad
   end interface
   
@@ -52,8 +54,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   write(12,*)'==========================='
   write(12,*)' '
   write(12,*)' Input parameters from file: '
-  write(12,'(2x,a140)')nameIn
-  write(12,*)' '
+  write(12,*) nameIn
   ! Open input file
   open(1,file=nameIn,status='old')
   rewind(1)
@@ -93,8 +94,9 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   !FOR SPHERE 
   if (sph) then
      if (left.gt.0) then
+        write(12,*) ' Central source spectrum described by'
         allocate(shpL(nL))
-        call inp_rad(shpL,spec_scale)
+        call inp_rad(shpL,spec_scale,startyp(1))
         !typentry give the scale of input radiation
         call rdinps2(Equal,1,str,L,UCASE)
         if (str(1:L).eq.'FLUX') TypEntry(1) = 1
@@ -108,6 +110,11 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
            error = 1
            stop
         end if
+        if (typentry(1).eq.1) then 
+           Fi = RDINP(Equal,1)
+           write(12,*) ' Flux at the inner boundary:', Fi,' W/m^2'
+           Ji = Fi / (4.0d0 * pi)
+        end if
         if (typentry(1).eq.2) then
            !enter luminosity [in Lo] of the source and distance r1[cm] to the source
            Lum = RDINP(Equal,1)
@@ -115,10 +122,12 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
            !all units in dusty are in SI, so convert the input
            Lum = Lum*3.862d+26
            dist = dist/100.0d0
+           write(12,*) ' Source luminosity ', Lum,' Lo and distance ', dist, ' m'
            Ji = Lum/(4.0d0*pi*dist*dist)/(4.0d0*pi)
-!           Cr1 = dist
         endif
-        if (typentry(1).eq.3) Ji = RDINP(Equal,1)
+        if (typentry(1).eq.3) then 
+           Ji = RDINP(Equal,1)
+        end if
         if (typentry(1).eq.4) then
            !entry of dilution (normalization) factor
            dilutn = RDINP(Equal,1)
@@ -127,16 +136,18 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         if (typentry(1).eq.5) then
            !enter dust temperature on inner boundary, T1[K]
            Tinner = RDINP(Equal,1)
+           write(12,*) ' Dust temperature on the inner boundary:', Tinner,' K'
         end if
      else
         typentry(1) = 0
      endif
      if (right.gt.0) then
+        write(12,*) ' External source spectrum described by'
         allocate(shpR(nL))
-        call inp_rad(shpR,spec_scale)
+        call inp_rad(shpR,spec_scale,startyp(2))
         !typentry give the scale of input radiation
-        call rdinps2(Equal,1,str,L,UCASE)
         if (left.eq.0) then
+           call rdinps2(Equal,1,str,L,UCASE)
            if (str(1:L).eq.'ENERGY_DEN') typentry(2) = 3
            if (str(1:L).eq.'DILUTN_FAC') typentry(2) = 4
            !check if the entered value is acceptable
@@ -156,15 +167,16 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
            ksi = RDINP(Equal,1)
            if (ksi.lt.0.0) ksi = 0.0d0
            if (ksi.gt.1.0) ksi = 1.0d0
-           write(12,'(a49,F5.2)') ' Relative bol.flux fraction of right source: R =',ksi
+           write(12,'(a49,F5.2)') ' Relativ bol.flux fraction of right source: R =',ksi
         end if
      end if
   end if
   !FOR SLAB
   if (slb) then
      if (left.gt.0) then
+        write(12,*) ' Left-side source spectrum described by'
         allocate(shpL(nL))
-        call inp_rad(shpL,spec_scale)
+        call inp_rad(shpL,spec_scale,startyp(1))
         ! typentry give the scale of input radiation
         call rdinps2(Equal,1,str,L,UCASE)
         if (str(1:L).eq.'FLUX') typentry(1) = 1
@@ -177,18 +189,24 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
            print*,'error msg(21) see out file'
            stop
         end if
-        if (typentry(1).eq.1) Ji = RDINP(Equal,1) / 4.d0 / pi
-        if (typentry(1).eq.3) Ji = RDINP(Equal,1)
+        if (typentry(1).eq.1) then 
+           Fi = RDINP(Equal,1)
+           write(12,*) ' Flux at the slab left boundary:', Fi,' W/m^2'
+           Ji = Fi / (4.d0 * pi)
+        end if
+        if (typentry(1).eq.3) then 
+           Ji = RDINP(Equal,1)
+        end if
         if (typentry(1).eq.4) then
            ! entry of dilution (normalization) factor
            dilutn = RDINP(Equal,1)
            Ji = dilutn*spec_scale/pi
         endif
-        ! var3 = dilutn
-!        if (typentry(1).eq.5) then
-!           ! enter dust temperature on inner boundary, T1[K]
-!           Tsub(1) = RDINP(Equal,1)
-!        end if
+        if (typentry(1).eq.5) then
+           ! enter dust temperature on inner boundary, T1[K]
+           Tinner = RDINP(Equal,1)
+           write(12,*) ' Dust temperature on the inner boundary:', Tinner,' K'
+        end if
         write(12,'(a33)') ' Calculation in planar geometry:'
         !find the kind of illumination
         call rdinps2(Equal,1,str,L,UCASE)
@@ -207,8 +225,9 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         end if
      endif
      if (right.gt.0) then
+        write(12,*) ' Right-side source spectrum described by'
         allocate(shpR(nL))
-        call inp_rad(shpR,spec_scale)
+        call inp_rad(shpR,spec_scale,startyp(2))
         call rdinps2(Equal,1,str,L,UCASE)
         if (str(1:L).eq.'DIRECTIONAL') then
            write(12,'(a41)') ' Directional illumination from the right.'
@@ -392,11 +411,12 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   allocate(SigmaA(nG+1,nL))
   allocate(SigmaS(nG+1,nL))
   call getOptPr(nameQ,nameNK,error,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
+  IF (iVerb.ge.2) print*,'Done with getOptPr'
 
   !=========  END READING DUST PROPERTIES ===================
   ! WriteOut prints all input data, read so far, in fname.out
   ! var1 is t1,fe1,luminosity or teff; var2 is r1; var3 is ext.rad. input
-  ! call WriteOut(var1,var2,var3,nG,nameQ,nameNK)
+  ! call WriteOut(nameQ,nameNK,var1,var2,var3,a1,a2, dilutn,left,right)
   ! (3) Density distribution
   ! For sphere only:
   if(sph) then
@@ -657,218 +677,201 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
 !!$     goto 999
 !!$  end if
 
-!!$  !********************************************
-!!$  !** III. Numerical accuracy **
-!!$  !********************************************
-!!$  ! accuracy for convergence (typical 0.0001)
-!!$  !!** this is accConv for dust temperature
-!!$  !!**  accConv = 10.0d-3  !! Too rough.
-!!$  !  accConv = 1.0d-4  !tests on July,8,2010  1e-4 and 1e-6 give very close results
-!!$  ! accuracy for flux conservation
-!!$  accuracy = RDINP(Equal,1)
-!!$  accConv = RDINP(Equal,1)
-!!$  accConv = ((1.+accuracy)**(1./4.)-1.)*0.1
-!!$  if (accuracy.le.0.0d0) accuracy = 0.02d0
-!!$  ! Protect against a very large value for accuracies
-!!$  if (accuracy.gt.0.25d0) accuracy = 0.25d0
-!!$  ! starting optical depth
-!!$  init_tau = RDINP(Equal,1)
-!!$  ! increment in optical depth
-!!$  dtau = RDINP(Equal,1)
-!!$  ! dynamical range
-!!$  dynrange = 1.0d-15
-!!$  if (accuracy.ge.0.1d0) then
-!!$     call getfs(accuracy*1000.0d0,0,1,strpow)
-!!$     write(12,'(a20,a3,a1)')' Required accuracy:',strpow,'%'
-!!$  else
-!!$     call getfs(accuracy*100.0d0,0,1,strpow)
-!!$     write(12,'(a20,a2,a1)')' Required accuracy:',strpow,'%'
-!!$  end if
-!!$  !  write(12,*)' --------------------------------------------'
-!!$  !********************************************
-!!$  !** IV. Output flags **
-!!$  !********************************************
-!!$  ! Internal flag for additional miscellaneous output  [MN]:
-!!$  ! if iInn=1: print err.vs.iter in unt=38 (fname.err) for all models
-!!$  ! and additionally list scaled fbol(y) and ubol(y) in m-files.
-!!$  iInn = 1
-!!$  iPhys = 0
-!!$  !  spectra
-!!$  iA = RDINP(Equal,1)
-!!$  iC = RDINP(Equal,1)
-!!$  ! images (intensity)
-!!$  if (iC.ne.0) then
-!!$     if (slb) then
-!!$        ! Read angular grid (this is theta_out) for slab intensity output.
-!!$        ! the output intensities are in units of lambda*I_lambda*cos(theta_out)/Fe
-!!$        ! where Fe=L/(4*pi*r^2), the local bolometric flux.
-!!$        ang_type = RDINP(Equal,1)
-!!$        !    Create the grid depending on grid type
-!!$        !    1-equidistant in theta, 2-equidistant in cos(theta), 3-from a file
-!!$        call input_slb_ang(ang_type)
-!!$        !    Convert to radians
-!!$        do imu = 1, nmu
-!!$           theta(imu) = theta(imu)*pi/180.0d0
-!!$        end do
-!!$        iV = 0
-!!$        iPsf = 0
-!!$     else
-!!$        ! for spherical case
-!!$        NlambdaOut = RDINP(Equal,1)
-!!$        if (nLambdaOut.ge.1) then
-!!$           do i = 1, nLambdaOut
-!!$              LambdaOut(i) = RDINP(NoEqual,1)
-!!$              !  make sure the wavelengths are inside dusty's range
-!!$              if (LambdaOut(i).le.0.01d0) LambdaOut(i) = 0.01d0
-!!$              if (LambdaOut(i).gt.36000.0d0) LambdaOut(i) = 36000.0d0
-!!$           end do
-!!$           ioverflw = 0
-!!$           do i = 1, nLambdaOut
-!!$              if (LambdaOut(i).lt.0.995d0) then
-!!$                 call getfs(LambdaOut(i),2,1,lamstr(i))
-!!$              else
-!!$                 if (LambdaOut(i).lt.9.95d0) then
-!!$                    call getfs(LambdaOut(i),1,0,lamstr(i))
-!!$                 else
-!!$                    if (LambdaOut(i).lt.99.5d0) then
-!!$                       call getfs(LambdaOut(i),0,0,lamstr(i))
-!!$                    else
-!!$                       call getfs(LambdaOut(i),0,1,lamstr(i))
-!!$                    end if
-!!$                 end if
-!!$              end if
-!!$              if (LambdaOut(i).gt.9999.5d0) then
-!!$                 ioverflw = 1
-!!$                 strpow = lamstr(i)
-!!$                 strpow(4:4) = '*'
-!!$                 strpow(5:5) = ' '
-!!$                 lamstr(i) = strpow
-!!$              end if
-!!$           end do
-!!$        end if
-!!$        write(12,*)' Images requested for these wavelengths (mic)'
-!!$        write(12,'(a1,20a5)')' ',(lamstr(i),i=1,nLambdaOut)
-!!$        if (ioverflw.eq.1) write(12,*)'  *: in mm'
-!!$        ! Convolved images  (only for our use)
-!!$        if (iC.lt.0) then
-!!$           iPsf = 1
-!!$           ! iPsf = rdinp(Equal,1)
-!!$           if (iPsf.ne.0) then
-!!$              Theta1 = RDINP(Equal,1)
-!!$              write(12,'(a39,1p,e7.1)') ' Convolved images produced for theta1=',theta1
-!!$              psftype = RDINP(Equal,1)
-!!$              if (psftype.ne.1.and.psftype.ne.2.and.psftype.ne.3) goto 994
-!!$              if (psftype.lt.3) then
-!!$                 ! Gaussians, read in parameters
-!!$                 ! FWHM for the first component
-!!$                 FWHM1(1) = RDINP(Equal,1)
-!!$                 if (nLambdaOut.gt.1) then
-!!$                    do i = 2, nLambdaOut
-!!$                       FWHM1(i) = RDINP(NoEqual,1)
-!!$                    end do
-!!$                 end if
-!!$                 if (psftype.eq.2) then
-!!$                    ! Relative strength for the second component
-!!$                    kPSF(1) = RDINP(Equal,1)
-!!$                    if (nLambdaOut.gt.1) then
-!!$                       do i = 2, nLambdaOut
-!!$                          kPSF(i) = RDINP(NoEqual,1)
-!!$                       end do
-!!$                    end if
-!!$                    !       FWHM for the second component
-!!$                    FWHM2(1) = RDINP(Equal,1)
-!!$                    if (nLambdaOut.gt.1) then
-!!$                       do i = 2, nLambdaOut
-!!$                          FWHM2(i) = RDINP(NoEqual,1)
-!!$                       end do
-!!$                    end if
-!!$                 end if
-!!$                 write(12,*)' the point spread functions are gaussians'
-!!$              else
-!!$                 ! user supplied psf
-!!$                 strg = 'point spread function:'
-!!$                 call filemsg(namepsf,strg)
-!!$                 write(12,*)' the point spread function supplied from file'
-!!$                 write(12,'(2x,a100)')namepsf
-!!$                 open(28,err=995,file=namepsf,status='old')
-!!$                 ! Three lines in the header:
-!!$                 do i = 1, 3
-!!$                    read(28,*,err=995)
-!!$                 end do
-!!$                 istop = 0
-!!$                 i = 0
-!!$                 do while (istop.ge.0)
-!!$                    read(28,*,end=901,err=995,iostat=istop)a, b
-!!$                    if (istop.ge.0) then
-!!$                       i = i + 1
-!!$                       if (i.eq.1) then
-!!$                          psf1 = b
-!!$                          if (a.ne.0.0d0) goto 995
-!!$                       end if
-!!$                       xpsf(i) = a
-!!$                       ypsf(i) = b / psf1
-!!$                    end if
-!!$                 end do
-!!$901              close(28)
-!!$                 Npsf = i
-!!$                 !      scale to 1 at the center. This is only to get FWHM here.
-!!$                 !      ypsf is normalized to area in Subroutine Convolve [MN]
-!!$                 call scaleto1(1000,npsf,ypsf)
-!!$                 !      Find equivalent fwhm
-!!$                 istop = 0
-!!$                 i = 1
-!!$                 do while (istop.eq.0)
-!!$                    i = i + 1
-!!$                    if (ypsf(i).le.0.5d0) istop = 1
-!!$                 end do
-!!$                 !      Linear interpolation
-!!$                 FWHM1(1) = (xpsf(i)-xpsf(i-1))/(ypsf(i)-ypsf(i-1))
-!!$                 FWHM1(1) = (fwhm1(1)*(0.5d0-ypsf(i-1))+xpsf(i-1))*2.0d0
-!!$                 FWHM2(1) = 0.0d0
-!!$                 write(12,'(a18,1p,e8.1)')' equivalent FWHM:',FWHM1(1)
-!!$                 ! end if for psf from a file
-!!$              end if
-!!$              ! end if for psf
-!!$           end if
-!!$           ! end if for convolved images
-!!$        end if
-!!$        ! visibility (only if the intensity is requested)
-!!$        iV = RDINP(Equal,1)
-!!$        if(iV.ne.0) iV = abs(iC)
-!!$        ! end if for geometry
-!!$     end if
-!!$     write(12,*)' --------------------------------------------'
-!!$  else
-!!$     ! if iC=0 set the other flags to 0 (just in case).
-!!$     iPsf = 0
-!!$     iV = 0
-!!$     write(12,*)' --------------------------------------------'
-!!$  end if
-!!$
-!!$  ! ---- added printout of lam*J_lam/J for sphere [MN'10] ------------
-!!$  if(SPH) then
-!!$     iJ = RDINP(Equal,1)
-!!$     if(iJ.GT.0) then
-!!$        nJOut = RDINP(Equal,1)
-!!$        if (nJOut.ge.1) then
-!!$           do i = 1, nJOut
-!!$              YJOut(i) = RDINP(NoEqual,1)
-!!$              !        make sure the radii are inside Dusty's range
-!!$              if (YJOut(i).le.1.0) YJOut(i) = 1.0
-!!$              if (YJOut(i).gt.Yout) YJOut(i) = Yout
-!!$           end do
-!!$        end if
-!!$        write(12,*)' En.density profile requested for these y:'
-!!$        write(12,'(a1,1p,10e12.3)')' ',(YJOut(i),i=1,nJOut)
-!!$        write(12,*)' --------------------------------------------'
-!!$     end if
-!!$  end if
-!!$  ! radial quantities
-!!$  iB = RDINP(Equal,1)
-!!$  ! run-time messages
-!!$  iX = RDINP(Equal,1)
-!!$  ! *** DONE READING INPUT PARAMETERS ***
-!!$  ! if everything is ok, close the input file and finish
+  !********************************************
+  !** III. Numerical accuracy **
+  !********************************************
+  ! accuracy for convergence (typical 0.0001)
+  ! accuracy for flux conservation
+  accFlux = RDINP(Equal,1)
+  accTemp = ((1.+accFlux)**(1./4.)-1.)*0.1
+  if ((accFlux.le.0.0d0).or.(accFlux.gt.0.75)) then 
+     print*,' Problem with specified Flux accuracy !!!'
+     stop
+  end if
+  write(12,'(A,F12.2,A)') '   Required Flux accuracy:',accFlux*100.,'%'
+  write(12,'(A,F12.2,A)') '   Required Temp accuracy:',accTemp*100.,'%' 
+  write(12,*)' --------------------------------------------'
+  !********************************************
+  !** IV. Output flags **
+  !********************************************
+  ! Internal flag for additional miscellaneous output  [MN]:
+  !  spectra
+  iA = RDINP(Equal,1)
+  iC = RDINP(Equal,1)
+  ! images (intensity)
+  if (iC.ne.0) then
+     if (slb) then
+        ! Read angular grid (this is theta_out) for slab intensity output.
+        ! the output intensities are in units of lambda*I_lambda*cos(theta_out)/Fe
+        ! where Fe=L/(4*pi*r^2), the local bolometric flux.
+        ang_type = RDINP(Equal,1)
+        !    Create the grid depending on grid type
+        !    1-equidistant in theta, 2-equidistant in cos(theta), 3-from a file
+        call input_slb_ang(ang_type)
+        !    Convert to radians
+        do imu = 1, nmu
+           theta(imu) = theta(imu)*pi/180.0d0
+        end do
+        iV = 0
+        iPsf = 0
+     else
+        ! for spherical case
+        NlambdaOut = RDINP(Equal,1)
+        if (nLambdaOut.ge.1) then
+           do i = 1, nLambdaOut
+              LambdaOut(i) = RDINP(NoEqual,1)
+              !  make sure the wavelengths are inside dusty's range
+              if (LambdaOut(i).le.0.01d0) LambdaOut(i) = 0.01d0
+              if (LambdaOut(i).gt.36000.0d0) LambdaOut(i) = 36000.0d0
+           end do
+           ioverflw = 0
+           do i = 1, nLambdaOut
+              if (LambdaOut(i).lt.0.995d0) then
+                 call getfs(LambdaOut(i),2,1,lamstr(i))
+              else
+                 if (LambdaOut(i).lt.9.95d0) then
+                    call getfs(LambdaOut(i),1,0,lamstr(i))
+                 else
+                    if (LambdaOut(i).lt.99.5d0) then
+                       call getfs(LambdaOut(i),0,0,lamstr(i))
+                    else
+                       call getfs(LambdaOut(i),0,1,lamstr(i))
+                    end if
+                 end if
+              end if
+              if (LambdaOut(i).gt.9999.5d0) then
+                 ioverflw = 1
+                 strpow = lamstr(i)
+                 strpow(4:4) = '*'
+                 strpow(5:5) = ' '
+                 lamstr(i) = strpow
+              end if
+           end do
+        end if
+        write(12,*)' Images requested for these wavelengths (mic)'
+        write(12,'(a1,20a5)')' ',(lamstr(i),i=1,nLambdaOut)
+        if (ioverflw.eq.1) write(12,*)'  *: in mm'
+        ! Convolved images  (only for our use)
+        if (iC.lt.0) then
+           iPsf = 1
+           ! iPsf = rdinp(Equal,1)
+           if (iPsf.ne.0) then
+              Theta1 = RDINP(Equal,1)
+              write(12,'(a39,1p,e7.1)') ' Convolved images produced for theta1=',theta1
+              psftype = RDINP(Equal,1)
+              if (psftype.ne.1.and.psftype.ne.2.and.psftype.ne.3) goto 994
+              if (psftype.lt.3) then
+                 ! Gaussians, read in parameters
+                 ! FWHM for the first component
+                 FWHM1(1) = RDINP(Equal,1)
+                 if (nLambdaOut.gt.1) then
+                    do i = 2, nLambdaOut
+                       FWHM1(i) = RDINP(NoEqual,1)
+                    end do
+                 end if
+                 if (psftype.eq.2) then
+                    ! Relative strength for the second component
+                    kPSF(1) = RDINP(Equal,1)
+                    if (nLambdaOut.gt.1) then
+                       do i = 2, nLambdaOut
+                          kPSF(i) = RDINP(NoEqual,1)
+                       end do
+                    end if
+                    !       FWHM for the second component
+                    FWHM2(1) = RDINP(Equal,1)
+                    if (nLambdaOut.gt.1) then
+                       do i = 2, nLambdaOut
+                          FWHM2(i) = RDINP(NoEqual,1)
+                       end do
+                    end if
+                 end if
+                 write(12,*)' the point spread functions are gaussians'
+              else
+                 ! user supplied psf
+                 strg = 'point spread function:'
+                 call filemsg(namepsf,strg)
+                 write(12,*)' the point spread function supplied from file'
+                 write(12,'(2x,a100)')namepsf
+                 open(28,err=995,file=namepsf,status='old')
+                 ! Three lines in the header:
+                 do i = 1, 3
+                    read(28,*,err=995)
+                 end do
+                 istop = 0
+                 i = 0
+                 do while (istop.ge.0)
+                    read(28,*,end=901,err=995,iostat=istop)a, b
+                    if (istop.ge.0) then
+                       i = i + 1
+                       if (i.eq.1) then
+                          psf1 = b
+                          if (a.ne.0.0d0) goto 995
+                       end if
+                       xpsf(i) = a
+                       ypsf(i) = b / psf1
+                    end if
+                 end do
+901              close(28)
+                 Npsf = i
+                 !      scale to 1 at the center. This is only to get FWHM here.
+                 !      ypsf is normalized to area in Subroutine Convolve [MN]
+                 call scaleto1(1000,npsf,ypsf)
+                 !      Find equivalent fwhm
+                 istop = 0
+                 i = 1
+                 do while (istop.eq.0)
+                    i = i + 1
+                    if (ypsf(i).le.0.5d0) istop = 1
+                 end do
+                 !      Linear interpolation
+                 FWHM1(1) = (xpsf(i)-xpsf(i-1))/(ypsf(i)-ypsf(i-1))
+                 FWHM1(1) = (fwhm1(1)*(0.5d0-ypsf(i-1))+xpsf(i-1))*2.0d0
+                 FWHM2(1) = 0.0d0
+                 write(12,'(a18,1p,e8.1)')' equivalent FWHM:',FWHM1(1)
+                 ! end if for psf from a file
+              end if
+              ! end if for psf
+           end if
+           ! end if for convolved images
+        end if
+        ! visibility (only if the intensity is requested)
+        iV = RDINP(Equal,1)
+        if(iV.ne.0) iV = abs(iC)
+        ! end if for geometry
+     end if
+     write(12,*)' --------------------------------------------'
+  else
+     ! if iC=0 set the other flags to 0 (just in case).
+     iPsf = 0
+     iV = 0
+     write(12,*)' --------------------------------------------'
+  end if
+
+  ! ---- added printout of lam*J_lam/J for sphere [MN'10] ------------
+  if(SPH) then
+     iJ = RDINP(Equal,1)
+     if(iJ.GT.0) then
+        nJOut = RDINP(Equal,1)
+        if (nJOut.ge.1) then
+           do i = 1, nJOut
+              YJOut(i) = RDINP(NoEqual,1)
+              !        make sure the radii are inside Dusty's range
+              if (YJOut(i).le.1.0) YJOut(i) = 1.0
+              if (YJOut(i).gt.Yout) YJOut(i) = Yout
+           end do
+        end if
+        write(12,*)' En.density profile requested for these y:'
+        write(12,'(a1,1p,10e12.3)')' ',(YJOut(i),i=1,nJOut)
+        write(12,*)' --------------------------------------------'
+     end if
+  end if
+  ! radial quantities
+  iB = RDINP(Equal,1)
+  ! run-time messages
+  iX = RDINP(Equal,1)
+  ! *** DONE READING INPUT PARAMETERS ***
+  ! if everything is ok, close the input file and finish
+
 999 goto 996
 !!$  ! or in the case of err reading files...
 !!$920 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
@@ -886,17 +889,17 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
     !  close(12)
     error = 3
     goto 996
-!!$994 call MSG(12)
-!!$    !  close(12)
-!!$    error = 3
-!!$    goto 996
-!!$995 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
-!!$    write(12,*)' File with the point spread function:    '
-!!$    write(12,'(a2,a100)')'  ', namePSF
-!!$    write(12,*)' is missing or not properly formatted?!  '
-!!$    write(12,*)' ****************************************'
-!!$    !  close(12)
-!!$    error = 3
+994 call MSG(12)
+    !  close(12)
+    error = 3
+    goto 996
+995 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
+    write(12,*)' File with the point spread function:    '
+    write(12,'(a2,a100)')'  ', namePSF
+    write(12,*)' is missing or not properly formatted?!  '
+    write(12,*)' ****************************************'
+    !  close(12)
+    error = 3
 997 write(12,*)' ***  FATAL ERROR IN DUSTY  *************'
     write(12,*)' File with the dust density distribution:'
     write(12,'(2x,a100)') nameETA
@@ -919,7 +922,7 @@ end subroutine Input
 !***********************************************************************
 
 !***********************************************************************
-subroutine inp_rad(shp,spec_scale)
+subroutine inp_rad(shp,spec_scale,startyp)
 !=======================================================================
 ! This is the former SUBROUTINE InpStar(error,is,nameIn)
 ! This subroutine is for reading the input radiation parameters
@@ -928,7 +931,7 @@ subroutine inp_rad(shp,spec_scale)
   use common
   implicit none
 
-  integer i,iL,iLs,nLs,k, l, nBB,ios1,filetype,nLamtr,kstop
+  integer i,iL,iLs,nLs,k, l, nBB,ios1,filetype,nLamtr,kstop,startyp
   double precision shp(:)
   double precision sum, tsum, value, RDINP, xSiO, bb, spec_scale, x, planck
   double precision a,b, EMfunc,fplbol
@@ -948,6 +951,7 @@ subroutine inp_rad(shp,spec_scale)
   filetype = 0
   if (str(1:L).eq.'BLACK_BODY') then 
      ! Number of black bodies
+     startyp=1
      nBB = RDINP(Equal,1)
      ! Stellar temperature(s)
      allocate(Tbb(nBB))
@@ -962,6 +966,7 @@ subroutine inp_rad(shp,spec_scale)
      if (nbb.eq.1) then
         !relative luminosity
         rellum(1) = 1.0d0
+        write(12,'(A,F12.2,A)') '   a single Black Body with temperature', Tbb(1),' K'
      endif  !end if for one bb
      ! Multiple black bodies
      if (nbb.gt.1) then
@@ -991,6 +996,11 @@ subroutine inp_rad(shp,spec_scale)
            rellum(i) = rellum(i)/sum
            tsum = tsum + rellum(i)*Tbb(i)**(4.0d0)
         end do
+        write(12,'(a2,i2,a13)')'  ', nBB,' black bodies'
+        write(12,'(a28)')'  with temperatures (in K):'
+        write(12,'(2x,1p,10e10.3)')(Tbb(i),i=1,nBB)
+        write(12,'(a43)')'  and relative luminosities, respectively:'
+        write(12,'(1p,10e10.1)')(rellum(i),i=1,nBB)
      end if ! end if for multiple bb
      do iL = 1, nL
         bb = 0.0d0
@@ -1003,6 +1013,7 @@ subroutine inp_rad(shp,spec_scale)
      deallocate(Tbb)
      deallocate(rellum)
   else if (str(1:L).eq.'ENGELKE_MARENGO') then
+     startyp=2
      ! Effective stellar temperature
      nBB = 1
      allocate(Tbb(nBB))
@@ -1014,8 +1025,14 @@ subroutine inp_rad(shp,spec_scale)
      if (xSiO.gt.100.0d0) xSiO = 100.0d0
      do iL=1,nL
         shp = EMfunc(lambda(iL),Tbb(1),xSiO)
+        write(12,*) '   ENGELKE_MARENGO function'
+        write(12,'(a13,1p,e10.3,a16)')' with Teff =',Tbb(1), ' K and depth of'
+        write(12,'(a30,F6.1,a2)')' the SiO absorption feature =', xSiO,' %'
      end do
+     deallocate(Tbb)
+     deallocate(rellum)
   else if (str(1:L).eq.'POWER_LAW') then
+     startyp=3
      ! Number of transitions
      nLamTr= RDINP(Equal,1)
      allocate(lamTr(nLamTr))
@@ -1072,21 +1089,40 @@ subroutine inp_rad(shp,spec_scale)
      do iL = 1,nL
         shp(iL) = lambda(iL)*fpl(iL)/(fplbol)
      enddo
+     if (Nlamtr.gt.0) then
+        write(12,*) '   Power law with:'
+        write(12,*)'    lambda      k'
+        do i = 1, Nlamtr
+           write(12,'(1x,1p,e10.3)')lamtr(i)
+           write(12,'(11x,1p,e10.3)')klam(i)
+        end do
+        write(12,'(1x,1p,e10.3)')lamtr(Nlamtr+1)
+     else
+        write(12,*)' Input data for the source spectrum is not good.'
+        write(12,*)' Changed to a 10000 K black body'
+     end if
      deallocate(fl)
      deallocate(fpl)
      deallocate(lamTr)
      deallocate(klam)
   else if (str(1:L).eq.'FILE_LAMBDA_F_LAMBDA') then 
+     write(12,*)'    Spectrum supplied from file (lambda_F_lambda):'
+     startyp=4
      filetype = 1
   else if (str(1:L).eq.'FILE_F_LAMBDA') then 
+     write(12,*)'    Spectrum supplied from file (F_lambda):'
+     startyp=5
      filetype = 2
   else if (str(1:L).eq.'FILE_F_NU') then 
+     write(12,*)'    Spectrum supplied from file (F_nu):'
+     startyp=6
      filetype = 3
   end if
 
   if (filetype.gt.0) then 
      strg = 'Spectral shape of external radiation:'
      call filemsg(filename,strg)
+     write(12,*)'   ',filename
      open(3,file=filename,status='old')
      rewind(3)
      iLs=0
@@ -1154,127 +1190,87 @@ end subroutine inp_rad
 !***********************************************************************
 !!$
 !!$
-!!$!***********************************************************************
-!!$subroutine input_slb_ang(ang_type)
-!!$!=======================================================================
-!!$! This subroutine reads the set of input or output illumination angles
-!!$! for slab case.                                           [MN, 2005]
-!!$! =======================================================================
-!!$  use common
-!!$  implicit none
-!!$
-!!$  integer ang_type, error, imu, length
-!!$  double precision th_min, th_max, angstep, cth_min, cth_max, caux, value, RDINP
-!!$  character*70 anggrid, strg,str*235
-!!$  logical Equal, noEqual,UCASE
-!!$!-----------------------------------------------------------------------
-!!$
-!!$  Equal = .true.
-!!$  noEqual = .false.
-!!$
-!!$! if ang_type=1 (equidistant in theta, given min,max,step)
-!!$  if (ang_type.eq.1) then
-!!$    th_min = RDINP(Equal,1)
-!!$    call chkangle(th_min)
-!!$    th_max = RDINP(Equal,1)
-!!$    call chkangle(th_max)
-!!$    if (th_max.le.th_min) then
-!!$     th_max = th_min
-!!$     nmu = 1
-!!$    end if
-!!$! step equidistant in theta
-!!$    angstep = RDINP(Equal,1)
-!!$!   create the grid:
-!!$    imu = 1
-!!$    theta(1)=th_min
-!!$    do while(theta(imu).lt.th_max)
-!!$     theta(imu+1) = theta(imu) + angstep
-!!$     imu = imu+1
-!!$    end do
-!!$    nmu = imu
-!!$    theta(nmu) = th_max
-!!$  end if
-!!$
-!!$! if ang_type=2 (equidistant in cos theta)
-!!$  if (ang_type.eq.2) then
-!!$    th_min = RDINP(Equal,1)
-!!$    call chkangle(th_min)
-!!$    th_max = RDINP(Equal,1)
-!!$    call chkangle(th_max)
-!!$    cth_min = dcos(th_min*pi/180.0d0)
-!!$    cth_max = dcos(th_max*pi/180.0d0)
-!!$!   Step, equidistant in cos(theta)
-!!$    AngStep = RDINP(Equal,1)
-!!$!   Create the grid:
-!!$    imu = 1
-!!$    caux = cth_min
-!!$    do while (caux.gt.0.0d0)
-!!$     theta(imu) = dacos(caux)*180.0d0/pi
-!!$     caux = caux - angstep
-!!$     imu = imu+1
-!!$    end do
-!!$    Nmu = imu
-!!$    theta(Nmu) = th_max
-!!$  end if
-!!$
-!!$  if (ang_type.eq.3) then
-!!$! Angular grid from a file, angles in degrees
-!!$   call FileMSG(ANGgrid,strg)
-!!$   open(7,ERR=92,file=ANGgrid,STATUS='OLD')
-!!$   Nmu = RDINP(Equal,7)
-!!$   do imu = 1, Nmu
-!!$     read(7,*) theta(imu)
-!!$   end do
-!!$92 close(7)
-!!$  end if
-!!$  write(12,*)' Intensity requested for these theta_out(deg):'
-!!$  write(12,'(a1,8f7.1,/,x,8f7.1,/,x,10f7.1)')' ', (theta(imu), imu = 1, nmu)
-!!$  if (ang_type.eq.1) write(12,'(a34,f4.1)') '  equidistant in theta_out, step=', angstep
-!!$  if (ang_type.eq.2) write(12,'(a39,f4.1)') '  equidistant in cos(theta_out), step=', angstep
-!!$  if (ang_type.eq.3) write(12,'(a18,a70)') '  grid from file: ', anggrid
-!!$! -----------------------------------------------------------------------
-!!$  return
-!!$end subroutine input_slb_ang
-!!$!***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$subroutine GetTau(nG,tau1,tau2,tauIn,Nrec,GridType,Nmodel,tau)
-!!$!=======================================================================
-!!$! This subroutine generates total optical depth TAUtot.
-!!$!                                                      [Z.I., Mar. 1996]
-!!$!=======================================================================
-!!$  use common
-!!$  implicit none
-!!$  integer model, Nmodel, nG, iL, GridType, Nrec
-!!$  double precision  q,TAUin(Nrec), tau(Nmodel), TAU1, TAU2
-!!$!-----------------------------------------------------------------------
-!!$  taumax = 0.0d0
-!!$  do model = 1, Nmodel
-!!$     if(GridType.eq.3) then
-!!$        tau(model) = tauIn(model)
-!!$     else
-!!$        ! Calculate taufid for given model
-!!$        if (model.eq.1) then
-!!$           tau(model) = tau1
-!!$        else
-!!$           if (model.eq.Nmodel) then
-!!$              tau(model) = tau2
-!!$           else
-!!$              if(GridType.eq.1) then
-!!$                 q =  (tau2 - tau1)/(Nmodel-1.0d0)
-!!$                 tau(model) = tau1 + q*(model-1.0d0)
-!!$              else
-!!$                 q = dexp(dlog(tau2/tau1)/(Nmodel-1.0d0))
-!!$                 tau(model) = tau1*q**(model-1.0d0)
-!!$              end if
-!!$           end if
-!!$        end if
-!!$     end if
-!!$  end do
-!!$!-----------------------------------------------------------------------
-!!$  return
-!!$end subroutine GetTau
-!!$!***********************************************************************
+!***********************************************************************
+subroutine input_slb_ang(ang_type)
+  !=======================================================================
+  ! This subroutine reads the set of input or output illumination angles
+  ! for slab case.                                           [MN, 2005]
+  ! =======================================================================
+  use common
+  implicit none
+  
+  integer ang_type, imu, length
+  double precision th_min, th_max, angstep, cth_min, cth_max, caux, value, RDINP
+  character*70 anggrid, strg,str*235
+  logical Equal, noEqual,UCASE
+  !----------------------------------------------------------------------
+  Equal = .true.
+  noEqual = .false.
+  
+  ! if ang_type=1 (equidistant in theta, given min,max,step)
+  if (ang_type.eq.1) then
+     th_min = RDINP(Equal,1)
+     call chkangle(th_min)
+     th_max = RDINP(Equal,1)
+     call chkangle(th_max)
+     if (th_max.le.th_min) then
+        th_max = th_min
+        nmu = 1
+     end if
+     ! step equidistant in theta
+     angstep = RDINP(Equal,1)
+     ! create the grid:
+     imu = 1
+     theta(1)=th_min
+     do while(theta(imu).lt.th_max)
+        theta(imu+1) = theta(imu) + angstep
+        imu = imu+1
+     end do
+     nmu = imu
+     theta(nmu) = th_max
+  end if
+  ! if ang_type=2 (equidistant in cos theta)
+  if (ang_type.eq.2) then
+     th_min = RDINP(Equal,1)
+     call chkangle(th_min)
+     th_max = RDINP(Equal,1)
+     call chkangle(th_max)
+     cth_min = dcos(th_min*pi/180.0d0)
+     cth_max = dcos(th_max*pi/180.0d0)
+     ! Step, equidistant in cos(theta)
+     AngStep = RDINP(Equal,1)
+     ! Create the grid:
+     imu = 1
+     caux = cth_min
+     do while (caux.gt.0.0d0)
+        theta(imu) = dacos(caux)*180.0d0/pi
+        caux = caux - angstep
+        imu = imu+1
+     end do
+     Nmu = imu
+     theta(Nmu) = th_max
+  end if
+  if (ang_type.eq.3) then
+     ! Angular grid from a file, angles in degrees
+     call FileMSG(ANGgrid,strg)
+     open(7,ERR=92,file=ANGgrid,STATUS='OLD')
+     Nmu = RDINP(Equal,7)
+     do imu = 1, Nmu
+        read(7,*) theta(imu)
+     end do
+92   close(7)
+  end if
+  write(12,*)' Intensity requested for these theta_out(deg):'
+  write(12,'(a1,8f7.1,/,x,8f7.1,/,x,10f7.1)')' ', (theta(imu), imu = 1, nmu)
+  if (ang_type.eq.1) write(12,'(a34,f4.1)') '  equidistant in theta_out, step=', angstep
+  if (ang_type.eq.2) write(12,'(a39,f4.1)') '  equidistant in cos(theta_out), step=', angstep
+  if (ang_type.eq.3) write(12,'(a18,a70)') '  grid from file: ', anggrid
+  ! -----------------------------------------------------------------------
+  return
+end subroutine input_slb_ang
+!***********************************************************************
+
+!$
 !!$
 !!$!***********************************************************************
 !!$subroutine getOmega(nG,omega)
@@ -2035,173 +2031,173 @@ end function EMfunc
 !!$!***********************************************************************
 !!$
 !!$
-!!$!***********************************************************************
-!!$subroutine CLLOSE(error,model,Nmodel)
-!!$! =======================================================================
-!!$! This subroutine closes output files.             [ZI,Feb'96; MN,Apr'99]
-!!$! =======================================================================
-!!$  use common
-!!$  implicit none
-!!$  character*235 su1, su2, s3, s4, txtt, txtf
-!!$  integer  error, model, Nmodel, im
-!!$! -----------------------------------------------------------------------
-!!$  ! close the default output file:
-!!$  if (iError.ne.0) then
-!!$     write(12,'(a42,i4)') ' There are some error messages for model:',model
-!!$     write(12,*) ' Please check m## file (if not produced then rerun)'
-!!$     if (iverb.gt.0) print*, 'There are some error messages for model:',model,' (check m## file)'
-!!$  end if
-!!$  if (iWarning.ne.0.and.iError.eq.0) then
-!!$     write(12,'(a36,i4)') ' There are some warnings for model:',model
-!!$     write(12,*)' Please check m## file (if not produced then rerun)'
-!!$     if (iverb.gt.0) print*, 'There are some warnings for model:',model,' (check m## file)'
-!!$  end if
-!!$  iCumm = iCumm + iError + iWarning
-!!$  if (model.eq.Nmodel.or.error.eq.3.or.error.eq.4) then
-!!$     if (error.ne.3) then
-!!$        if(rdw.or.rdwa.or.rdwpr) then
-!!$           write(12,'(a)')  ' ====================================='
-!!$        else
-!!$           if(sph) then
-!!$              write(12,'(a)')  ' ====================================='
-!!$           else
-!!$              write(12,'(a)')  ' ====================================='
-!!$           end if
-!!$        end if
-!!$        write(12,'(a22,1p,e8.1,a8)')'  (1) optical depth at',lamfid,' microns'
-!!$        write(12,'(a69,1p,e9.2)')'  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0=', Psi0
-!!$        if(slb) then
-!!$           !  ----------  for slab output ----------------------------
-!!$           write(12,'(a)')'  (3) input bol.flux (in W/m2) of the left-side source at the left slab boundary'
-!!$           write(12,'(a)')'  (4) input bol.flux (in W/m2) of the right-side source at the right slab boundary'
-!!$           write(12,'(a)')'  (5) bolometric flux (in W/m2) at the left slab boundary'
-!!$           write(12,'(a)')'  (6) bolometric flux (in W/m2) at the right slab boundary'
-!!$           write(12,'(a)')'  (7) position of the left slab boundary for L = 1e4 Lo'
-!!$           write(12,'(a)')'  (8) dust temperature at the left slab boundary'
-!!$           write(12,'(a)')'  (9) dust temperature at the right slab boundary'
-!!$           write(12,'(a)')'  (10) radiation pressure on left boundary; see manual for units'
-!!$           write(12,'(a)')'  (11) maximum error in flux conservation (Fmax-Fmin)/(Fmax+Fmin)'
-!!$        else
-!!$           !---------- for spherical shell ----------------------------
-!!$           write(12,'(a)')'  (3) bolometric flux at the inner radius '
-!!$           write(12,'(a)')'  (4) inner radius for L = 1e4 Lo'
-!!$           write(12,'(a)')'  (5) ratio of the inner to the stellar radius'
-!!$           write(12,'(a)')'  (6) angular size (in arcsec) when Fbol=1e-6 W/m2'
-!!$           write(12,'(a)')'  (7) dust temperature at the inner radius '
-!!$           write(12,'(a)')'  (8) dust temperature at the outer edge'
-!!$           write(12,'(a)')'  (9) radiation pressure on inner boundary; see manual for units'
-!!$           write(12,'(a)')' (10) maximum error in flux conservation (Fmax-Fmin)/(Fmax+Fmin)'
-!!$           if(rdw.or.rdwa.or.rdwpr) then
-!!$              write(12,'(a)')' (11) mass-loss rate (in Mo/year)'
-!!$              write(12,'(a)')' (12) terminal outflow velocity (in km/s)'
-!!$              write(12,'(a)')' (13) upper limit of the stellar mass (in Mo)'
-!!$           end if
-!!$        end if
-!!$        write(12,*)' ================================================'
-!!$        if(iCumm.eq.0) write(12,*)' Everything is ok for all models.'
-!!$        !---- private file ---
-!!$        if(rdwpr) write(12,*)' Table with the wind properties is in file *.rdw'
-!!$        !------------------------- spectra ------------------
-!!$        if(iA.ne.0) then
-!!$           if (iA.eq.1) then
-!!$              write(12,*)' All spectra are in file *.stb'
-!!$           else
-!!$              if (slb.and.iA.eq.3) then
-!!$                 write(12,*)' Spectra are in files *.s## and *.z##'
-!!$              else
-!!$                 write(12,*)' Spectra are in files *.s##'
-!!$              end if
-!!$           end if
-!!$        end if
-!!$        !------------------------- images ------------------
-!!$        if (iC.ne.0) then
-!!$           if (abs(iC).eq.1) then
-!!$              if(slb) then
-!!$                 write(12,*)' All intensities are in file *.itb'
-!!$              else
-!!$                 write(12,*)' All imaging quantities are in file *.itb'
-!!$              end if
-!!$           else
-!!$              if(slb) then
-!!$                 write(12,*)' Intensities are in files *.i##'
-!!$              else
-!!$                 write(12,*)' Images are in files *.i##'
-!!$              end if
-!!$              if (iV.ne.0.and.abs(ic).eq.3) write(12,*)' Visibility curves are in files *.v##'
-!!$           end if
-!!$           if (iC.eq.-3.and.iPsf.ne.0) then
-!!$              write(12,*)' Convolved images are in files *.c##'
-!!$              if (psftype.lt.3) write(12,*)' Point spread functions are in file *.psf'
-!!$           end if
-!!$        end if
-!!$        !----------------------- en.density ------------------
-!!$        if(sph) then
-!!$           if(iJ.ne.0) then
-!!$              if (iJ.eq.1) then
-!!$                 write(12,*)' All energy density profiles are in file *.jtb'
-!!$              else
-!!$                 write(12,*)' Energy density profiles are in files *.j##'
-!!$              end if
-!!$           end if
-!!$        end if
-!!$        !------------------------- radial ------------------
-!!$        if(iB.ne.0) then
-!!$           if (iB.eq.1) then
-!!$              write(12,*)' All radial profiles are in file *.rtb'
-!!$           else
-!!$              write(12,*)' Radial profiles are in files *.r##'
-!!$           end if
-!!$        end if
-!!$        !------------------------- messages ------------------
-!!$        if (iX.eq.1) write(12,*)' All run-time messages are in file *.mtb'
-!!$        if (iX.gt.1) write(12,*)' Run-time messages are in files *.m##'
-!!$     else
-!!$        write(12,*)' Ending calculations for this input file.'
-!!$     end if  !end if for error.ne.3
-!!$  end if  !end if for models
-!!$  if (model.eq.Nmodel.or.error.eq.3.or.error.eq.4) then
-!!$     write(12,*) '========== the end =============================='
-!!$     close(12)
-!!$  end if
-!!$  ! close the psf file
-!!$  if (model.eq.1.or.error.eq.3) then
-!!$     if (iPsf.eq.1.and.psftype.lt.3) close(23)
-!!$  end if
-!!$  ! conditionally close the spectral files
-!!$  if(iA.eq.1) then
-!!$     if(model.eq.Nmodel) close(15)
-!!$  else
-!!$     close(15)
-!!$  end if
-!!$  ! conditionally close the radial files
-!!$  if(iB.eq.1) then
-!!$     if(model.eq.Nmodel) close(16)
-!!$  else
-!!$     close(16)
-!!$  end if
-!!$  ! conditionally close the imaging files
-!!$  if(abs(iC).eq.1) then
-!!$     if(model.eq.Nmodel) close(17)
-!!$  else
-!!$     close(17)
-!!$  end if
-!!$  if(iX.eq.1) then
-!!$     if(model.eq.Nmodel) close(18)
-!!$  else
-!!$     close(18)
-!!$  end if
-!!$  ! conditionally close the energy density files
-!!$  if(iJ.eq.1) then
-!!$     if(model.eq.Nmodel) close(19)
-!!$  else
-!!$     close(19)
-!!$  end if
-!!$  if (iPsf.ne.0) close(21)
-!!$  if (iV.ne.0) close(22)
-!!$!-----------------------------------------------------------------------
-!!$  return
-!!$end subroutine CLLOSE
-!!$!***********************************************************************
+
+!***********************************************************************
+subroutine CLLOSE(model,Nmodel)
+  ! =======================================================================
+  ! This subroutine closes output files.             [ZI,Feb'96; MN,Apr'99]
+  ! =======================================================================
+  use common
+  implicit none
+  character*235 su1, su2, s3, s4, txtt, txtf
+  integer model, Nmodel, im
+  ! ----------------------------------------------------------------------
+  ! close the default output file:
+  if (Error.ne.0) then
+     write(12,'(a42,i4)') ' There are some error messages for model:',model
+     write(12,*) ' Please check m## file (if not produced then rerun)'
+     if (iverb.gt.0) print*, 'There are some error messages for model:',model,' (check m## file)'
+  end if
+  if (Warning.ne.0.and.Error.eq.0) then
+     write(12,'(a36,i4)') ' There are some warnings for model:',model
+     write(12,*)' Please check m## file (if not produced then rerun)'
+     if (iverb.gt.0) print*, 'There are some warnings for model:',model,' (check m## file)'
+  end if
+  if (model.eq.Nmodel.or.error.eq.3.or.error.eq.4) then
+     if (error.ne.3) then
+        if((denstyp.eq.3).or.(denstyp.eq.4)) then
+           write(12,'(a)')  ' ====================================='
+        else
+           if(sph) then
+              write(12,'(a)')  ' ====================================='
+           else
+              write(12,'(a)')  ' ====================================='
+           end if
+        end if
+        write(12,'(a22,1p,e8.1,a8)')'  (1) optical depth at',lamfid,' microns'
+        write(12,'(a69,1p,e9.2)')'  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0=', Psi0
+        if(slb) then
+           !  ----------  for slab output ----------------------------
+           write(12,'(a)')'  (3) input bol.flux (in W/m2) of the left-side source at the left slab boundary'
+           write(12,'(a)')'  (4) input bol.flux (in W/m2) of the right-side source at the right slab boundary'
+           write(12,'(a)')'  (5) bolometric flux (in W/m2) at the left slab boundary'
+           write(12,'(a)')'  (6) bolometric flux (in W/m2) at the right slab boundary'
+           write(12,'(a)')'  (7) position of the left slab boundary for L = 1e4 Lo'
+           write(12,'(a)')'  (8) dust temperature at the left slab boundary'
+           write(12,'(a)')'  (9) dust temperature at the right slab boundary'
+           write(12,'(a)')'  (10) radiation pressure on left boundary; see manual for units'
+           write(12,'(a)')'  (11) maximum error in flux conservation (Fmax-Fmin)/(Fmax+Fmin)'
+        else
+           !---------- for spherical shell ----------------------------
+           write(12,'(a)')'  (3) bolometric flux at the inner radius '
+           write(12,'(a)')'  (4) inner radius for L = 1e4 Lo'
+           write(12,'(a)')'  (5) ratio of the inner to the stellar radius'
+           write(12,'(a)')'  (6) angular size (in arcsec) when Fbol=1e-6 W/m2'
+           write(12,'(a)')'  (7) dust temperature at the inner radius '
+           write(12,'(a)')'  (8) dust temperature at the outer edge'
+           write(12,'(a)')'  (9) radiation pressure on inner boundary; see manual for units'
+           write(12,'(a)')' (10) maximum error in flux conservation (Fmax-Fmin)/(Fmax+Fmin)'
+           if((denstyp.eq.3).or.(denstyp.eq.4)) then
+              write(12,'(a)')' (11) mass-loss rate (in Mo/year)'
+              write(12,'(a)')' (12) terminal outflow velocity (in km/s)'
+              write(12,'(a)')' (13) upper limit of the stellar mass (in Mo)'
+           end if
+        end if
+        write(12,*)' ================================================'
+        if((error+warning).eq.0) write(12,*)' Everything is ok for all models.'
+        !---- private file ---
+!        if(rdwpr) write(12,*)' Table with the wind properties is in file *.rdw'
+        !------------------------- spectra ------------------
+        if(iA.ne.0) then
+           if (iA.eq.1) then
+              write(12,*)' All spectra are in file *.stb'
+           else
+              if (slb.and.iA.eq.3) then
+                 write(12,*)' Spectra are in files *.s## and *.z##'
+              else
+                 write(12,*)' Spectra are in files *.s##'
+              end if
+           end if
+        end if
+        !------------------------- images ------------------
+        if (iC.ne.0) then
+           if (abs(iC).eq.1) then
+              if(slb) then
+                 write(12,*)' All intensities are in file *.itb'
+              else
+                 write(12,*)' All imaging quantities are in file *.itb'
+              end if
+           else
+              if(slb) then
+                 write(12,*)' Intensities are in files *.i##'
+              else
+                 write(12,*)' Images are in files *.i##'
+              end if
+              if (iV.ne.0.and.abs(ic).eq.3) write(12,*)' Visibility curves are in files *.v##'
+           end if
+           if (iC.eq.-3.and.iPsf.ne.0) then
+              write(12,*)' Convolved images are in files *.c##'
+              if (psftype.lt.3) write(12,*)' Point spread functions are in file *.psf'
+           end if
+        end if
+        !----------------------- en.density ------------------
+        if(sph) then
+           if(iJ.ne.0) then
+              if (iJ.eq.1) then
+                 write(12,*)' All energy density profiles are in file *.jtb'
+              else
+                 write(12,*)' Energy density profiles are in files *.j##'
+              end if
+           end if
+        end if
+        !------------------------- radial ------------------
+        if(iB.ne.0) then
+           if (iB.eq.1) then
+              write(12,*)' All radial profiles are in file *.rtb'
+           else
+              write(12,*)' Radial profiles are in files *.r##'
+           end if
+        end if
+        !------------------------- messages ------------------
+        if (iX.eq.1) write(12,*)' All run-time messages are in file *.mtb'
+        if (iX.gt.1) write(12,*)' Run-time messages are in files *.m##'
+     else
+        write(12,*)' Ending calculations for this input file.'
+     end if  !end if for error.ne.3
+  end if  !end if for models
+  if (model.eq.Nmodel.or.error.eq.3.or.error.eq.4) then
+     write(12,*) '========== the end =============================='
+     close(12)
+  end if
+  ! close the psf file
+  if (model.eq.1.or.error.eq.3) then
+     if (iPsf.eq.1.and.psftype.lt.3) close(23)
+  end if
+  ! conditionally close the spectral files
+  if(iA.eq.1) then
+     if(model.eq.Nmodel) close(15)
+  else
+     close(15)
+  end if
+  ! conditionally close the radial files
+  if(iB.eq.1) then
+     if(model.eq.Nmodel) close(16)
+  else
+     close(16)
+  end if
+  ! conditionally close the imaging files
+  if(abs(iC).eq.1) then
+     if(model.eq.Nmodel) close(17)
+  else
+     close(17)
+  end if
+  if(iX.eq.1) then
+     if(model.eq.Nmodel) close(18)
+  else
+     close(18)
+  end if
+  ! conditionally close the energy density files
+  if(iJ.eq.1) then
+     if(model.eq.Nmodel) close(19)
+  else
+     close(19)
+  end if
+  if (iPsf.ne.0) close(21)
+  if (iV.ne.0) close(22)
+!-----------------------------------------------------------------------
+  return
+end subroutine CLLOSE
+!***********************************************************************
 !!$
 !!$!***********************************************************************
 !!$subroutine MakeTable(Elems,rows,cols,unt)
@@ -2355,7 +2351,7 @@ end subroutine ChkAngle
 !***********************************************************************
 
 !!$!***********************************************************************
-!!$subroutine WriteOut(var1,var2,var3,nG,nameQ,nameNK)
+!!$subroutine WriteOut(nameQ,nameNK,var1,var2,var3,a1,a2, dilutn, left,right, startyp)
 !!$!=======================================================================
 !!$! WriteOut prints in fname.out all input parameters,  read before density distribution
 !!$! type.
@@ -2364,87 +2360,93 @@ end subroutine ChkAngle
 !!$  use common
 !!$  implicit none
 !!$
-!!$  integer is, iG, nG, i, length
-!!$  double precision var1, var2, var3
+!!$  integer iis,is,ns, iG, i, length, left, right, startyp(2)
+!!$  double precision var1, var2, var3, a1, a2, dilutn
 !!$  character*72 strpow, aux, src, chaux*3
-!!$  character*(*) nameQ(npG), nameNK(10)
+!!$  character*235 nameQ(:), nameNK(10)
 !!$  logical first
 !!$  first = .true.
-!!$!-------------------------------------------------------------------------
-!!$  is = 1
-!!$15 if (SLB) then
-!!$   if (is.eq.1) then
-!!$    src = 'Left-side source spectrum described by'
-!!$   else
-!!$    src = 'Right-side source spectrum described by'
-!!$   end if
-!!$  else
-!!$   if (is.eq.1) then
-!!$    src = 'Central source spectrum described by'
-!!$   else
-!!$    src = 'External source spectrum described by'
-!!$   end if
-!!$  end if
-!!$  call Clean(src, aux, length)
+!!$  !-----------------------------------------------------------------------
+!!$  !if both side present number of sources equals 2 
+!!$  if ((left.eq.1).and.(right.eq.1)) then 
+!!$     ns=2
+!!$  else 
+!!$     ns=1
+!!$     if (left.eq.1) is = 1 !left side source
+!!$     if (right.eq.1) is = 2 !right side source
+!!$  endif
 !!$
-!!$  if(Left.eq.0.and.is.eq.1) then
-!!$   write(12,*) ' No central source.'
-!!$  else
-!!$! #1: black body(ies) for startyp=1
-!!$   if (startyp(is).eq.1) then
-!!$    if (nBB(is).gt.1) then
-!!$     call ATTACH(aux, length, ' ', src)
-!!$! multiple black bodies
-!!$     write(12,'(a2,a37,i2,a13)')'  ', src, nBB(is),' black bodies'
-!!$     write(12,'(a27)')' with temperatures (in K):'
-!!$     write(12,'(2x,1p,10e10.3)')(Tbb(is,i),i=1,nBB(is))
-!!$     write(12,'(a42)')' and relative luminosities, respectively:'
-!!$     write(12,'(1p,10e10.1)')(rellum(is,i),i=1,nBB(is))
-!!$    else
-!!$! for a single black body:
-!!$     call ATTACH(aux,length,' a black body',src)
-!!$     write(12,'(a2,a)') '  ',src
-!!$     write(12,'(a19,1p,e10.3,a2)')' with temperature:',Tbb(is,1),' K'
-!!$    end if
-!!$   end if
-!!$
-!!$! #2: Engelke-Marengo function for startyp=2
-!!$   if (startyp(is).eq.2) then
-!!$    call ATTACH(aux, length,' Engelke-Marengo function', src)
-!!$    write(12,'(a2,a)') '  ',src
-!!$    write(12,'(a13,1p,e10.3,a16)')' with Teff =',Tbb(is,1), ' K and depth of'
-!!$    write(12,'(a30,F6.1,a2)')' the SiO absorption feature =', xSiO,' %'
-!!$   end if
-!!$
-!!$! #3: power-law(s) for startyp=3
-!!$   if (startyp(is).eq.3) then
-!!$    if (Nlamtr(is).gt.0) then
-!!$     call ATTACH(aux,length,' power law:',src)
-!!$     write(12,'(a2,a)') '  ',src
-!!$     write(12,*)'    lambda      k'
-!!$     do i = 1, Nlamtr(is)
-!!$      write(12,'(1x,1p,e10.3)')lamtr(is,i)
-!!$      write(12,'(11x,1p,e10.3)')klam(is,i)
-!!$     end do
-!!$     write(12,'(1x,1p,e10.3)')lamtr(is,Nlamtr(is)+1)
-!!$    else
-!!$     write(12,*)' Input data for the source spectrum is not good.'
-!!$     write(12,*)' Changed to a 10000 K black body'
-!!$    end if
-!!$   end if
-!!$
-!!$! spectrum from a file for startyp=4,5,6
-!!$   if (startyp(is).ge.4.and.startyp(is).le.6) then
-!!$    if (is.eq.1) then
-!!$     write(12,*)' Stellar spectrum supplied from file:'
-!!$    else
-!!$     write(12,*)' External spectrum supplied from file:'
-!!$    end if
-!!$    write(12,'(a2,a100)') '  ',nameStar(is)
-!!$    call PrHeader(3,nameStar(is))
-!!$   end if
-!!$  end if
-!!$  write(12,*)' --------------------------------------------'
+!!$  do iis=1,ns
+!!$     if (SLB) then
+!!$        if (is.eq.1) then
+!!$           src = 'Left-side source spectrum described by'
+!!$        else
+!!$           src = 'Right-side source spectrum described by'
+!!$        end if
+!!$     else
+!!$        if (is.eq.1) then
+!!$           src = 'Central source spectrum described by'
+!!$        else
+!!$           src = 'External source spectrum described by'
+!!$        end if
+!!$     end if
+!!$     call Clean(src, aux, length)
+!!$     if(sph.and.Left.eq.0) then
+!!$        write(12,*) ' No central source.'
+!!$     else
+!!$        ! #1: black body(ies) for startyp=1
+!!$        if (startyp(is).eq.1) then
+!!$           if (nBB(is).gt.1) then
+!!$              call ATTACH(aux, length, ' ', src)
+!!$              ! multiple black bodies
+!!$              write(12,'(a2,a37,i2,a13)')'  ', src, nBB(is),' black bodies'
+!!$              write(12,'(a27)')' with temperatures (in K):'
+!!$              write(12,'(2x,1p,10e10.3)')(Tbb(is,i),i=1,nBB(is))
+!!$              write(12,'(a42)')' and relative luminosities, respectively:'
+!!$              write(12,'(1p,10e10.1)')(rellum(is,i),i=1,nBB(is))
+!!$           else
+!!$              ! for a single black body:
+!!$              call ATTACH(aux,length,' a black body',src)
+!!$              write(12,'(a2,a)') '  ',src
+!!$              write(12,'(a19,1p,e10.3,a2)')' with temperature:',Tbb(is,1),' K'
+!!$           end if
+!!$        end if
+!!$        ! #2: Engelke-Marengo function for startyp=2
+!!$        if (startyp(is).eq.2) then
+!!$           call ATTACH(aux, length,' Engelke-Marengo function', src)
+!!$           write(12,'(a2,a)') '  ',src
+!!$           write(12,'(a13,1p,e10.3,a16)')' with Teff =',Tbb(is,1), ' K and depth of'
+!!$           write(12,'(a30,F6.1,a2)')' the SiO absorption feature =', xSiO,' %'
+!!$        end if
+!!$        ! #3: power-law(s) for startyp=3
+!!$        if (startyp(is).eq.3) then
+!!$           if (Nlamtr(is).gt.0) then
+!!$              call ATTACH(aux,length,' power law:',src)
+!!$              write(12,'(a2,a)') '  ',src
+!!$              write(12,*)'    lambda      k'
+!!$              do i = 1, Nlamtr(is)
+!!$                 write(12,'(1x,1p,e10.3)')lamtr(is,i)
+!!$                 write(12,'(11x,1p,e10.3)')klam(is,i)
+!!$              end do
+!!$              write(12,'(1x,1p,e10.3)')lamtr(is,Nlamtr(is)+1)
+!!$           else
+!!$              write(12,*)' Input data for the source spectrum is not good.'
+!!$              write(12,*)' Changed to a 10000 K black body'
+!!$           end if
+!!$        end if
+!!$        ! spectrum from a file for startyp=4,5,6
+!!$        if (startyp(is).ge.4.and.startyp(is).le.6) then
+!!$           if (is.eq.1) then
+!!$              write(12,*)' Stellar spectrum supplied from file:'
+!!$           else
+!!$              write(12,*)' External spectrum supplied from file:'
+!!$           end if
+!!$           write(12,'(a2,a100)') '  ',nameStar(is)
+!!$           call PrHeader(3,nameStar(is))
+!!$        end if
+!!$     end if
+!!$     write(12,*)' --------------------------------------------'
+!!$  end do
 !!$  if(first) then
 !!$! if there is a second source go back to read its parameters
 !!$   if(Right.gt.0) then
@@ -2567,4 +2569,130 @@ end subroutine ChkAngle
 !!$
 !!$  return
 !!$end subroutine WriteOut
-!!$!***********************************************************************
+!***********************************************************************
+
+!***********************************************************************
+subroutine OPPEN(model,rootname,length)
+!=======================================================================
+! This subroutine prints the results out.              [Z.I., Feb. 1996]
+!=======================================================================
+
+  use common
+  implicit none
+  character ch5*5, rootname*(*), fname*235
+  character*72 header1, s3, s4
+  integer model, length, i
+  !---------------------------------------------------------------------
+
+  ! set up the status indicators
+  Error = 0
+  ! the following files pertain to all models and are open if model.eq.1
+  if (model.eq.1) then
+     ! the header to output file *.out is moved to prout [MN,Sep'99]
+     ! open file for crosssections
+     call attach(rootname,length,'.Xsec',fname)
+     open(855,file=fname,status='unknown')
+     ! open file for point spread function
+     if (iPsf.ne.0.and.psftype.lt.3) then
+        ! wavelength dependent psf are also printed out
+        call attach(rootname,length,'.psf',fname)
+        open(23,file=fname,status='unknown')
+        header1 = '    offset'
+        write(23,'(a10,20f10.2)')header1,(LambdaOut(i),i=1,nLambdaOut)
+     end if
+     ! spectra for all models in one file '*.stb' if flag=1
+     if(iA.eq.1) then
+        call attach(rootname,length,'.stb',fname)
+        open(15,file=fname,status='unknown')
+     end if
+     ! all radial profiles in one file '*.rtb' if flag=1
+     if(iB.eq.1) then
+        call attach(rootname,length,'.rtb',fname)
+        open(16,file=fname,status='unknown')
+     end if
+     ! all imaging files in  '*.itb' if flag=1
+     if (abs(iC).eq.1) then
+        call attach(rootname,length,'.itb',fname)
+        open(17,file=fname,status='unknown')
+     end if
+     ! all J-files in  '*.jtb' if flag=1
+     if (abs(iJ).eq.1) then
+        call attach(rootname,length,'.jtb',fname)
+        open(19,file=fname,status='unknown')
+     end if
+     ! all message files in  '*.mtb' if flag=1
+     if(iX.eq.1) then
+        call attach(rootname,length,'.mtb',fname)
+        open(18,file=fname,status='unknown')
+     end if
+!!$     ! open the file for error vs. iterations in '*.err'
+!!$     if(iInn.eq.1) then
+!!$        call attach(rootname,length,'.err',fname)
+!!$        open(38,file=fname,status='unknown')
+!!$        write(38,'(a12,a235)') 'Input file: ',rootname
+!!$     end if
+!!$     ! for private rdw option
+!!$     if(rdwpr) then
+!!$        call attach(rootname,length,'.rdw',fname)
+!!$        open(66,file=fname,status='unknown')
+!!$     end if
+!!$     ! end if for model=1
+  end if
+!-------------------------------------------------------------
+! the following files are open for every model
+
+! (the headers for .s## and .r## files are moved to prout, MN)
+! open the spectrum file rootname.s##  (## = model number)
+  if(iA.gt.1) then
+     write(ch5,'(a2,i3.3)') '.s', model
+     call attach(rootname,length,ch5,fname)
+     open(15,file=fname,status='unknown')
+     if(slb) then
+        if(iA.eq.3) then
+           write(ch5,'(a2,i3.3)') '.z', model
+           call attach(rootname,length,ch5,fname)
+           open(25,file=fname,status='unknown')
+        end if
+     end if
+  end if
+  ! open the file rootname.r## (y-dependent quantities)
+  if(iB.gt.1) then
+     write(ch5,'(a2,i3.3)') '.r', model
+     call attach(rootname,length,ch5,fname)
+     open(16,file=fname,status='unknown')
+  end if
+  ! open the file rootname.i## (surface brightness)
+  if(abs(iC).gt.1) then
+     write(ch5,'(a2,i3.3)') '.i', model
+     call attach(rootname,length,ch5,fname)
+     open(17,file=fname,status='unknown')
+  end if
+  ! open the file rootname.c## (convolved images) for flag ic<0
+  ! if ic=-3 - in a separate file fname.c##
+  if(iC.eq.-3.and.iPsf.gt.0) then
+     write(ch5,'(a2,i3.3)') '.c', model
+     call attach(rootname,length,ch5,fname)
+     open(21,file=fname,status='unknown')
+  end if
+  ! open the file rootname.v## (visibility curves)
+  if((abs(iC).eq.3).and.(iV.gt.0)) then
+     write(ch5,'(a2,i3.3)') '.v', model
+     call attach(rootname,length,ch5,fname)
+     open(22,file=fname,status='unknown')
+  end if
+  ! open the output file rootname.m##
+  if (iX.gt.1) then
+     write(ch5,'(a2,i3.3)') '.m', model
+     call attach(rootname,length,ch5,fname)
+     open(18,file=fname,status='unknown')
+  end if
+  ! open the output file rootname.j##
+  if (iJ.gt.1) then
+     write(ch5,'(a2,i3.3)') '.j', model
+     call attach(rootname,length,ch5,fname)
+     open(19,file=fname,status='unknown')
+  end if
+  !--------------------------------------------------------------------
+  return
+end subroutine OPPEN
+!***********************************************************************

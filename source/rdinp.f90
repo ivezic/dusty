@@ -56,7 +56,8 @@ double precision function RDINP(Equal,iUnit)
         last = last - 1
         if (last.lt.first) goto 1
      END DO
-     IF (Card(first:first).EQ.'*') WRITE (12,'(A)') Card(1:last)
+!original line  IF (Card(first:first).EQ.'*') WRITE (12,'(A)') Card(1:last)! original line
+     IF (Card(first:first).EQ.'*') WRITE (12,'(A)') Card(1:96)
      ind = Index(Card,'%')
      if (ind.gt.0) last = ind - 1
   End If
@@ -153,7 +154,7 @@ subroutine rdinps2(equal,iUnit,str,LENGTH,UCASE)
       if(first .gt. last) then
         read(iUnit, '(a)', end = 99) card
         first = 1
-        if(chr(first) .eq. '*') write(12,'(a)') card
+        if(chr(first) .eq. '*') write(12,'(a)') card(1:96)
         last = len(card)
         ind = index(card,'%')
         if(ind .gt. 0) last = ind-1

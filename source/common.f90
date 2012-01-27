@@ -11,29 +11,49 @@ Module common
   parameter (max_threads = 16)          ! max number of threads if parallel
   integer NREC
   PARAMETER (NREC = 1000)
+  double precision :: dynrange          ! dynamical range (1d-20 .. 1d20)
+  PARAMETER (dynrange = 1.d20)
+  integer nOutput                      ! number of output columns
+  PARAMETER (nOutput=20)
 
 
   character*4 :: version
   parameter (version='4.00')
-  integer :: error,warn,iverb
+  integer :: error,warning,iverb
   double precision, allocatable :: lambda(:)  ! lambda grid dusty
-  double precision, allocatable :: shpL(:)  ! shape left side ilumination
-  double precision, allocatable :: shpR(:)  ! shape right side ilumination
-  double precision,allocatable  :: Tsub(:)   !sublimation temperature for each grain
+  double precision, allocatable :: shpL(:)    ! shape left side ilumination
+  double precision, allocatable :: shpR(:)    ! shape right side ilumination
+  double precision,allocatable  :: Tsub(:)    ! sublimation temperature for each grain
+  double precision :: TAUin(Nrec) ! user specified input tau grid
   integer :: nL                 ! size of lambda grid
   integer :: nG                 ! number of grain types
   logical :: slb,sph            ! geometry
   ! remove TypEntry ???? --- not necessary ??? 
   integer :: TypEntry(2)        ! type of ilumination for (0-left and 1-right)
+  integer :: denstyp            ! density type   
   double precision ksi          ! the ratio of the right/left bol. fluxes (<1) for slab
   double precision Ji,Jo        ! input mean energy density - scaling in dusty
   double precision Tinner       ! Temperature at the inner boundary for fiducial grain
   double precision mu1,mu2      ! cosine of ilumination anlge slab case
   integer :: iFidG              ! id number of fiducial grain
   double precision :: lamfid    ! fiducial wavelength [micron]
+  integer :: iLfid              ! index fiducial wavelength
   double precision,allocatable  :: SigmaA(:,:) ! absorbtion crosssection
   double precision,allocatable  :: SigmaS(:,:) ! scattering crosssection
+  double precision :: tauFid    ! optical depth at fiducial wavelength
+  double precision :: sigAfid, sigSfid,sigExfid ! crossection fiducial wavelength
   integer :: ver                ! RDW variable
+  double precision :: accFlux   ! flux accuracy
+  double precision :: accTemp   ! temperature accuracy ((1.+accFlux)**(1./4.)-1.)*0.1
+
+  double precision:: psi,psi0   ! psi as defined in IE97
+  ! output parameter - should be a structure and not in global ... search if it is used elseweher
+  integer psftype, Npsf, iLambda
+  integer :: iA,iB,iC,iX,iPSF,iV,NlambdaOut,Nconv,nMu,Nvisi,iD,iJ,nJOut
+  double precision,allocatable :: theta(:)
+  double precision :: lambdaOut(nOutput), FWHM1(nOutput), FWHM2(nOutput),kPSF(nOutput), &
+       xpsf(1000), ypsf(1000), psfArea(nOutput), YJout(nOutput), theta1
+
 
 !!$  ! ===========================================================================
 !!$  ! Commons with various parameters related to numerical accuracy.

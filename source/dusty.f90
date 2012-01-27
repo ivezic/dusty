@@ -4,11 +4,22 @@ PROGRAM DUSTY
   INTEGER :: clock_rate, clock_start, clock_end, io_status, lpath
   INTEGER :: empty, GridType
   INTEGER :: Nmodel
-  DOUBLE PRECISION :: RDINP, tau1, tau2, tauIn(Nrec)
+  DOUBLE PRECISION :: RDINP, tau1, tau2
   DOUBLE PRECISION, allocatable :: tau(:)
   CHARACTER(len=4)   :: suffix,verbosity
   CHARACTER(len=235) :: dustyinpfile, path, apath, nameIn, nameOut, stdf(7)
   INTEGER iL
+  INTERFACE
+     SUBROUTINE GetTau(tau1,tau2,GridType,Nmodel,tau)
+       integer Nmodel, GridType
+       double precision  TAU1, TAU2, tau(:)
+     END SUBROUTINE GETTAU
+     SUBROUTINE KERNEL(path,lpath,tau,Nmodel)
+       integer  Nmodel, lpath
+       double precision tau(:)
+       character(len=235) path
+     END SUBROUTINE KERNEL
+  END INTERFACE
   !-------------------------------------------------------
   ! **************************
   ! *** ABOUT THIS VERSION ***
@@ -63,15 +74,13 @@ PROGRAM DUSTY
         ENDIF
         IF (error.ne.3) THEN 
            IF (error.eq.0) THEN 
-              IF (iVerb.ge.2) print*,'Done with getOptPr'
               IF(ALLOCATED(tau)) DEALLOCATE(tau)
               ALLOCATE(tau(Nmodel))
-!              CALL GetTau(nG,tau1,tau2,tauIn,Nrec,GridType,Nmodel,tau)
+              CALL GetTau(tau1,tau2,GridType,Nmodel,tau)
               IF (iVerb.ge.2) print*,'Done with GetTau'
-!              IF (SPH) THEN 
-!                 CALL Kernel_matrix(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error)
+              CALL Kernel(path,lpath,tau,Nmodel)
+!                 CALL Kernel_matrix(nG,path,lpath,tau,Nrec,Nmodel,GridType,error)
 !              ELSE
-!              CALL Kernel(nG,path,lpath,tauIn,tau,Nrec,Nmodel,GridType,error)
 !              END IF
            END IF
         ELSE
@@ -128,4 +137,43 @@ subroutine ReadLambda()
   end do
   return
 end subroutine ReadLambda
+!***********************************************************************
+
+!***********************************************************************
+subroutine GetTau(tau1,tau2,GridType,Nmodel,tau)
+!=======================================================================
+! This subroutine generates total optical depth TAUtot.
+!                                                      [Z.I., Mar. 1996]
+!=======================================================================
+  use common
+  implicit none
+  integer model, Nmodel, iL, GridType
+  double precision  q, TAU1, TAU2, tau(:), taumax
+!-----------------------------------------------------------------------
+  taumax = 0.0d0
+  do model = 1, Nmodel
+     if(GridType.eq.3) then
+        tau(model) = tauIn(model)
+     else
+        ! Calculate taufid for given model
+        if (model.eq.1) then
+           tau(model) = tau1
+        else
+           if (model.eq.Nmodel) then
+              tau(model) = tau2
+           else
+              if(GridType.eq.1) then
+                 q =  (tau2 - tau1)/(Nmodel-1.0d0)
+                 tau(model) = tau1 + q*(model-1.0d0)
+              else
+                 q = dexp(dlog(tau2/tau1)/(Nmodel-1.0d0))
+                 tau(model) = tau1*q**(model-1.0d0)
+              end if
+           end if
+        end if
+     end if
+  end do
+!-----------------------------------------------------------------------
+  return
+end subroutine GetTau
 !***********************************************************************
