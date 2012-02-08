@@ -25,6 +25,9 @@ PROGRAM DUSTY
   ! *** ABOUT THIS VERSION ***
   ! **************************
   ! version= '4.00' set in common as parameter
+
+  call alloc_mem()
+
   CALL ReadLambda()
   IF (error.ne.0) THEN 
      PRINT*,'something wrong with lambda grid!'
@@ -94,6 +97,7 @@ PROGRAM DUSTY
 !!$     OPEN(unit=100,file="temp.mas")
 !!$     CLOSE(unit=100,status='delete')
 !!$  END IF
+  call dealloc_mem()
 END PROGRAM DUSTY
 
 !***********************************************************************
@@ -177,3 +181,29 @@ subroutine GetTau(tau1,tau2,GridType,Nmodel,tau)
   return
 end subroutine GetTau
 !***********************************************************************
+
+subroutine alloc_mem()
+use common
+implicit none 
+  ! Memory allocation----------------------------------
+  allocate(Y(npY))
+  allocate(Yprev(npY))
+  allocate(P(npY))
+  allocate(iYfirst(npP))
+  allocate(YPequal(npP))
+  allocate(Plast(npY))
+  allocate(ETAdiscr(npY))
+end subroutine alloc_mem
+
+subroutine dealloc_mem()
+use common
+implicit none 
+  ! Memory allocation----------------------------------
+  deallocate(Y)
+  deallocate(Yprev)
+  deallocate(P)
+  deallocate(iYfirst)
+  deallocate(YPequal)
+  deallocate(Plast)
+  deallocate(ETAdiscr)
+end subroutine dealloc_mem

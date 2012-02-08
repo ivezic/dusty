@@ -13,9 +13,22 @@ Module common
   PARAMETER (NREC = 1000)
   double precision :: dynrange          ! dynamical range (1d-20 .. 1d20)
   PARAMETER (dynrange = 1.d20)
-  integer nOutput                      ! number of output columns
+  integer nOutput                       ! number of output columns
   PARAMETER (nOutput=20)
+  integer npY,npP
+  PARAMETER (npY = 1000)
+  PARAMETER (npP = 1000)
 
+  double precision,allocatable :: ETAdiscr(:)
+  integer,allocatable ::  iYfirst(:), YPequal(:), Plast(:)
+
+  integer :: Ntr,nYetaF,nPcav
+  double precision Pow
+  double precision Yout
+  double precision,allocatable :: ptr(:)
+  double precision,allocatable :: Ytr(:)
+  double precision,allocatable :: yetaf(:)
+  double precision,allocatable :: etaf(:)
 
   character*4 :: version
   parameter (version='4.00')
@@ -24,6 +37,9 @@ Module common
   double precision, allocatable :: shpL(:)    ! shape left side ilumination
   double precision, allocatable :: shpR(:)    ! shape right side ilumination
   double precision,allocatable  :: Tsub(:)    ! sublimation temperature for each grain
+  double precision,allocatable  :: Y(:)       ! Y - grid
+  double precision,allocatable  :: Yprev(:)   ! previous Y - grid
+  double precision,allocatable  :: P(:)       ! P - grid
   double precision :: TAUin(Nrec) ! user specified input tau grid
   integer :: nL                 ! size of lambda grid
   integer :: nG                 ! number of grain types

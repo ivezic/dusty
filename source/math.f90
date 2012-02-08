@@ -456,27 +456,27 @@ end subroutine scaleto1
 !!$
 !!$
 !!$
-!!$!***********************************************************************
-!!$subroutine doProduct(nn,yt,pt,p0,j,prd)
-!!$!=======================================================================
-!!$! This is an auxiliary subroutine which evaluates a messy expression
-!!$! needed to calculate normalization constants for a broken power law
-!!$! density.                                             [Z.I., Aug. 1996]
-!!$!=======================================================================
-!!$  implicit none
-!!$  integer nn, i, j
-!!$  double precision yt(nn), pt(nn), prd, p0
-!!$  !---------------------------------------------------------------------
-!!$  prd = yt(1)**(pt(1) - p0)
-!!$  if (j.gt.1) then
-!!$     do i = 2, j
-!!$        prd = prd * yt(i)**(pt(i) - pt(i-1))
-!!$     end do
-!!$  end if
-!!$  !---------------------------------------------------------------------
-!!$  return
-!!$end subroutine doProduct
-!!$!***********************************************************************
+!***********************************************************************
+subroutine doProduct(nn,yt,pt,p0,j,prd)
+!=======================================================================
+! This is an auxiliary subroutine which evaluates a messy expression
+! needed to calculate normalization constants for a broken power law
+! density.                                             [Z.I., Aug. 1996]
+!=======================================================================
+  implicit none
+  integer nn, i, j
+  double precision yt(nn), pt(nn), prd, p0
+  !---------------------------------------------------------------------
+  prd = yt(1)**(pt(1) - p0)
+  if (j.gt.1) then
+     do i = 2, j
+        prd = prd * yt(i)**(pt(i) - pt(i-1))
+     end do
+  end if
+  !---------------------------------------------------------------------
+  return
+end subroutine doProduct
+!***********************************************************************
 !!$
 !!$
 !!$!***********************************************************************

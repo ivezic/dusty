@@ -14,13 +14,13 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   character(len=72) :: strpow,lamstr(nOutput)
   character(len=235),allocatable :: nameNK(:),nameQ(:)
   integer :: i, istop, GridType,Nmodel,L,right,left,top,iG,iFiles, &
-       nFiles,szds, EtaOK, Ntr, nYetaf, startyp(2), &
+       nFiles,szds, EtaOK, startyp(2), &
        ang_type, imu, ioverflw
   double precision :: a,b,tau1,tau2,Lum,dist,RDINP,spec_scale, &
        dilutn,Tstar(2),th1,th2,xC(10),xCuser(10),sum,qsd,a1,a2,&
-       Yout, pow, x1, ceta, Fi, Fo, psf1
-  double precision, allocatable :: Ytr(:),ptr(:),aa(:),bb(:),xx(:),e(:),&
-       yetaf(:), etaf(:)
+       x1, ceta, Fi, Fo, psf1
+  double precision, allocatable ::aa(:),bb(:),xx(:),e(:) 
+      
   
   interface
      subroutine inp_rad(shp,spec_scale,startyp)
