@@ -23,6 +23,7 @@ Module common
 
   double precision,allocatable :: ETAdiscr(:)
   integer,allocatable ::  iYfirst(:), YPequal(:), Plast(:)
+  integer left,right
 
   integer :: Ntr,nYetaF,nPcav
   double precision Pow
@@ -32,6 +33,11 @@ Module common
   double precision,allocatable :: yetaf(:)
   double precision,allocatable :: etaf(:)
   double precision,allocatable :: ETAzp(:,:)
+  double precision,allocatable :: abund(:,:)
+  double precision,allocatable :: omega(:,:)
+  double precision,allocatable :: TAUslb(:,:)
+  double precision,allocatable :: TAUtot(:)
+  double precision,allocatable :: fsL(:,:), fsR(:,:), fsLbol(:), fsRbol(:),fsbol(:)
 
   character*4 :: version
   parameter (version='4.00')

@@ -97,8 +97,8 @@ subroutine GetTauMax(tau0,taumax)
   sigexfid = sigAfid + sigSfid
   taumax = 0.0d0
   do iL = 1, nL
-     tau_tmp = tau0*(SigmaA(nG+1,iL) + SigmaS(nG+1,iL))/SigExfid
-     if (tau_tmp.ge.taumax) taumax = tau_tmp
+     tautot(iL) = tau0*(SigmaA(nG,iL) + SigmaS(nG,iL))/SigExfid
+     if (tautot(iL).ge.taumax) taumax = tautot(iL)
   end do
   !-------------------------------------------------------------------
   deallocate(faux1)
@@ -120,6 +120,7 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
        nY, nYprev, nP, nCav, nIns, nY_old
   logical initial
   double precision delta,taulim,pstar,taumax, em(npG,npL,npY)
+  double precision, allocatable:: fs(:,:),us(:,:),T4_ext(:)
 
 !!$  integer model, iterfbol, fbolOK,grid,iY,iL,nY_old,y_incr,imu, &
 !!$       iPstar,EtaOK , iP, iZ, nZ, iOut
@@ -130,6 +131,9 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
 !!$       Udbol(npY), Usbol(npY), fDebol(npY),fDsbol(npY), maxFerr
 
 !--------------------------------------------------------------------------
+  allocate(fs(npL,npY))
+  allocate(us(npL,npY))
+  allocate(T4_ext(npY))
   if (iX.ne.0) then
      call line(0,2,18)
      write(18,'(a7,i3,a20)') ' model ',model,'  RUN-TIME MESSAGES '
@@ -186,8 +190,8 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
         end if
      end if
      ! solve the radiative transfer problem
-!!$     call Rad_Transf(initial,pstar,y_incr,us,fs,em,omega,iterfbol,T4_ext)
-!!$     if (iVerb.eq.2) write(*,*)' Done with radiative transfer. '
+     call Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em,iterfbol,T4_ext)
+     if (iVerb.eq.2) write(*,*)' Done with radiative transfer. '
 !!$     ! calculate diffuse flux
 !!$     ! for slab
 !!$     if(slb) then
@@ -385,6 +389,9 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
 !!$     write(18,*)'  ======================================='
 !!$  end if
   !---------------------------------------------------------------------
+  deallocate(fs)
+  deallocate(us)
+  deallocate(T4_ext)
 999 return
 end subroutine solve
 !***********************************************************************
@@ -398,9 +405,11 @@ subroutine SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol,
   use common
   implicit none
   integer iL,iY, iPstar, itereta, iterfbol,taux, nY,nYprev, nP, nCav, nIns
-  double precision pstar,tau,taumax
+  double precision pstar,taumax
+  double precision, allocatable :: tau(:)
   logical initial
   !-----------------------------------------------------------------------
+  allocate(tau(nY))
   if (sph) then
      if (initial.and.iterfbol.eq.1) then
         ! generate y-grid
@@ -423,15 +432,15 @@ subroutine SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol,
            END IF
         END DO
      end if
-!!$     tau(1) = 0.0d0
-!!$     do iY = 2, nY
-!!$        tau(iY) = tau(iY-1) + Y(iY)
-!!$     end do
-!!$     do iL = 1, nL
-!!$        do iY = 1, nY
-!!$           TAUslb(iL,iY) = tautot(iL)*tau(iY)/tau(nY)
-!!$        end do
-!!$     end do
+     tau(1) = 0.0d0
+     do iY = 2, nY
+        tau(iY) = tau(iY-1) + Y(iY)
+     end do
+     do iL = 1, nL
+        do iY = 1, nY
+           TAUslb(iL,iY) = tautot(iL)*tau(iY)/tau(nY)
+        end do
+     end do
   end if
   if (iX.ge.1) then
      if (slb) then
@@ -443,6 +452,7 @@ subroutine SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol,
         write(18,'(a24,i3)')'                 Ncav = ',Ncav
      end if
   end if
+  deallocate(tau)
   !---------------------------------------------------------------------
   return
 end subroutine setGrids
@@ -1027,7 +1037,7 @@ end subroutine Insert
 !***********************************************************************
 
 !********************************************************************
-subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em,omega, &
+subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em, &
      iterfbol,T4_ext)
 !======================================================================
   use common
@@ -1035,7 +1045,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em,omega, 
   logical, intent(in) :: initial
   integer, intent(in) :: y_incr,iterfbol
   integer :: nY,nP,nYprev,itereta
-  double precision pstar, us(npL,npY), fs(npL,npY), em(npG,npL,npY), omega(npG+1,npL), &
+  double precision pstar, us(npL,npY), fs(npL,npY), em(npG,npL,npY), &
        T4_ext(npY)
 
 !!$  integer i,iY,iY1,iL,iG,nn,itlim,imu,conv,iter,iPstar, iP, iZ, nZ, &
@@ -1066,10 +1076,10 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em,omega, 
 !!$        tr(iY) = ETAzp(1,iY)/ETAzp(1,nY)
 !!$     end do
 !!$  end if
-!!$  ! generate albedo through the envelope
-!!$  call getOmega(nG,omega)
-!!$  ! generate stellar spectrum
-!!$  call Find_Tran(pstar,T4_ext,us,fs)
+  ! generate albedo through the envelope
+  call getOmega(nY)
+  ! generate stellar spectrum
+  call Find_Tran(pstar,nY,nP,T4_ext,us,fs)
 !!$  if(iVerb.eq.2) write(*,*)' Done with transmitted radiation.'
 !!$  ! issue a message in fname.out about the condition for neglecting
 !!$  ! occultation only if T1 is given in input:
@@ -1218,38 +1228,37 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em,omega, 
 999 return
 end subroutine Rad_Transf
 !***********************************************************************
-!!$
-!!$
-!!$!***********************************************************************
-!!$subroutine Find_Tran(pstar,T4_ext,us,fs)
-!!$!=======================================================================
-!!$! This subroutine generates the transmitted energy density and  flux for
-!!$! the slab and sphere. is=1 is for the left src, is=2 is the right src
-!!$!                                               [MN, Feb.'99, Deka, 2008]
-!!$!=======================================================================
-!!$  use common
-!!$  implicit none
-!!$  integer i, iY, iL, iz, is, nZ, nn, error
-!!$  double precision  shpL(npL), shpR(npL), usL(npL,npY),arg, dyn2,usR(npL,npY), &
-!!$       eint2, eint3, x, res, &
-!!$        denom, expow, m0(npL,npY), m1(npL,npY),m1p(npL,npY), &
-!!$       m1m(npL,npY), tauaux(npL,npY), zeta, result1, eta
-!!$  double precision, intent(in) :: pstar
-!!$  double precision, intent(out) :: fs(npL,npY),us(npL,npY),T4_ext(npY)
-!!$  external eta
-!!$!-----------------------------------------------------------------------
-!!$
-!!$  dyn2 = 1.0d-30
-!!$  ! intialise
-!!$  usL = 0.0d0
-!!$  usR = 0.0d0
-!!$  us = 0.0d0
-!!$  fsL = 0.0d0
-!!$  fsR = 0.0d0
-!!$  fs = 0.0d0
-!!$  fsLbol = 0.0d0
-!!$  fsRbol = 0.0d0
-!!$  fsbol = 0.0d0
+
+!***********************************************************************
+subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
+!=======================================================================
+! This subroutine generates the transmitted energy density and  flux for
+! the slab and sphere. is=1 is for the left src, is=2 is the right src
+!                                               [MN, Feb.'99, Deka, 2008]
+!=======================================================================
+  use common
+  implicit none
+  integer i, iY, iL, iz, is, nZ, nn, nY, nP
+  double precision  usL(npL,npY),arg, dyn2,usR(npL,npY), &
+       eint2, eint3, x, res, &
+       denom, expow, m0(npL,npY), m1(npL,npY),m1p(npL,npY), &
+       m1m(npL,npY), tauaux(npL,npY), zeta, result1, eta
+  double precision, intent(in) :: pstar
+  double precision, intent(out) :: fs(npL,npY),us(npL,npY),T4_ext(npY)
+  external eta
+!-----------------------------------------------------------------------
+
+  dyn2 = 1.0d-30
+  ! intialise
+  usL = 0.0d0
+  usR = 0.0d0
+  us = 0.0d0
+  fsL = 0.0d0
+  fsR = 0.0d0
+  fs = 0.0d0
+  fsLbol = 0.0d0
+  fsRbol = 0.0d0
+  fsbol = 0.0d0
 !!$  ! left-side source is always present
 !!$  if(left.gt.0) then
 !!$     call getSpShape(shpL,1)
@@ -1261,398 +1270,397 @@ end subroutine Rad_Transf
 !!$  else
 !!$     shpr = 0.0d0
 !!$  end if
-!!$  ! define T_external for typEntry(1).ne.5
-!!$  if (typEntry(1).ne.5) then
-!!$     ! for slab
-!!$     if(slb) then
-!!$        do iY = 1, nY
-!!$           if (left.eq.1.and.right.eq.0) then
-!!$              if (mu1.eq.-1.0d0) then
-!!$                 T4_ext(iY) = pi*Ji/(2.0d0*sigma)
-!!$              else
-!!$                 T4_ext(iY) = pi*Ji/sigma
-!!$              end if
-!!$           elseif (left.eq.0.and.right.eq.1) then
-!!$              if (mu2.eq.-1.0d0) then
-!!$                 T4_ext(iY) = pi*ksi*Ji/(2.0d0*sigma)
-!!$              else
-!!$                 T4_ext(iY) = pi*ksi*Ji/(sigma)
-!!$              end if
-!!$           elseif (left.eq.1.and.right.eq.1) then
-!!$              if (mu1.eq.-1.0d0.and.mu2.eq.-1.0d0) then
-!!$                 T4_ext(iY) = pi*(Ji + ksi*Ji)/(2.0d0*sigma)
-!!$              else
-!!$                 T4_ext(iY) = pi*(Ji + ksi*Ji)/sigma
-!!$              end if
-!!$           end if
-!!$        end do
-!!$     ! for sphere
-!!$     elseif(sph) then
-!!$        do iY = 1, nY
-!!$           if (left.eq.1.and.right.eq.0) then
-!!$              T4_ext(iY) =  (pi/sigma)*Ji/(Y(iY)**2.0d0)
-!!$           elseif (left.eq.0.and.right.eq.1) then
-!!$              T4_ext(iY) =  pi*Jo/sigma
-!!$           elseif (left.eq.1.and.right.eq.1) then
-!!$              T4_ext(iY) =  (pi/sigma)*(Ji/(Y(iY)**2.0d0) + Jo)
-!!$           end if
-!!$        end do
-!!$     end if
-!!$  else
-!!$  end if
-!!$  do iY = 1, nY
-!!$     ! loop over wavelengths
-!!$     do iL = 1, nL
-!!$        ! find stellar part of flux and en.density
-!!$        ! for slab
-!!$        if(slb) then
-!!$           ! for the source on the left
-!!$           ! for isotropic illumination (from a half-plane)
-!!$           if(mu1.eq.-1.0d0) then
-!!$              usL(iL,iY) = shpL(iL)*eint2(TAUslb(iL,iY))
-!!$              fsL(iL,iY) = 4.0d0*pi*shpL(iL)*eint3(TAUslb(iL,iY))
-!!$           else
-!!$              ! For directional illumination
-!!$              x = TAUslb(iL,iY)/mu1
-!!$              if(x.ge.50.0d0) then
-!!$                 fsL(iL,iY) = 0.0d0
-!!$                 usL(iL,iY) = 0.0d0
-!!$              else
-!!$                 usL(iL,iY) = shpL(iL)*dexp(-x)
-!!$                 fsL(iL,iY) = 4.0d0*pi*mu1*shpL(iL)*dexp(-x)
-!!$              end if
-!!$           end if
-!!$           ! For the second source on the right
-!!$           if(right.gt.0) then
-!!$              if(mu2.eq.-1.0d0) then
-!!$                 ! If isotropic illumination from the right
-!!$                 arg = TAUslb(iL,nY)-TAUslb(iL,iY)
-!!$                 usR(iL,iY) = ksi*shpR(iL)*eint2(arg)
-!!$                 fsR(iL,iY) = 4.0d0*pi*ksi*shpR(iL)*eint3(arg)
-!!$              else
-!!$                 !  For directional illumination from the right
-!!$                 x = (TAUslb(iL,nY)-TAUslb(iL,iY))/mu2
-!!$                 if(x.ge.50.0d0) then
-!!$                    fsR(iL,iY) = 0.0d0
-!!$                    usR(iL,iY) = 0.0d0
-!!$                 else
-!!$                    usR(iL,iY) = ksi*shpR(iL)*dexp(-x)
-!!$                    fsR(iL,iY) = 4.0d0*pi*mu2*ksi*shpR(iL)*dexp(-x)
-!!$                 end if
-!!$              end if
-!!$              ! end if for source on the right
-!!$           end if
-!!$           ! for sphere
-!!$        elseif(sph) then
-!!$           ! for the central (left) source
-!!$           if (left.eq.1) then
-!!$              ! effect of the star's finite size
-!!$              if (pstar.gt.0.0d0) then
-!!$                 zeta = 2.0d0*(1.0d0-sqrt(1.0d0-(pstar/Y(iY))**2.0d0))* &
-!!$                      (Y(iY)/pstar)**2.0d0
-!!$              else
-!!$                 zeta = 1.0d0
-!!$              end if
-!!$              expow = ETAzp(1,iY)*TAUtot(iL)
-!!$              if(expow.lt.50.0d0) then
-!!$                 ! en. denisity
-!!$                 usL(iL,iY) = shpL(iL)*zeta*exp(-expow)
-!!$                 ! flux
-!!$                 fsL(iL,iY) = 4.0d0*pi*shpL(iL)*exp(-expow)
-!!$              else
-!!$                 usL(iL,iY) = 0.0d0
-!!$                 fsL(iL,iY) = 0.0d0
-!!$              end if
-!!$           end if
-!!$        end if
-!!$     end do
-!!$  end do
-!!$  if(sph.and.right.eq.1) then
-!!$     call SPH_ext_illum(m0,m1,m1p,m1m)
-!!$     do iY = 1, nY
-!!$        do iL = 1, nL
-!!$           ! find the en.density of the ext.radiation
-!!$           usR(iL,iY) = shpR(iL)*m0(iL,iY)/2.0d0
-!!$           ! and the external flux
-!!$           fsR(iL,iY) = 2.0d0*pi*shpR(iL)*m1(iL,iY)
-!!$        end do
-!!$     end do
-!!$  end if
-!!$  !scaling with energy density
-!!$  do iY = 1, nY
-!!$     ! loop over wavelengths
-!!$     do iL = 1, nL
-!!$        if (slb) then
-!!$           fs(iL,iY) = (fsL(iL,iY) -  fsR(iL,iY))/(1.0d0 + ksi)
-!!$           us(iL,iY) = (usL(iL,iY) +  usR(iL,iY))/(1.0d0 + ksi)
-!!$           fsL(iL,iY) = fsL(iL,iY)/(1.0d0 + ksi)
-!!$           fsR(iL,iY) = fsR(iL,iY)/(1.0d0 + ksi)
-!!$           ! fs(iL,iY) =  (fsL(iL,iY) - fsR(iL,iY))
-!!$        elseif(sph) then
-!!$           if (left.eq.1.and.right.eq.0) then
-!!$              us(iL,iY) = usL(iL,iY)
-!!$              fs(iL,iY) = fsL(iL,iY)
-!!$           elseif(left.eq.0.and.right.eq.1) then
-!!$              !!** fs(iL,iY) = fsR(iL,iY)  a '-' sign is needed (see below, MN)
-!!$              fs(iL,iY) = -fsR(iL,iY)
-!!$              us(iL,iY) = usR(iL,iY)
-!!$           elseif(typentry(1).ne.5.and.left.eq.1.and.right.eq.1) then
-!!$              denom = Ji/(Y(iY)**2.0d0) + Jo
-!!$              us(iL,iY) = (Ji*usL(iL,iY)/(Y(iY)**2.0d0) + Jo*usR(iL,iY))/denom
-!!$              fsL(iL,iY) = Ji*fsL(iL,iY)/(Y(iY)**2.0d0)/denom
-!!$              fsR(iL,iY) = Jo*fsR(iL,iY)/denom
-!!$              fs(iL,iY) = fsL(iL,iY) - fsR(iL,iY)
-!!$           end if
-!!$        end if
-!!$     end do
-!!$  end do
-!!$  do iY = 1, nY
-!!$     ! loop over wavelengths
-!!$     do iL = 1, nL
-!!$        ! here only us needs limit from below; fs can be negative though
-!!$        if (us(iL,iY).lt.dyn2) us(iL,iY) = 0.0d0
-!!$     end do
-!!$  end do
-!!$  call bolom(fsL,fsLbol)
-!!$  call bolom(fsR,fsRbol)
-!!$  call bolom(fs,fsbol)
-!!$  error = 0
-!!$  goto 999
-!!$998 write(12,*)' *** fatal error in dusty! *************************'
-!!$  write(12,*)' file with the spectral shape of external radiation:'
-!!$  write(12,'(a2,a256)')'  ',namestar(1), namestar(2)
-!!$  write(12,*)' is missing or not properly formatted?!'
-!!$  write(12,*)' ***************************************************'
-!!$  error = 3
-!!$  !--------------------------------------------------------------------
-!!$999 return
-!!$end subroutine Find_Tran
-!!$!***********************************************************************
+  ! define T_external for typEntry(1).ne.5
+  if (typEntry(1).ne.5) then
+     ! for slab
+     if(slb) then
+        do iY = 1, nY
+           if (left.eq.1.and.right.eq.0) then
+              if (mu1.eq.-1.0d0) then
+                 T4_ext(iY) = pi*Ji/(2.0d0*sigma)
+              else
+                 T4_ext(iY) = pi*Ji/sigma
+              end if
+           elseif (left.eq.0.and.right.eq.1) then
+              if (mu2.eq.-1.0d0) then
+                 T4_ext(iY) = pi*ksi*Ji/(2.0d0*sigma)
+              else
+                 T4_ext(iY) = pi*ksi*Ji/(sigma)
+              end if
+           elseif (left.eq.1.and.right.eq.1) then
+              if (mu1.eq.-1.0d0.and.mu2.eq.-1.0d0) then
+                 T4_ext(iY) = pi*(Ji + ksi*Ji)/(2.0d0*sigma)
+              else
+                 T4_ext(iY) = pi*(Ji + ksi*Ji)/sigma
+              end if
+           end if
+        end do
+     ! for sphere
+     elseif(sph) then
+        do iY = 1, nY
+           if (left.eq.1.and.right.eq.0) then
+              T4_ext(iY) =  (pi/sigma)*Ji/(Y(iY)**2.0d0)
+           elseif (left.eq.0.and.right.eq.1) then
+              T4_ext(iY) =  pi*Jo/sigma
+           elseif (left.eq.1.and.right.eq.1) then
+              T4_ext(iY) =  (pi/sigma)*(Ji/(Y(iY)**2.0d0) + Jo)
+           end if
+        end do
+     end if
+  else
+  end if
+  do iY = 1, nY
+     ! loop over wavelengths
+     do iL = 1, nL
+        ! find stellar part of flux and en.density
+        ! for slab
+        if(slb) then
+           ! for the source on the left
+           ! for isotropic illumination (from a half-plane)
+           if(mu1.eq.-1.0d0) then
+              usL(iL,iY) = shpL(iL)*eint2(TAUslb(iL,iY))
+              fsL(iL,iY) = 4.0d0*pi*shpL(iL)*eint3(TAUslb(iL,iY))
+           else
+              ! For directional illumination
+              x = TAUslb(iL,iY)/mu1
+              if(x.ge.50.0d0) then
+                 fsL(iL,iY) = 0.0d0
+                 usL(iL,iY) = 0.0d0
+              else
+                 usL(iL,iY) = shpL(iL)*dexp(-x)
+                 fsL(iL,iY) = 4.0d0*pi*mu1*shpL(iL)*dexp(-x)
+              end if
+           end if
+           ! For the second source on the right
+           if(right.gt.0) then
+              if(mu2.eq.-1.0d0) then
+                 ! If isotropic illumination from the right
+                 arg = TAUslb(iL,nY)-TAUslb(iL,iY)
+                 usR(iL,iY) = ksi*shpR(iL)*eint2(arg)
+                 fsR(iL,iY) = 4.0d0*pi*ksi*shpR(iL)*eint3(arg)
+              else
+                 !  For directional illumination from the right
+                 x = (TAUslb(iL,nY)-TAUslb(iL,iY))/mu2
+                 if(x.ge.50.0d0) then
+                    fsR(iL,iY) = 0.0d0
+                    usR(iL,iY) = 0.0d0
+                 else
+                    usR(iL,iY) = ksi*shpR(iL)*dexp(-x)
+                    fsR(iL,iY) = 4.0d0*pi*mu2*ksi*shpR(iL)*dexp(-x)
+                 end if
+              end if
+              ! end if for source on the right
+           end if
+           ! for sphere
+        elseif(sph) then
+           ! for the central (left) source
+           if (left.eq.1) then
+              ! effect of the star's finite size
+              if (pstar.gt.0.0d0) then
+                 zeta = 2.0d0*(1.0d0-sqrt(1.0d0-(pstar/Y(iY))**2.0d0))* &
+                      (Y(iY)/pstar)**2.0d0
+              else
+                 zeta = 1.0d0
+              end if
+              expow = ETAzp(1,iY)*TAUtot(iL)
+              if(expow.lt.50.0d0) then
+                 ! en. denisity
+                 usL(iL,iY) = shpL(iL)*zeta*exp(-expow)
+                 ! flux
+                 fsL(iL,iY) = 4.0d0*pi*shpL(iL)*exp(-expow)
+              else
+                 usL(iL,iY) = 0.0d0
+                 fsL(iL,iY) = 0.0d0
+              end if
+           end if
+        end if
+     end do
+  end do
+  if(sph.and.right.eq.1) then
+     call SPH_ext_illum(m0,m1,m1p,m1m,nY,nP)
+     do iY = 1, nY
+        do iL = 1, nL
+           ! find the en.density of the ext.radiation
+           usR(iL,iY) = shpR(iL)*m0(iL,iY)/2.0d0
+           ! and the external flux
+           fsR(iL,iY) = 2.0d0*pi*shpR(iL)*m1(iL,iY)
+        end do
+     end do
+  end if
+  !scaling with energy density
+  do iY = 1, nY
+     ! loop over wavelengths
+     do iL = 1, nL
+        if (slb) then
+           fs(iL,iY) = (fsL(iL,iY) -  fsR(iL,iY))/(1.0d0 + ksi)
+           us(iL,iY) = (usL(iL,iY) +  usR(iL,iY))/(1.0d0 + ksi)
+           fsL(iL,iY) = fsL(iL,iY)/(1.0d0 + ksi)
+           fsR(iL,iY) = fsR(iL,iY)/(1.0d0 + ksi)
+           ! fs(iL,iY) =  (fsL(iL,iY) - fsR(iL,iY))
+        elseif(sph) then
+           if (left.eq.1.and.right.eq.0) then
+              us(iL,iY) = usL(iL,iY)
+              fs(iL,iY) = fsL(iL,iY)
+           elseif(left.eq.0.and.right.eq.1) then
+              !!** fs(iL,iY) = fsR(iL,iY)  a '-' sign is needed (see below, MN)
+              fs(iL,iY) = -fsR(iL,iY)
+              us(iL,iY) = usR(iL,iY)
+           elseif(typentry(1).ne.5.and.left.eq.1.and.right.eq.1) then
+              denom = Ji/(Y(iY)**2.0d0) + Jo
+              us(iL,iY) = (Ji*usL(iL,iY)/(Y(iY)**2.0d0) + Jo*usR(iL,iY))/denom
+              fsL(iL,iY) = Ji*fsL(iL,iY)/(Y(iY)**2.0d0)/denom
+              fsR(iL,iY) = Jo*fsR(iL,iY)/denom
+              fs(iL,iY) = fsL(iL,iY) - fsR(iL,iY)
+           end if
+        end if
+     end do
+  end do
+  do iY = 1, nY
+     ! loop over wavelengths
+     do iL = 1, nL
+        ! here only us needs limit from below; fs can be negative though
+        if (us(iL,iY).lt.dyn2) us(iL,iY) = 0.0d0
+     end do
+  end do
+  call bolom(fsL,fsLbol,nY)
+  call bolom(fsR,fsRbol,nY)
+  call bolom(fs,fsbol,nY)
+  error = 0
+  goto 999
+998 write(12,*)' *** fatal error in dusty! *************************'
+  write(12,*)' file with the spectral shape of external radiation:'
+  write(12,*)' is missing or not properly formatted?!'
+  write(12,*)' ***************************************************'
+  error = 3
+  !--------------------------------------------------------------------
+999 return
+end subroutine Find_Tran
+!***********************************************************************
 !!$
-!!$!**********************************************************************
-!!$double precision function eint1(x)
-!!$!======================================================================
-!!$! Needed for the slab geometry. It calculates the first exponential
-!!$! integral E1(x) by analytical f-la (13.13) from Abramovitz & Stegun(1994)
-!!$!                                                         [MN,Dec'97]
-!!$! ======================================================================
-!!$  implicit none
-!!$  integer i
-!!$  double precision ac(4),bc(4), cc(6), x, aux, poly, denom
-!!$  data ac/8.5733287401d0,18.0590169730d0,8.6347608925d0,0.2677737343d0/
-!!$  data bc/9.5733223454d0,25.6329561486d0,21.0996530827d0,3.9584969228d0/
-!!$  data cc/-0.57721566d0,0.99999193d0,-0.24991055d0,0.05519968d0,-0.00976004d0,0.00107857d0/
-!!$  ! ----------------------------------------------------------------------
-!!$
-!!$  ! For x=1D-15, E1~30 (used below to limit the value at x=0);for x>1, E1<1D-8
-!!$  ! Two approximations are used, for x>1 and x<1, respectively
-!!$  if(x.lt.0.0d0) x = dabs(x)
-!!$  if (x.gt.1.0d0) then
-!!$     poly = 0.0d0
-!!$     denom = 0.0d0
-!!$     aux = 1.0d0
-!!$     do i = 1, 4
-!!$        poly = poly + ac(5-i)*aux
-!!$        denom = denom + bc(5-i)*aux
-!!$        aux = aux * x
-!!$     end do
-!!$     poly = poly + aux
-!!$     denom = denom + aux
-!!$     eint1 = poly/denom/x*dexp(-x)
-!!$  else
-!!$     ! if (x.gt.0.0d0.and.x.le.1.0d-15) x=1.0d-15
-!!$     poly = 0.0d0
-!!$     aux = 1.0d0
-!!$     do i = 1, 6
-!!$        poly = poly + cc(i)*aux
-!!$        aux = aux * x
-!!$     end do
-!!$     eint1 = poly - dlog(x)
-!!$  end if
-!!$  ! ----------------------------------------------------------------------
-!!$  return
-!!$end function eint1
-!!$!**********************************************************************
-!!$
-!!$!**********************************************************************
-!!$double precision function eint2(x)
-!!$!======================================================================
-!!$! Needed for the slab geometry. it calculates the second exponential
-!!$! integral e2(x) by the recurrence f-la. (see abramovitz & stegun,1994)
-!!$!                                                         [MN,Dec'97]
-!!$! ======================================================================
-!!$  implicit none
-!!$  double precision x, eint1
-!!$  ! -------------------------------------------------------------------
-!!$  if(x.lt.0.0d0) x = dabs(x)
-!!$  if (x.lt.1.0d-15) then
-!!$     eint2 = 1.0d0
-!!$  else
-!!$     eint2 = dexp(-x) - x*eint1(x)
-!!$  end if
-!!$  ! --------------------------------------------------------------------
-!!$  return
-!!$end function eint2
-!!$!**********************************************************************
-!!$
-!!$!**********************************************************************
-!!$double precision function eint3(x)
-!!$!======================================================================
-!!$! Needed for the slab geometry. It calculates the third exponential
-!!$! integral E3(x) by the recurrence f-la. (see Abramovitz & Stegun,1994)
-!!$!                                                        [MN,Dec'97]
-!!$! ======================================================================
-!!$  implicit none
-!!$  double precision x, eint2
-!!$  !---------------------------------------------------------------------
-!!$  if(x.le.0.0d0) x = dabs(x)
-!!$  if (x.lt.1.0d-15) then
-!!$     eint3 = 1.0d0/(2.0d0)
-!!$  else
-!!$     eint3 = (dexp(-x) - x*eint2(x))/(2.0d0)
-!!$  end if
-!!$  ! --------------------------------------------------------------------
-!!$  return
-!!$end function eint3
-!!$!**********************************************************************
-!!$
-!!$!***********************************************************************
-!!$subroutine Bolom(q,qbol)
-!!$!=======================================================================
-!!$! This subroutine integrates given radiation field, q (function of
-!!$! wavelength and radial coordinate), over wavelength. q is a matrix
-!!$! of physical size (npL,npY) [coming from paramet.inc] and real size
-!!$! (nL,nY) [coming from grids.inc], and qBol is an array of physical size
-!!$! (npY) and real size nY.                              [Z.I., Mar. 1996]
-!!$!=======================================================================
-!!$  use common, only: npL, nL, lambda, nY, npY
-!!$  implicit none
-!!$
-!!$  integer iL, iY
-!!$  double precision q(npL,npY), qaux(npL), qbol(npY), resaux
-!!$  !---------------------------------------------------------------------
-!!$  ! loop over iY (radial coordinate)
-!!$
-!!$  do iY = 1, nY
-!!$     ! generate auxiliary function for integration
-!!$     ! loop over iL (wavelength)
-!!$     do iL = 1, nL
-!!$        qaux(iL) = q(iL,iY)/lambda(iL)
-!!$     end do
-!!$     call Simpson(npL,1,nL,lambda,qaux,resaux)
-!!$     qbol(iY) = resaux
-!!$  end do
-!!$  !---------------------------------------------------------------------
-!!$  return
-!!$end subroutine Bolom
-!!$!***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$subroutine SPH_ext_illum(m0,m1,m1p,m1m)
-!!$!=======================================================================
-!!$! This subroutine finds the transmitted energy density and flux for sphere
-!!$! if there is external illumination.                          [Deka, 2008]
-!!$!=======================================================================
-!!$  use common
-!!$  implicit none
-!!$  integer i,ii, iP,iL, n,nn,nZ, iz, izz, iY, error,iNloc
-!!$  double precision eta,tauaux(npY), z(np,nY), m0(npL,npY), m1(npL,npY), &
-!!$       m1m(npL,npY),m1p(npL,npY),result1, result2, term1(npL,npP),term2(npL,npP), &
-!!$       term_aux1(npP), x1, x2, p1, dyn2,p_loc,Yloc1, angle(npP), expow1, expow2
-!!$  double precision, dimension(:), allocatable:: xg,  wg
-!!$  external eta
-!!$!-----------------------------------------------------------------------
-!!$  dyn2 = 1.0d-30
-!!$  error = 0
-!!$  term1 = 0.0d0
-!!$  term2 = 0.0d0
-!!$  do iY = 1, nY
-!!$     do iP = 1, Plast(iY)
-!!$        ! upper limit for the counter of z position
-!!$        nZ = nY + 1 - iYfirst(iP)
-!!$        do iZ = 1, nZ
-!!$           tauaux(iZ) = ETAzp(iP,iZ)
-!!$        end do
-!!$        iZz  = iY + 1 - iYfirst(iP)
-!!$        ! loop over wavelengths
-!!$        do iL = 1, nL
-!!$           expow1 = tautot(iL)*(tauaux(nZ) + tauaux(iZz))
-!!$           expow2 = tautot(iL)*(tauaux(nZ) - tauaux(iZz))
-!!$           if (expow1.lt.50.0d0) then
-!!$              term1(iL,iP) = exp(-expow1)
-!!$           else
-!!$              term1(iL,iP) = 0.0d0
-!!$           end if
-!!$           if (expow2.lt.50.0d0) then
-!!$              term2(iL,iP) = exp(-expow2)
-!!$           else
-!!$              term2(iL,iP) = 0.0d0
-!!$           end if
-!!$        end do
-!!$     end do
-!!$     do iP = 1, Plast(iY)
-!!$        angle(iP) = asin(P(iP)/Y(iY))
-!!$     end do
-!!$     do iL = 1, nL
-!!$        term_aux1 = 0.0d0
-!!$        do iP = 1, Plast(iY)
-!!$           term_aux1(iP) = (term1(iL,iP) + term2(iL,iP))
-!!$        end do
-!!$        result1 = 0.0d0
-!!$        do iP = 1, Plast(iY) - 1
-!!$           result1 = result1 + abs(term_aux1(iP) + term_aux1(iP+1))* &
-!!$                abs(cos(angle(iP)) - cos(angle(iP+1)))/2.0d0
-!!$        end do
-!!$        m0(iL,iY) =  result1
-!!$     end do
-!!$     do iL = 1, nL
-!!$        term_aux1 = 0.0d0
-!!$        do iP = 1, Plast(iY)
-!!$           term_aux1(iP) = abs(term1(iL,iP))
-!!$        end do
-!!$        result1 = 0.0d0
-!!$        do iP = 1, Plast(iY)-1
-!!$           x1 = angle(iP)
-!!$           x2 = angle(iP+1)
-!!$           nn = 2*int(abs(x2 - x1)/5.0d0) + 11
-!!$           if(allocated(xg)) deallocate(xg)
-!!$           if(allocated(wg)) deallocate(wg)
-!!$           allocate(xg(nn))
-!!$           allocate(wg(nn))
-!!$           call gauleg(x1,x2,xg,wg,nn)
-!!$           do i = 1, nn
-!!$              p_loc = xg(i)
-!!$              call lininter(Plast(iY),Plast(iY),angle,term_aux1,p_loc,iNloc,Yloc1)
-!!$              result1 = result1 + Yloc1*wg(i)*sin(xg(i))*cos(xg(i))
-!!$           end do
-!!$        end do
-!!$        term_aux1 = 0.0d0
-!!$        do iP = 1, Plast(iY)
-!!$           term_aux1(iP) = abs(term2(iL,iP))
-!!$        end do
-!!$        result2 = 0.0d0
-!!$        do iP = 1, Plast(iY)-1
-!!$           x1 = angle(iP)
-!!$           x2 = angle(iP+1)
-!!$           nn = 2*int(abs(x2 - x1)/5.0d0) + 11
-!!$           if(allocated(xg)) deallocate(xg)
-!!$           if(allocated(wg)) deallocate(wg)
-!!$           allocate(xg(nn))
-!!$           allocate(wg(nn))
-!!$           call gauleg(x1,x2,xg,wg,nn)
-!!$           do i = 1, nn
-!!$              p_loc = xg(i)
-!!$              call lininter(Plast(iY),Plast(iY),angle,term_aux1,p_loc,iNloc,Yloc1)
-!!$              result2 = result2 + Yloc1*wg(i)*sin(xg(i))*cos(xg(i))
-!!$           end do
-!!$        end do
-!!$        m1(iL,iY) = abs(result1 - result2)
-!!$     end do
-!!$  end do
-!!$  !-----------------------------------------------------------------------
-!!$  return
-!!$end subroutine SPH_ext_illum
-!!$!***********************************************************************
+!**********************************************************************
+double precision function eint1(x)
+!======================================================================
+! Needed for the slab geometry. It calculates the first exponential
+! integral E1(x) by analytical f-la (13.13) from Abramovitz & Stegun(1994)
+!                                                         [MN,Dec'97]
+! ======================================================================
+  implicit none
+  integer i
+  double precision ac(4),bc(4), cc(6), x, aux, poly, denom
+  data ac/8.5733287401d0,18.0590169730d0,8.6347608925d0,0.2677737343d0/
+  data bc/9.5733223454d0,25.6329561486d0,21.0996530827d0,3.9584969228d0/
+  data cc/-0.57721566d0,0.99999193d0,-0.24991055d0,0.05519968d0,-0.00976004d0,0.00107857d0/
+  ! ----------------------------------------------------------------------
+
+  ! For x=1D-15, E1~30 (used below to limit the value at x=0);for x>1, E1<1D-8
+  ! Two approximations are used, for x>1 and x<1, respectively
+  if(x.lt.0.0d0) x = dabs(x)
+  if (x.gt.1.0d0) then
+     poly = 0.0d0
+     denom = 0.0d0
+     aux = 1.0d0
+     do i = 1, 4
+        poly = poly + ac(5-i)*aux
+        denom = denom + bc(5-i)*aux
+        aux = aux * x
+     end do
+     poly = poly + aux
+     denom = denom + aux
+     eint1 = poly/denom/x*dexp(-x)
+  else
+     ! if (x.gt.0.0d0.and.x.le.1.0d-15) x=1.0d-15
+     poly = 0.0d0
+     aux = 1.0d0
+     do i = 1, 6
+        poly = poly + cc(i)*aux
+        aux = aux * x
+     end do
+     eint1 = poly - dlog(x)
+  end if
+  ! ----------------------------------------------------------------------
+  return
+end function eint1
+!**********************************************************************
+
+!**********************************************************************
+double precision function eint2(x)
+!======================================================================
+! Needed for the slab geometry. it calculates the second exponential
+! integral e2(x) by the recurrence f-la. (see abramovitz & stegun,1994)
+!                                                         [MN,Dec'97]
+! ======================================================================
+  implicit none
+  double precision x, eint1
+  ! -------------------------------------------------------------------
+  if(x.lt.0.0d0) x = dabs(x)
+  if (x.lt.1.0d-15) then
+     eint2 = 1.0d0
+  else
+     eint2 = dexp(-x) - x*eint1(x)
+  end if
+  ! --------------------------------------------------------------------
+  return
+end function eint2
+!**********************************************************************
+
+!**********************************************************************
+double precision function eint3(x)
+!======================================================================
+! Needed for the slab geometry. It calculates the third exponential
+! integral E3(x) by the recurrence f-la. (see Abramovitz & Stegun,1994)
+!                                                        [MN,Dec'97]
+! ======================================================================
+  implicit none
+  double precision x, eint2
+  !---------------------------------------------------------------------
+  if(x.le.0.0d0) x = dabs(x)
+  if (x.lt.1.0d-15) then
+     eint3 = 1.0d0/(2.0d0)
+  else
+     eint3 = (dexp(-x) - x*eint2(x))/(2.0d0)
+  end if
+  ! --------------------------------------------------------------------
+  return
+end function eint3
+!**********************************************************************
+
+!***********************************************************************
+subroutine Bolom(q,qbol,nY)
+!=======================================================================
+! This subroutine integrates given radiation field, q (function of
+! wavelength and radial coordinate), over wavelength. q is a matrix
+! of physical size (npL,npY) [coming from paramet.inc] and real size
+! (nL,nY) [coming from grids.inc], and qBol is an array of physical size
+! (npY) and real size nY.                              [Z.I., Mar. 1996]
+!=======================================================================
+  use common, only: npL, nL, lambda, npY
+  implicit none
+
+  integer iL, iY, nY
+  double precision q(npL,npY), qaux(npL), qbol(npY), resaux
+  !---------------------------------------------------------------------
+  ! loop over iY (radial coordinate)
+
+  do iY = 1, nY
+     ! generate auxiliary function for integration
+     ! loop over iL (wavelength)
+     do iL = 1, nL
+        qaux(iL) = q(iL,iY)/lambda(iL)
+     end do
+     call Simpson(npL,1,nL,lambda,qaux,resaux)
+     qbol(iY) = resaux
+  end do
+  !---------------------------------------------------------------------
+  return
+end subroutine Bolom
+!***********************************************************************
+
+!***********************************************************************
+subroutine SPH_ext_illum(m0,m1,m1p,m1m,nY,nP)
+!=======================================================================
+! This subroutine finds the transmitted energy density and flux for sphere
+! if there is external illumination.                          [Deka, 2008]
+!=======================================================================
+  use common
+  implicit none
+  integer i,ii, iP,iL, n,nn,nZ, iz, izz, iY,iNloc, nY, nP
+  double precision eta,tauaux(npY), z(np,nY), m0(npL,npY), m1(npL,npY), &
+       m1m(npL,npY),m1p(npL,npY),result1, result2, term1(npL,npP),term2(npL,npP), &
+       term_aux1(npP), x1, x2, p1, dyn2,p_loc,Yloc1, angle(npP), expow1, expow2
+  double precision, dimension(:), allocatable:: xg,  wg
+  external eta
+!-----------------------------------------------------------------------
+  dyn2 = 1.0d-30
+  error = 0
+  term1 = 0.0d0
+  term2 = 0.0d0
+  do iY = 1, nY
+     do iP = 1, Plast(iY)
+        ! upper limit for the counter of z position
+        nZ = nY + 1 - iYfirst(iP)
+        do iZ = 1, nZ
+           tauaux(iZ) = ETAzp(iP,iZ)
+        end do
+        iZz  = iY + 1 - iYfirst(iP)
+        ! loop over wavelengths
+        do iL = 1, nL
+           expow1 = tautot(iL)*(tauaux(nZ) + tauaux(iZz))
+           expow2 = tautot(iL)*(tauaux(nZ) - tauaux(iZz))
+           if (expow1.lt.50.0d0) then
+              term1(iL,iP) = exp(-expow1)
+           else
+              term1(iL,iP) = 0.0d0
+           end if
+           if (expow2.lt.50.0d0) then
+              term2(iL,iP) = exp(-expow2)
+           else
+              term2(iL,iP) = 0.0d0
+           end if
+        end do
+     end do
+     do iP = 1, Plast(iY)
+        angle(iP) = asin(P(iP)/Y(iY))
+     end do
+     do iL = 1, nL
+        term_aux1 = 0.0d0
+        do iP = 1, Plast(iY)
+           term_aux1(iP) = (term1(iL,iP) + term2(iL,iP))
+        end do
+        result1 = 0.0d0
+        do iP = 1, Plast(iY) - 1
+           result1 = result1 + abs(term_aux1(iP) + term_aux1(iP+1))* &
+                abs(cos(angle(iP)) - cos(angle(iP+1)))/2.0d0
+        end do
+        m0(iL,iY) =  result1
+     end do
+     do iL = 1, nL
+        term_aux1 = 0.0d0
+        do iP = 1, Plast(iY)
+           term_aux1(iP) = abs(term1(iL,iP))
+        end do
+        result1 = 0.0d0
+        do iP = 1, Plast(iY)-1
+           x1 = angle(iP)
+           x2 = angle(iP+1)
+           nn = 2*int(abs(x2 - x1)/5.0d0) + 11
+           if(allocated(xg)) deallocate(xg)
+           if(allocated(wg)) deallocate(wg)
+           allocate(xg(nn))
+           allocate(wg(nn))
+           call gauleg(x1,x2,xg,wg,nn)
+           do i = 1, nn
+              p_loc = xg(i)
+              call lininter(Plast(iY),Plast(iY),angle,term_aux1,p_loc,iNloc,Yloc1)
+              result1 = result1 + Yloc1*wg(i)*sin(xg(i))*cos(xg(i))
+           end do
+        end do
+        term_aux1 = 0.0d0
+        do iP = 1, Plast(iY)
+           term_aux1(iP) = abs(term2(iL,iP))
+        end do
+        result2 = 0.0d0
+        do iP = 1, Plast(iY)-1
+           x1 = angle(iP)
+           x2 = angle(iP+1)
+           nn = 2*int(abs(x2 - x1)/5.0d0) + 11
+           if(allocated(xg)) deallocate(xg)
+           if(allocated(wg)) deallocate(wg)
+           allocate(xg(nn))
+           allocate(wg(nn))
+           call gauleg(x1,x2,xg,wg,nn)
+           do i = 1, nn
+              p_loc = xg(i)
+              call lininter(Plast(iY),Plast(iY),angle,term_aux1,p_loc,iNloc,Yloc1)
+              result2 = result2 + Yloc1*wg(i)*sin(xg(i))*cos(xg(i))
+           end do
+        end do
+        m1(iL,iY) = abs(result1 - result2)
+     end do
+  end do
+  !-----------------------------------------------------------------------
+  return
+end subroutine SPH_ext_illum
+!***********************************************************************
 !!$
 !!$!***********************************************************************
 !!$subroutine Emission(nG,T4_ext,emiss)

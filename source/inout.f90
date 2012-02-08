@@ -13,7 +13,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
        nameTau, strg, namepsf
   character(len=72) :: strpow,lamstr(nOutput)
   character(len=235),allocatable :: nameNK(:),nameQ(:)
-  integer :: i, istop, GridType,Nmodel,L,right,left,top,iG,iFiles, &
+  integer :: i, istop, GridType,Nmodel,L,top,iG,iFiles, &
        nFiles,szds, EtaOK, startyp(2), &
        ang_type, imu, ioverflw
   double precision :: a,b,tau1,tau2,Lum,dist,RDINP,spec_scale, &
@@ -1271,46 +1271,45 @@ end subroutine input_slb_ang
 !***********************************************************************
 
 !$
-!!$
-!!$!***********************************************************************
-!!$subroutine getOmega(nG,omega)
-!!$!=======================================================================
-!!$! This subroutine generates albedo omega(iL,iY) from the abs/sca cross-
-!!$! sections and the component abundancies. This is temporary (trivial)
-!!$! version  for single size grains.                     [Z.I., Mar. 1996]
-!!$!
-!!$!!** Note that Omega(iG,iL) here is re-defined compared to the old Dusty. [MN]
-!!$!=======================================================================
-!!$  use common
-!!$  implicit none
-!!$  integer  iG, nG, iL, iY
-!!$  double precision omega(npG+1,npL),ext(npL),sca(nPL)
-!!$!-----------------------------------------------------------------------
-!!$
-!!$  ! generate overall albedo through the envelope
-!!$  ! ** this is for future multigrain code **
-!!$  ! ** for single grains it is trivial **
-!!$  do iL = 1, nL
-!!$     ext(iL) = 0
-!!$     sca(iL) = 0
-!!$     do iG = 1, nG
-!!$        ! calculate albedo
-!!$        ext(iL) = ext(iL) + (sigmaA(iG,iL) + sigmaS(iG,iL))
-!!$        sca(iL) = sca(iL) + sigmaS(iG,iL)
-!!$        omega(iG,iL) = sigmaS(iG,iL)/(sigmaA(iG,iL) + sigmaS(iG,iL))
-!!$     end do
-!!$     omega(nG+1,iL) = sca(iL) / ext(iL)
-!!$  end do
-!!$  ! calculate relative abundances
-!!$  do iG = 1, nG
-!!$     do iY = 1, nY
-!!$        abund(iG,iY) = 1.0d0
-!!$     end do
-!!$  end do
-!!$  !--------------------------------------------------------------------
-!!$  return
-!!$end subroutine getOmega
-!!$!**********************************************************************
+!***********************************************************************
+subroutine getOmega(nY)
+!=======================================================================
+! This subroutine generates albedo omega(iL,iY) from the abs/sca cross-
+! sections and the component abundancies. This is temporary (trivial)
+! version  for single size grains.                     [Z.I., Mar. 1996]
+!
+!!** Note that Omega(iG,iL) here is re-defined compared to the old Dusty. [MN]
+!=======================================================================
+  use common
+  implicit none
+  integer  iG, iL, iY, nY
+  double precision ext(npL),sca(nPL)
+!-----------------------------------------------------------------------
+
+  ! generate overall albedo through the envelope
+  ! ** this is for future multigrain code **
+  ! ** for single grains it is trivial **
+  do iL = 1, nL
+     ext(iL) = 0
+     sca(iL) = 0
+     do iG = 1, nG
+        ! calculate albedo
+        ext(iL) = ext(iL) + (sigmaA(iG,iL) + sigmaS(iG,iL))
+        sca(iL) = sca(iL) + sigmaS(iG,iL)
+        omega(iG,iL) = sigmaS(iG,iL)/(sigmaA(iG,iL) + sigmaS(iG,iL))
+     end do
+     omega(nG+1,iL) = sca(iL) / ext(iL)
+  end do
+  ! calculate relative abundances
+  do iG = 1, nG
+     do iY = 1, nY
+        abund(iG,iY) = 1.0d0
+     end do
+  end do
+  !--------------------------------------------------------------------
+  return
+end subroutine getOmega
+!**********************************************************************
 !!$
 !!$!***********************************************************************
 !!$subroutine getSpShape(shp,is)
