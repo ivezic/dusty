@@ -193,6 +193,7 @@ implicit none
   allocate(YPequal(npP))
   allocate(Plast(npY))
   allocate(ETAdiscr(npY))
+  allocate(ETAzp(npP,npY))
 end subroutine alloc_mem
 
 subroutine dealloc_mem()
@@ -206,4 +207,5 @@ implicit none
   deallocate(YPequal)
   deallocate(Plast)
   deallocate(ETAdiscr)
+  deallocate(ETAzp)
 end subroutine dealloc_mem

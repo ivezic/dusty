@@ -294,83 +294,83 @@ end subroutine scaleto1
 !!$!***********************************************************************
 !!$
 !!$
-!!$!***********************************************************************
-!!$SUBROUTINE Spline(x,y,n,yp1,ypn,y2)
-!!$!=======================================================================
-!!$  INTEGER n,NMAX
-!!$  DOUBLE PRECISION yp1,ypn,x(n),y(n),y2(n)
-!!$  PARAMETER (NMAX=500)
-!!$  INTEGER i,k
-!!$  DOUBLE PRECISION p,qn,sig,un,u(NMAX)
-!!$  ! --------------------------------------------------------------------
-!!$  if (yp1.gt..99e30) then
-!!$     y2(1)=0.
-!!$     u(1)=0.
-!!$  else
-!!$     y2(1)=-0.5
-!!$     u(1)=(3./(x(2)-x(1)))*((y(2)-y(1))/(x(2)-x(1))-yp1)
-!!$  endif
-!!$  do i=2,n-1
-!!$     sig=(x(i)-x(i-1))/(x(i+1)-x(i-1))
-!!$     p=sig*y2(i-1)+2.
-!!$     y2(i)=(sig-1.)/p
-!!$     u(i)=(6.*((y(i+1)-y(i))/(x(i+1)-x(i)) &
-!!$          -(y(i)-y(i-1))/(x(i)-x(i-1)))/(x(i+1)-x(i-1))-sig*u(i-1))/p
-!!$  end do
-!!$  if (ypn.gt..99e30) then
-!!$     qn=0.
-!!$     un=0.
-!!$  else
-!!$     qn=0.5
-!!$     un=(3./(x(n)-x(n-1)))*(ypn-(y(n)-y(n-1))/(x(n)-x(n-1)))
-!!$  endif
-!!$  y2(n)=(un-qn*u(n-1))/(qn*y2(n-1)+1.)
-!!$  do k=n-1,1,-1
-!!$     y2(k)=y2(k)*y2(k+1)+u(k)
-!!$  end do
-!!$  ! --------------------------------------------------------------------
-!!$  return
-!!$end subroutine Spline
-!!$!***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$SUBROUTINE SPLINE2(x,fun,N,coef)
-!!$! =======================================================================
-!!$! This subroutine finds coefficients coef(i,j) such that
-!!$! fun(x)=coef(i,1) + coef(i,2)*x + coef(i,3)*x^2 + coef(i,4)*x^3
-!!$! for x(i).LE.x.LE.x(i+1) is a cubic spline approximation of fun(x),
-!!$! with i=1..N.                                         [Z.I., Feb. 1995]
-!!$! =======================================================================
-!!$  use common
-!!$  IMPLICIT none
-!!$  INTEGER N, i
-!!$  DOUBLE PRECISION x(npY), coef(npY,4), secnder(npY), y2at1, y2atN, &
-!!$       Dd, xL, xR, dR, dL, fun(npY), fL, fR
-!!$  ! -----------------------------------------------------------------------
-!!$  ! find second derivative, secnder
-!!$  y2at1 = (fun(2)-fun(1))/(x(2)-x(1))
-!!$  y2atN = (fun(N)-fun(N-1))/(x(N)-x(N-1))
-!!$  CALL SPLINE(x,fun,N,y2at1,y2atN,secnder)
-!!$  ! generate coef(i,j), j=1,2,3,4
-!!$  DO i = 1, N-1
-!!$     Dd = x(i+1) - x(i)
-!!$     xL = x(i)
-!!$     xR = x(i+1)
-!!$     dL = secnder(i)
-!!$     dR = secnder(i+1)
-!!$     fL = fun(i)
-!!$     fR = fun(i+1)
-!!$     coef(i,1) = (xR*fL-xL*fR)/Dd + dL*xR*Dd/6.*((xR/Dd)**2.-1.)
-!!$     coef(i,1) = coef(i,1) - dR*xL*Dd/6. *((xL/Dd)**2.-1.)
-!!$     coef(i,2) = (fR-fL)/Dd + dL*Dd/6.*(1.-3.*(xR/Dd)**2.)
-!!$     coef(i,2) = coef(i,2) - dR*Dd/6.*(1.-3.*(xL/Dd)**2.)
-!!$     coef(i,3) = (dL*xR-dR*xL)/Dd/2.
-!!$     coef(i,4) = (dR-dL)/6./Dd
-!!$  END DO
-!!$  ! ---------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE SPLINE2
-!!$!***********************************************************************
+!***********************************************************************
+SUBROUTINE Spline(x,y,n,yp1,ypn,y2)
+!=======================================================================
+  INTEGER n,NMAX
+  DOUBLE PRECISION yp1,ypn,x(n),y(n),y2(n)
+  PARAMETER (NMAX=500)
+  INTEGER i,k
+  DOUBLE PRECISION p,qn,sig,un,u(NMAX)
+  ! --------------------------------------------------------------------
+  if (yp1.gt..99e30) then
+     y2(1)=0.
+     u(1)=0.
+  else
+     y2(1)=-0.5
+     u(1)=(3./(x(2)-x(1)))*((y(2)-y(1))/(x(2)-x(1))-yp1)
+  endif
+  do i=2,n-1
+     sig=(x(i)-x(i-1))/(x(i+1)-x(i-1))
+     p=sig*y2(i-1)+2.
+     y2(i)=(sig-1.)/p
+     u(i)=(6.*((y(i+1)-y(i))/(x(i+1)-x(i)) &
+          -(y(i)-y(i-1))/(x(i)-x(i-1)))/(x(i+1)-x(i-1))-sig*u(i-1))/p
+  end do
+  if (ypn.gt..99e30) then
+     qn=0.
+     un=0.
+  else
+     qn=0.5
+     un=(3./(x(n)-x(n-1)))*(ypn-(y(n)-y(n-1))/(x(n)-x(n-1)))
+  endif
+  y2(n)=(un-qn*u(n-1))/(qn*y2(n-1)+1.)
+  do k=n-1,1,-1
+     y2(k)=y2(k)*y2(k+1)+u(k)
+  end do
+  ! --------------------------------------------------------------------
+  return
+end subroutine Spline
+!***********************************************************************
+
+!***********************************************************************
+SUBROUTINE SPLINE2(x,fun,N,coef)
+! =======================================================================
+! This subroutine finds coefficients coef(i,j) such that
+! fun(x)=coef(i,1) + coef(i,2)*x + coef(i,3)*x^2 + coef(i,4)*x^3
+! for x(i).LE.x.LE.x(i+1) is a cubic spline approximation of fun(x),
+! with i=1..N.                                         [Z.I., Feb. 1995]
+! =======================================================================
+  use common
+  IMPLICIT none
+  INTEGER N, i
+  DOUBLE PRECISION x(npY), coef(npY,4), secnder(npY), y2at1, y2atN, &
+       Dd, xL, xR, dR, dL, fun(npY), fL, fR
+  ! -----------------------------------------------------------------------
+  ! find second derivative, secnder
+  y2at1 = (fun(2)-fun(1))/(x(2)-x(1))
+  y2atN = (fun(N)-fun(N-1))/(x(N)-x(N-1))
+  CALL SPLINE(x,fun,N,y2at1,y2atN,secnder)
+  ! generate coef(i,j), j=1,2,3,4
+  DO i = 1, N-1
+     Dd = x(i+1) - x(i)
+     xL = x(i)
+     xR = x(i+1)
+     dL = secnder(i)
+     dR = secnder(i+1)
+     fL = fun(i)
+     fR = fun(i+1)
+     coef(i,1) = (xR*fL-xL*fR)/Dd + dL*xR*Dd/6.*((xR/Dd)**2.-1.)
+     coef(i,1) = coef(i,1) - dR*xL*Dd/6. *((xL/Dd)**2.-1.)
+     coef(i,2) = (fR-fL)/Dd + dL*Dd/6.*(1.-3.*(xR/Dd)**2.)
+     coef(i,2) = coef(i,2) - dR*Dd/6.*(1.-3.*(xL/Dd)**2.)
+     coef(i,3) = (dL*xR-dR*xL)/Dd/2.
+     coef(i,4) = (dR-dL)/6./Dd
+  END DO
+  ! ---------------------------------------------------------------------
+  RETURN
+END SUBROUTINE SPLINE2
+!***********************************************************************
 !!$
 !!$!***********************************************************************
 !!$SUBROUTINE trapzd(func,a,b,s,n)
@@ -785,30 +785,30 @@ end subroutine doProduct
 !!$END SUBROUTINE MPROVE
 !!$!***********************************************************************
 !!$
-!!$! ***********************************************************************
-!!$SUBROUTINE Maple3(w,z,p,MpInt)
-!!$! =====================================================================
-!!$! This function calculates indefinite integral:
-!!$!    MpInt(iC) = INT(w^(2-iC) / sqrt(w^2-p^2) * dw), for iC=1,2,3,4.
-!!$!                                                     [Z.I., Apr. 1996]
-!!$! =====================================================================
-!!$  IMPLICIT none
-!!$  DOUBLE PRECISION w, z, p, MpInt(4)
-!!$  ! ---------------------------------------------------------------------
-!!$  ! integrals
-!!$  MpInt(1) = z
-!!$  MpInt(2) = dlog(w+z)
-!!$  IF (p.GT.0.0) THEN
-!!$     MpInt(3) = dacos(p/w)/p
-!!$     MpInt(4) = z/w/p/p
-!!$  ELSE
-!!$     MpInt(3) = -1.0 / w
-!!$     MpInt(4) = -0.5 / w / w
-!!$  END IF
-!!$  ! ---------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE Maple3
-!!$!***********************************************************************
+! ***********************************************************************
+SUBROUTINE Maple3(w,z,p,MpInt)
+! =====================================================================
+! This function calculates indefinite integral:
+!    MpInt(iC) = INT(w^(2-iC) / sqrt(w^2-p^2) * dw), for iC=1,2,3,4.
+!                                                     [Z.I., Apr. 1996]
+! =====================================================================
+  IMPLICIT none
+  DOUBLE PRECISION w, z, p, MpInt(4)
+  ! ---------------------------------------------------------------------
+  ! integrals
+  MpInt(1) = z
+  MpInt(2) = dlog(w+z)
+  IF (p.GT.0.0) THEN
+     MpInt(3) = dacos(p/w)/p
+     MpInt(4) = z/w/p/p
+  ELSE
+     MpInt(3) = -1.0 / w
+     MpInt(4) = -0.5 / w / w
+  END IF
+  ! ---------------------------------------------------------------------
+  RETURN
+END SUBROUTINE Maple3
+!***********************************************************************
 !!$
 !!$!**********************************************************************
 !!$subroutine add(np1,nr1,np2,nr2,q1,q2,q3,qout)

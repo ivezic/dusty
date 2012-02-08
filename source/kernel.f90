@@ -35,6 +35,9 @@ subroutine Kernel(path,lpath,tau,Nmodel)
      if (iVerb.eq.2) write(*,*) ' going to Solve '
      ! solve radiative transfer for this particular optical depth
      call Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     ! old dustys way
+     ! CALL Solve_matrix(model,nG,error)
+
      ! if flux is conserved, the solution is obtained. So write out the values
      ! to output files for specified models
      if (fbolOK.eq.1) then
@@ -116,7 +119,7 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
   integer model,iterfbol,fbolOK,etaOK,iPstar,itereta,y_incr, &
        nY, nYprev, nP, nCav, nIns, nY_old
   logical initial
-  double precision delta,taulim,pstar,taumax
+  double precision delta,taulim,pstar,taumax, em(npG,npL,npY)
 
 !!$  integer model, iterfbol, fbolOK,grid,iY,iL,nY_old,y_incr,imu, &
 !!$       iPstar,EtaOK , iP, iZ, nZ, iOut
@@ -182,8 +185,8 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
            go to 999
         end if
      end if
-!!$     ! solve the radiative transfer problem
-!!$     call Rad_Transf(nG,initial,pstar,y_incr,us,fs,em,omega,iterfbol,T4_ext)
+     ! solve the radiative transfer problem
+!!$     call Rad_Transf(initial,pstar,y_incr,us,fs,em,omega,iterfbol,T4_ext)
 !!$     if (iVerb.eq.2) write(*,*)' Done with radiative transfer. '
 !!$     ! calculate diffuse flux
 !!$     ! for slab
@@ -1022,32 +1025,37 @@ subroutine Insert(pstar,iP,iPstar)
   return
 end subroutine Insert
 !***********************************************************************
-!!$
-!!$!********************************************************************
-!!$subroutine Rad_Transf(nG,initial,pstar,y_incr,us,fs,em,omega, &
-!!$     iterfbol,T4_ext)
-!!$!======================================================================
-!!$  use common
-!!$  implicit none
-!!$  integer i,iY,iY1,iL,iG,nn,itlim,imu,error,conv,iter,iPstar, iP, iZ, nZ, &
+
+!********************************************************************
+subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em,omega, &
+     iterfbol,T4_ext)
+!======================================================================
+  use common
+  implicit none
+  logical, intent(in) :: initial
+  integer, intent(in) :: y_incr,iterfbol
+  integer :: nY,nP,nYprev,itereta
+  double precision pstar, us(npL,npY), fs(npL,npY), em(npG,npL,npY), omega(npG+1,npL), &
+       T4_ext(npY)
+
+!!$  integer i,iY,iY1,iL,iG,nn,itlim,imu,conv,iter,iPstar, iP, iZ, nZ, &
 !!$           iOut, istop
-!!$  integer, intent(in)::nG, y_incr,iterfbol
 !!$  double precision  em(npG,npL,npY), tauaux(npY), pstar, result1, omega(npG+1,npL),&
 !!$       fs(npL,npY), us(npL,npY), T4_ext(npY), T_old(npG,npY), u_old(npL,npY), &
 !!$       maxerrT,maxerrU, aux1,aux2, x1,x2, eta, &
 !!$       fDebol(npY), fDsbol(npY), Usbol(npY), Udebol(npY), Udsbol(npY), &
 !!$	   U_prev(npL,npY), Ubol_old(npY), xx, JL, JR,maxFerr
 !!$  double precision, dimension(:), allocatable:: xg, wg
-!!$  logical, intent(in) ::  initial
-!!$  external eta
-!!$  !------------------------------------------------------------------------
-!!$  error = 0
-!!$  if(sph) then
-!!$     ! generate spline coefficients for ETA as in old Dusty [MN'Aug,10]
-!!$     CALL setupETA
-!!$     ! evaluate ETAzp (carried in common)
-!!$     CALL getETAzp
-!!$  end if
+  external eta
+
+  !------------------------------------------------------------------------
+  error = 0
+  if(sph) then
+     ! generate spline coefficients for ETA as in old Dusty [MN'Aug,10]
+     CALL setupETA(nY,nYprev,itereta)
+     ! evaluate ETAzp (carried in common)
+     CALL getETAzp(nY,nP)
+  end if
 !!$  ! the tau-profile at the fiducious lambda (needed in prout)
 !!$  if (slb) then
 !!$     do iY = 1, nY
@@ -1207,9 +1215,9 @@ end subroutine Insert
 !!$        END DO
 !!$      END DO
 !!$   END IF
-!!$999 return
-!!$end subroutine Rad_Transf
-!!$!***********************************************************************
+999 return
+end subroutine Rad_Transf
+!***********************************************************************
 !!$
 !!$
 !!$!***********************************************************************
@@ -2300,187 +2308,187 @@ end subroutine Insert
 !!$END SUBROUTINE NORDLUND
 !!$!**********************************************************************
 !!$
-!!$!***********************************************************************
-!!$SUBROUTINE setupETA
-!!$!=======================================================================
-!!$! This subroutine finds spline coefficients ETAcoef such that
-!!$! the normalized density function ETA(Y(iY)) is:
-!!$! ETAcoef(iY,1)+ETAcoef(iY,2)/Y(iY)+...+ETAcoef(iY,2)/Y(iY)^3
-!!$! If spline approximation differs more than maxerr (see below) at the
-!!$! midpoint, then a straight line is used instead. (In case of wavelength
-!!$! depend. ETA, use ETAfun where any new dens. laws should be described).
-!!$! Coefficients ETAcoef are later used in getETAzp to calculate ETAzp.
-!!$!                                                [ZI, Feb'96; MN,Aug'97]
-!!$! =======================================================================
-!!$  use common
-!!$  implicit none
-!!$  INTEGER iY, iCoeff
-!!$  DOUBLE PRECISION coef(npY,4), ETA, maxerr, Ymid, Yinverse(npY), &
-!!$       ETAaux(npY), ETAmid(npY)
-!!$! -----------------------------------------------------------------------
-!!$  ! generate input function for SPLINE2
-!!$  DO iY = 1, nY
-!!$     Yinverse(iY) = 1. / Y(iY)
-!!$     ETAaux(iY) = ETA(Y(iY))
-!!$     IF (iY.LT.nY) THEN
-!!$        Ymid = dsqrt(Y(iY)*Y(iY+1))
-!!$        ETAmid(iY) = ETA(Ymid)
-!!$     END IF
-!!$  END DO
-!!$  ! calculate spline coefficients
-!!$  CALL SPLINE2(Yinverse,ETAaux,nY,coef)
-!!$  ! check and fix spline coefficients
-!!$  maxerr = 0.1
-!!$  ! RDW is initialized in Input
-!!$  CALL CHKSPLIN(Yinverse,ETAaux,ETAmid,nY,coef,maxerr)
-!!$  ! copy coefficients to the output array ETAcoef
-!!$  DO iY = 1, nY
-!!$     DO iCoeff = 1, 4
-!!$        ETAcoef(iY,iCoeff) = coef(iY,iCoeff)
-!!$     END DO
-!!$  END DO
-!!$! -----------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE setupETA
-!!$!***********************************************************************
+!***********************************************************************
+SUBROUTINE setupETA(nY,nYprev,itereta)
+!=======================================================================
+! This subroutine finds spline coefficients ETAcoef such that
+! the normalized density function ETA(Y(iY)) is:
+! ETAcoef(iY,1)+ETAcoef(iY,2)/Y(iY)+...+ETAcoef(iY,2)/Y(iY)^3
+! If spline approximation differs more than maxerr (see below) at the
+! midpoint, then a straight line is used instead. (In case of wavelength
+! depend. ETA, use ETAfun where any new dens. laws should be described).
+! Coefficients ETAcoef are later used in getETAzp to calculate ETAzp.
+!                                                [ZI, Feb'96; MN,Aug'97]
+! =======================================================================
+  use common
+  implicit none
+  INTEGER iY, nY,nYprev,itereta, iCoeff
+  DOUBLE PRECISION coef(npY,4), ETA, maxerr, Ymid, Yinverse(npY), &
+       ETAaux(npY), ETAmid(npY)
+! -----------------------------------------------------------------------
+  ! generate input function for SPLINE2
+  DO iY = 1, nY
+     Yinverse(iY) = 1. / Y(iY)
+     ETAaux(iY) = ETA(Y(iY),nY,nYprev,itereta)
+     IF (iY.LT.nY) THEN
+        Ymid = dsqrt(Y(iY)*Y(iY+1))
+        ETAmid(iY) = ETA(Ymid,nY,nYprev,itereta)
+     END IF
+  END DO
+  ! calculate spline coefficients
+  CALL SPLINE2(Yinverse,ETAaux,nY,coef)
+  ! check and fix spline coefficients
+  maxerr = 0.1
+  ! RDW is initialized in Input
+  CALL CHKSPLIN(Yinverse,ETAaux,ETAmid,nY,coef,maxerr)
+  ! copy coefficients to the output array ETAcoef
+  DO iY = 1, nY
+     DO iCoeff = 1, 4
+        ETAcoef(iY,iCoeff) = coef(iY,iCoeff)
+     END DO
+  END DO
+! -----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE setupETA
+!***********************************************************************
+
+! ***********************************************************************
+SUBROUTINE CHKSPLIN(x,fun,funmid,N,coef,maxerr)
+! ======================================================================
+! This subroutine checks the spline coefficients coef(i,j):
+! fun(x)=coef(i,1) + coef(i,2)*x + coef(i,3)*x^2 + coef(i,4)*x^3,
+! for x(i).LE.x.LE.x(i+1) with i=1..N. Array funmid(1..N-1) contains the
+! values of function fun at mid points defined as
+! xmid(i)=SQRT(x(i)*x(i+1). If spline approximation produces error
+! greater than maxerr, or funmid<0, a straight line is produced between
+! x(i) and x(i+1).                                   [Z.I., Feb. 1995]
+! ======================================================================
+  use common
+  IMPLICIT none
+  INTEGER N, i, iCoeff
+  DOUBLE PRECISION x(npY), fun(npY), funmid(npY), coef(npY,4),   &
+       maxerr, error_spl, slope, xmid, funSpline, aux, power, yR, yL
+  ! -------------------------------------------------------------------
+  ! check the midpoints
+  DO i = 1, N - 1
+     xmid = dsqrt(x(i)*x(i+1))
+     funSpline = 0.0
+     DO iCoeff = 1,4
+        IF (xmid.EQ.0.0.AND.iCoeff.EQ.1) THEN
+           aux = 1.0
+        ELSE
+           aux = xmid**(float(iCoeff)-1.0)
+        END IF
+        funSpline = funSpline + coef(i,iCoeff)*aux
+     END DO
+     error_spl = DABS((funSpline-funmid(i))/funmid(i))
+     ! check for the deviation at the midpoint
+     IF (error_spl.GE.maxerr.OR.funSpline.LE.0.0) THEN
+        slope = (fun(i+1) - fun(i)) / (x(i+1)-x(i))
+        coef(i,1) = fun(i) - x(i) * slope
+        coef(i,2) = slope
+        coef(i,3) = 0.0
+        coef(i,4) = 0.0
+     END IF
+     ! check for the logarithmic derivative (only for RDW)
+     IF(denstyp.eq.3) THEN !denstyp=3 -> RDW
+        yL = fun(i)
+        yR = fun(i+1)
+        IF (x(i)*x(i+1).GT.0.AND.yL*yR.GT.0) THEN
+           power = log(yR/yL)/log(x(i+1)/x(i))
+           IF (abs(power).GT.10.) THEN
+              slope = (yR - yL) / (x(i+1)-x(i))
+              coef(i,1) = yL - x(i) * slope
+              coef(i,2) = slope
+              coef(i,3) = 0.0
+              coef(i,4) = 0.0
+           END IF
+        END IF
+     END IF
+  END DO
+  ! --------------------------------------------------------------------
+  RETURN
+end subroutine CHKSPLIN
+! ***********************************************************************
 !!$
-!!$! ***********************************************************************
-!!$SUBROUTINE CHKSPLIN(x,fun,funmid,N,coef,maxerr)
-!!$! ======================================================================
-!!$! This subroutine checks the spline coefficients coef(i,j):
-!!$! fun(x)=coef(i,1) + coef(i,2)*x + coef(i,3)*x^2 + coef(i,4)*x^3,
-!!$! for x(i).LE.x.LE.x(i+1) with i=1..N. Array funmid(1..N-1) contains the
-!!$! values of function fun at mid points defined as
-!!$! xmid(i)=SQRT(x(i)*x(i+1). If spline approximation produces error
-!!$! greater than maxerr, or funmid<0, a straight line is produced between
-!!$! x(i) and x(i+1).                                   [Z.I., Feb. 1995]
-!!$! ======================================================================
-!!$  use common
-!!$  IMPLICIT none
-!!$  INTEGER N, i, iCoeff
-!!$  DOUBLE PRECISION x(npY), fun(npY), funmid(npY), coef(npY,4),   &
-!!$       maxerr, error, slope, xmid, funSpline, aux, power, yR, yL
-!!$  ! -------------------------------------------------------------------
-!!$  ! check the midpoints
-!!$  DO i = 1, N - 1
-!!$     xmid = dsqrt(x(i)*x(i+1))
-!!$     funSpline = 0.0
-!!$     DO iCoeff = 1,4
-!!$        IF (xmid.EQ.0.0.AND.iCoeff.EQ.1) THEN
-!!$           aux = 1.0
-!!$        ELSE
-!!$           aux = xmid**(float(iCoeff)-1.0)
-!!$        END IF
-!!$        funSpline = funSpline + coef(i,iCoeff)*aux
-!!$     END DO
-!!$     error = DABS((funSpline-funmid(i))/funmid(i))
-!!$     ! check for the deviation at the midpoint
-!!$     IF (error.GE.maxerr.OR.funSpline.LE.0.0) THEN
-!!$        slope = (fun(i+1) - fun(i)) / (x(i+1)-x(i))
-!!$        coef(i,1) = fun(i) - x(i) * slope
-!!$        coef(i,2) = slope
-!!$        coef(i,3) = 0.0
-!!$        coef(i,4) = 0.0
-!!$     END IF
-!!$     ! check for the logarithmic derivative (only for RDW)
-!!$     IF(RDW) THEN
-!!$        yL = fun(i)
-!!$        yR = fun(i+1)
-!!$        IF (x(i)*x(i+1).GT.0.AND.yL*yR.GT.0) THEN
-!!$           power = log(yR/yL)/log(x(i+1)/x(i))
-!!$           IF (abs(power).GT.10.) THEN
-!!$              slope = (yR - yL) / (x(i+1)-x(i))
-!!$              coef(i,1) = yL - x(i) * slope
-!!$              coef(i,2) = slope
-!!$              coef(i,3) = 0.0
-!!$              coef(i,4) = 0.0
-!!$           END IF
-!!$        END IF
-!!$     END IF
-!!$  END DO
-!!$  ! --------------------------------------------------------------------
-!!$  RETURN
-!!$end subroutine CHKSPLIN
-!!$! ***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$SUBROUTINE getETAzp
-!!$!=======================================================================
-!!$! This function calculates ETAzp(iP,iZ) along the line of sight with
-!!$! impact parameter P(iP) and iZ=1, nZ. Here iZ = 1 corresponds to z=0
-!!$! and iZ=nZ to the outer edge. Other grid points coincide with the
-!!$! radial grid. The method used is spline approximation for normalized
-!!$! density distribution ETA, with subsequent z-integration performed
-!!$! analytically in function IntETA
-!!$!                                               [ZI,Feb'95; MN,Aug'97]
-!!$! =======================================================================
-!!$  use common
-!!$  implicit none
-!!$  INTEGER iP, nZ, iZ, iW
-!!$  DOUBLE PRECISION IntETA, auxEta, w1, w2
-!!$  EXTERNAL IntEta
-!!$! -----------------------------------------------------------------------
-!!$  ! loop over impact parameters
-!!$  DO iP = 1, nP
-!!$     ! maximal number of points along tangential position, z
-!!$     nZ = nY + 1 - iYfirst(iP)
-!!$     ! starting values for z and ETAzp(iP,iZ)
-!!$     IF (P(iP).GE.1.0) THEN
-!!$        w2 = P(iP)
-!!$     ELSE
-!!$        w2 = 1.0
-!!$     END IF
-!!$     ! initialize ETAzp(iP,iZ)*TAUtot(iL)
-!!$     ETAzp(iP,1) = 0.0
-!!$     ! loop over z
-!!$     DO iZ = 2, nZ
-!!$        ! index for local radius, w2
-!!$        iW = iYfirst(iP) + iZ - 1
-!!$        ! limits for integration
-!!$        w1 = w2
-!!$        w2 = Y(iW)
-!!$        ! find next step in ETAzp
-!!$        auxEta = IntETA(P(iP),iW-1,w1,w2)
-!!$        ! add next step in ETAzp
-!!$        ETAzp(iP,iZ) = ETAzp(iP,iZ-1) + auxEta
-!!$     END DO
-!!$  END DO
-!!$! -----------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE getETAzp
-!!$!***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$DOUBLE PRECISION FUNCTION IntETA(paux,iW1,w1,w)
-!!$!=======================================================================
-!!$! This function calculates the integral over the normalized dens. prof.
-!!$! along the line of sight with impact parameter p and between the points
-!!$! corresponding to y=w1 and y=w. The method used is spline approximation
-!!$! for normalized density distribution ETA and subsequent integration
-!!$! performed analytically by MAPLE (these results are given through
-!!$! soubroutine Maple3).                         [ZI,Feb'96,MN,Aug'97]
-!!$! =======================================================================
-!!$  use common
-!!$  implicit none
-!!$  INTEGER iW1, iCoeff
-!!$  DOUBLE PRECISION  paux, w1, w, aux(4), z, z1, aux1(4)
-!!$! -----------------------------------------------------------------------
-!!$  z = dsqrt(w*w-paux*paux)
-!!$  z1 = dsqrt(w1*w1-paux*paux)
-!!$  ! integrals calculated by MAPLE
-!!$  CALL Maple3(w,z,paux,aux)
-!!$  CALL Maple3(w1,z1,paux,aux1)
-!!$  DO iCoeff = 1, 4
-!!$     aux(iCoeff) = aux(iCoeff) - aux1(iCoeff)
-!!$  END DO
-!!$  IntETA = 0.0
-!!$  DO iCoeff = 1, 4
-!!$     IntETA = IntETA + ETAcoef(iW1,iCoeff) * aux(iCoeff)
-!!$  END DO
-!!$! -----------------------------------------------------------------------
-!!$  RETURN
-!!$END FUNCTION IntETA
-!!$!***********************************************************************
+!***********************************************************************
+SUBROUTINE getETAzp(nY,nP)
+!=======================================================================
+! This function calculates ETAzp(iP,iZ) along the line of sight with
+! impact parameter P(iP) and iZ=1, nZ. Here iZ = 1 corresponds to z=0
+! and iZ=nZ to the outer edge. Other grid points coincide with the
+! radial grid. The method used is spline approximation for normalized
+! density distribution ETA, with subsequent z-integration performed
+! analytically in function IntETA
+!                                               [ZI,Feb'95; MN,Aug'97]
+! =======================================================================
+  use common
+  implicit none
+  INTEGER iP, nZ, iZ, iW, nY, nP
+  DOUBLE PRECISION IntETA, auxEta, w1, w2
+  EXTERNAL IntEta
+! -----------------------------------------------------------------------
+  ! loop over impact parameters
+  DO iP = 1, nP
+     ! maximal number of points along tangential position, z
+     nZ = nY + 1 - iYfirst(iP)
+     ! starting values for z and ETAzp(iP,iZ)
+     IF (P(iP).GE.1.0) THEN
+        w2 = P(iP)
+     ELSE
+        w2 = 1.0
+     END IF
+     ! initialize ETAzp(iP,iZ)*TAUtot(iL)
+     ETAzp(iP,1) = 0.0
+     ! loop over z
+     DO iZ = 2, nZ
+        ! index for local radius, w2
+        iW = iYfirst(iP) + iZ - 1
+        ! limits for integration
+        w1 = w2
+        w2 = Y(iW)
+        ! find next step in ETAzp
+        auxEta = IntETA(P(iP),iW-1,w1,w2)
+        ! add next step in ETAzp
+        ETAzp(iP,iZ) = ETAzp(iP,iZ-1) + auxEta
+     END DO
+  END DO
+! -----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE getETAzp
+!***********************************************************************
+
+!***********************************************************************
+DOUBLE PRECISION FUNCTION IntETA(paux,iW1,w1,w)
+!=======================================================================
+! This function calculates the integral over the normalized dens. prof.
+! along the line of sight with impact parameter p and between the points
+! corresponding to y=w1 and y=w. The method used is spline approximation
+! for normalized density distribution ETA and subsequent integration
+! performed analytically by MAPLE (these results are given through
+! soubroutine Maple3).                         [ZI,Feb'96,MN,Aug'97]
+! =======================================================================
+  use common
+  implicit none
+  INTEGER iW1, iCoeff
+  DOUBLE PRECISION  paux, w1, w, aux(4), z, z1, aux1(4)
+! -----------------------------------------------------------------------
+  z = dsqrt(w*w-paux*paux)
+  z1 = dsqrt(w1*w1-paux*paux)
+  ! integrals calculated by MAPLE
+  CALL Maple3(w,z,paux,aux)
+  CALL Maple3(w1,z1,paux,aux1)
+  DO iCoeff = 1, 4
+     aux(iCoeff) = aux(iCoeff) - aux1(iCoeff)
+  END DO
+  IntETA = 0.0
+  DO iCoeff = 1, 4
+     IntETA = IntETA + ETAcoef(iW1,iCoeff) * aux(iCoeff)
+  END DO
+! -----------------------------------------------------------------------
+  RETURN
+END FUNCTION IntETA
+!***********************************************************************
 !!$
 !!$!***********************************************************************
 !!$subroutine Init_Temp(nG,T4_ext,us)

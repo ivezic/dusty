@@ -15,9 +15,11 @@ Module common
   PARAMETER (dynrange = 1.d20)
   integer nOutput                       ! number of output columns
   PARAMETER (nOutput=20)
-  integer npY,npP
+  integer npY,npP,npL,npG
   PARAMETER (npY = 1000)
   PARAMETER (npP = 1000)
+  PARAMETER (npL = 1000)
+  PARAMETER (npG = 10)
 
   double precision,allocatable :: ETAdiscr(:)
   integer,allocatable ::  iYfirst(:), YPequal(:), Plast(:)
@@ -29,6 +31,7 @@ Module common
   double precision,allocatable :: Ytr(:)
   double precision,allocatable :: yetaf(:)
   double precision,allocatable :: etaf(:)
+  double precision,allocatable :: ETAzp(:,:)
 
   character*4 :: version
   parameter (version='4.00')
@@ -62,7 +65,8 @@ Module common
   double precision :: accFlux   ! flux accuracy
   double precision :: accTemp   ! temperature accuracy ((1.+accFlux)**(1./4.)-1.)*0.1
 
-  double precision:: psi,psi0   ! psi as defined in IE97
+  double precision :: psi,psi0   ! psi as defined in IE97
+  double precision :: ETAcoef(npY,4)
   ! output parameter - should be a structure and not in global ... search if it is used elseweher
   integer psftype, Npsf, iLambda
   integer :: iA,iB,iC,iX,iPSF,iV,NlambdaOut,Nconv,nMu,Nvisi,iD,iJ,nJOut
