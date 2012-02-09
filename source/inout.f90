@@ -1458,123 +1458,129 @@ double precision function EMfunc(lambda,teff,xSiO)
   return
 end function EMfunc
 !***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$subroutine PrOut(model,nG,delta)
-!!$!=======================================================================
-!!$! This subroutine prints the results out.        [ZI,Feb'96; MN,Mar'99]
-!!$!=======================================================================
-!!$
-!!$  use common
-!!$  implicit none
+
+!***********************************************************************
+subroutine PrOut(nY,model,delta)
+!=======================================================================
+! This subroutine prints the results out.        [ZI,Feb'96; MN,Mar'99]
+!=======================================================================
+
+  use common
+  implicit none
+  !---parameter
+  integer :: model,nY
+  double precision :: delta
+  !---local variables
+  integer :: iLV,iG,iL,iY
+  double precision, allocatable::Elems(:,:),ftotL(:),ftotR(:),faux(:)
+  double precision :: sigmaVs,sigmaVa,sigmaVe
+  double precision :: FbolL, FbolR, FbolIL,FbolIR,res, xAttTotL,&
+       xAttTotR,xDsTotL,xDsTotR,xDeTotL,xDeTotR,temp1,temp2, &
+       fnormL, fnormR, limval, tht1
+  character*120 STemp,Serr,hdint, hdcon,hdvis, s1, su1, s2, su2, tstr*10
+  character*132 hdsp1,hdsp2,hdrslb1,hdrslb2,hdrsph1,hdrsph2,hdrdyn
+  character*255 crossfilename
+  
 !!$  integer iG, iY, iL, i, model, j, unt, imu, nrows, ncols,nG, iOut, iNloc , iLV
 !!$!  parameter (nrows=200, ncols=25)
 !!$  double precision psfn, psffunc(20,1000),eta, faux(npL), omega(npG+1,npL),ftotL(npL),ftotR(npL),  &
-!!$       tht1, xs, xds, xde, res, fnormL, fnormR, dmax, limval, GinfG1, delta, &
-!!$       y_loc, J_loc, Jbol(10), FbolL, FbolR, FbolIL,FbolIR,xAttTotL,xAttTotR,xDsTotL,xDsTotR,xDeTotL,xDeTotR,temp1,temp2
-!!$  double precision, allocatable::Elems(:,:)
-!!$  character*120 STemp,Serr,hdint, hdcon,hdvis, s1, su1, s2, su2, tstr*10
-!!$  character*132 hdsp1,hdsp2,hdrslb1,hdrslb2,hdrsph1,hdrsph2,hdrdyn
-!!$  character*255 crossfilename
-!!$  double precision sigmaVs,sigmaVa,sigmaVe
-!!$!----------------------------------------------------------------------
+!!$       , xs, xds, xde, res, fnormL, fnormR, dmax, limval, GinfG1, delta, &
+!!$       y_loc, J_loc, Jbol(10), xAttTotL,xAttTotR,xDsTotL,xDsTotR,xDeTotL,xDeTotR,temp1,temp2
+!----------------------------------------------------------------------
 !!$
-!!$  dynrange = 1.d-15
-!!$  if(allocated(Elems)) deallocate(Elems)
-!!$  if (nG.gt.1) allocate(Elems(npL,3+2*nG))
-!!$  if (nG.eq.1) allocate(Elems(npL,3))
-!!$  call lininter(npL,nL,lambda,sigmaS(nG+1,:),lamfid,iLV,sigmaVs)
-!!$  call lininter(npL,nL,lambda,sigmaA(nG+1,:),lamfid,iLV,sigmaVa)
-!!$  Elems(:,1) = lambda(:)
-!!$  Elems(:,2) = SigmaA(nG+1,:)/(sigmaVa+sigmaVs)
-!!$  Elems(:,3) = SigmaS(nG+1,:)/(sigmaVa+sigmaVs)
-!!$  write(855,'(A,f7.2,A,e12.5)') '# total extinction at',lamfid,' micron <V>=',sigmaVa + sigmaVs
-!!$  hdrdyn = '#  lambda    <abs>/<V>  <sca>/<V>'
-!!$  if (nG.gt.1) then
-!!$     do iG=1,nG
-!!$        hdrdyn(34+(iG-1)*22:34+(iG-0)*22) = '  <abs>/<V>  <sca>/<V>'
-!!$        write(hdrdyn(38+(iG-1)*22:39+(iG-1)*22),'(i2.2)') iG
-!!$        write(hdrdyn(49+(iG-1)*22:50+(iG-1)*22),'(i2.2)') iG
-!!$        Elems(:,2+2*iG) = SigmaA(iG,:)/(sigmaVa+sigmaVs)
-!!$        Elems(:,3+2*iG) = SigmaS(iG,:)/(sigmaVa+sigmaVs)
-!!$     end do
-!!$     write(855,'(A)') hdrdyn(:34+nG*22)
-!!$     call maketable(Elems,npL,3+2*nG,855)
-!!$  else
-!!$     write(855,*) hdrdyn
-!!$     call maketable(Elems,npL,3,855)
-!!$  end if
-!!$  close(855)
-!!$
-!!$  call Simpson(npL,1,nL,lambda,fsL(:,1)/lambda,FbolIL)
-!!$  call Simpson(npL,1,nL,lambda,fsR(:,nY)/lambda,FbolIR)
-!!$  FbolIL=FbolIL*Jext(1)
-!!$  FbolIR=FbolIR*Jext(nY)
-!!$  if(allocated(Elems)) deallocate(Elems)
-!!$  allocate(Elems(npL,8))
-!!$
-!!$  !  find the bolometric fluxes at the boundaries [MN]
-!!$  !** FH changed to find ftot everywhere
-!!$  do iY = 1, nY
-!!$     do iL = 1, nL
-!!$        ! the emerging spectra for sphere (or right-side spectra for slab)
-!!$        ftot(iL,iY) = fsL(iL,iY) + fde(iL,iY) + fds(iL,iY) - ksi*fsR(iL,iY)
-!!$        if (abs(ftot(iL,iY)).lt.dynrange) ftot(iL,iY) = 0.
-!!$        faux(iL) = ftot(iL,nY)/lambda(iL)
-!!$     end do
-!!$  enddo
-!!$  do iL = 1,nL
-!!$     ftotL(iL) = fde(iL,1) + fds(iL,1) - ksi*fsR(iL,1)
-!!$     ftotR(iL) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY)
-!!$     if (abs(ftotL(iL)).lt.dynrange) ftotL(iL) = 0.
-!!$     if (abs(ftotR(iL)).lt.dynrange) ftotR(iL) = 0.
-!!$  end do
-!!$  call Simpson(npL,1,nL,lambda,faux,res)
-!!$  call Simpson(npL,1,nL,lambda,ftotL/lambda,temp1)
-!!$  call Simpson(npL,1,nL,lambda,fsR(:,1)/lambda(:),temp2)
-!!$  xAttTotL = abs(temp2/temp1)
-!!$  call Simpson(npL,1,nL,lambda,fde(:,1)/lambda(:),temp2)
-!!$  xDeTotL = abs(temp2/temp1)
-!!$  call Simpson(npL,1,nL,lambda,fds(:,1)/lambda(:),temp2)
-!!$  xDsTotL = abs(temp2/temp1)
-!!$  call Simpson(npL,1,nL,lambda,ftotR/lambda,temp1)
-!!$  call Simpson(npL,1,nL,lambda,fsL(:,nY)/lambda(:),temp2)
-!!$  xAttTotR = abs(temp2/temp1)
-!!$  call Simpson(npL,1,nL,lambda,fde(:,nY)/lambda(:),temp2)
-!!$  xDeTotR = abs(temp2/temp1)
-!!$  call Simpson(npL,1,nL,lambda,fds(:,nY)/lambda(:),temp2)
-!!$  xDsTotR = abs(temp2/temp1)
-!!$
-!!$  ! normalization factor for output spectra
-!!$  call Simpson(npL,1,nL,lambda,ftotR/lambda,fnormR)
-!!$  call Simpson(npL,1,nL,lambda,ftotL/lambda,fnormL)
-!!$  ! the emerging bolometric flux
-!!$  FbolR = fnormR * Jext(nY)
-!!$  if (slb) FbolL = fnormL * Jext(1)
-!!$
-!!$  ! calculation of radiation pressure
-!!$  ! nG + 1 contains the sum of all sigma(iG) 1<=iG<=nG
-!!$  call lininter(npL,nL,lambda,sigmaS(nG+1,:),lamfid,iLV,sigmaVs)
-!!$  call lininter(npL,nL,lambda,sigmaA(nG+1,:),lamfid,iLV,sigmaVa)
-!!$  sigmaVe = sigmaVa+sigmaVs
-!!$  do iY=1,nY
-!!$     call Simpson(npL,1,nL,lambda,(sigmaS(nG+1,:)+sigmaA(nG+1,:))*ftot(:,iY)/lambda(:),temp1)
-!!$     RPr(iY) = temp1/(4*pi*clight*mprot*Gconst)*1.0D4*3.84e26/1.988e30*5.0D-26*Jext(iY)/sigmaVe
-!!$  enddo
-!!$
-!!$  res = 0.0d00
-!!$! this is the cut-off for printout of small values (in spectra)
-!!$  limval = 1.0d-20
-!!$! Zeljko's calculation of theta1, the ang. size (in arcsec) of the cavity for Fbol=1e-6 W/m2
-!!$  tht1 = 412.6d0/(dsqrt(Ji*4*pi))
-!!$! error in %
-!!$  if (SmC(5,model).lt.0.1d0) then
-!!$   call getfs(SmC(5,model)*100.0d0,0,0,Serr)
-!!$  else if (SmC(5,model).ge.0.1d0.and.SmC(5,model).lt.1.0d0) then
-!!$   call getfs(SmC(5,model)*100.0d0,0,1,Serr)
-!!$  else
-!!$   call getfs(SmC(5,model)*100.0d0,0,2,Serr)
-!!$  end if
+  allocate(ftotL(nL))
+  allocate(ftotR(nL))
+  allocate(faux(nL))
+  if(allocated(Elems)) deallocate(Elems)
+  if (nG.gt.1) allocate(Elems(nL,3+2*nG))
+  if (nG.eq.1) allocate(Elems(nL,3))
+  call lininter(nL,nL,lambda,sigmaS(nG+1,:),lamfid,iLV,sigmaVs)
+  call lininter(nL,nL,lambda,sigmaA(nG+1,:),lamfid,iLV,sigmaVa)
+  sigmaVe = sigmaVa+sigmaVs
+  Elems(:,1) = lambda(:)
+  Elems(:,2) = SigmaA(nG+1,:)/(sigmaVa+sigmaVs)
+  Elems(:,3) = SigmaS(nG+1,:)/(sigmaVa+sigmaVs)
+  write(855,'(A,f7.2,A,e12.5)') '# total extinction at',lamfid,' micron <V>=',sigmaVa + sigmaVs
+  hdrdyn = '#  lambda    <abs>/<V>  <sca>/<V>'
+  if (nG.gt.1) then
+     do iG=1,nG
+        hdrdyn(34+(iG-1)*22:34+(iG-0)*22) = '  <abs>/<V>  <sca>/<V>'
+        write(hdrdyn(38+(iG-1)*22:39+(iG-1)*22),'(i2.2)') iG
+        write(hdrdyn(49+(iG-1)*22:50+(iG-1)*22),'(i2.2)') iG
+        Elems(:,2+2*iG) = SigmaA(iG,:)/(sigmaVa+sigmaVs)
+        Elems(:,3+2*iG) = SigmaS(iG,:)/(sigmaVa+sigmaVs)
+     end do
+     write(855,'(A)') hdrdyn(:34+nG*22)
+     call maketable(Elems,npL,3+2*nG,855)
+  else
+     write(855,*) hdrdyn
+     call maketable(Elems,npL,3,855)
+  end if
+  close(855)
+
+  call Simpson(nL,1,nL,lambda,fsL(:,1)/lambda,FbolIL)
+  call Simpson(nL,1,nL,lambda,fsR(:,nY)/lambda,FbolIR)
+  FbolIL=FbolIL*Jext(1)
+  FbolIR=FbolIR*Jext(nY)
+  if(allocated(Elems)) deallocate(Elems)
+  allocate(Elems(npL,8))
+  !  find the bolometric fluxes at the boundaries [MN]
+  !** FH changed to find ftot everywhere
+  do iY = 1, nY
+     do iL = 1, nL
+        ! the emerging spectra for sphere (or right-side spectra for slab)
+        ftot(iL,iY) = fsL(iL,iY) + fde(iL,iY) + fds(iL,iY) - ksi*fsR(iL,iY)
+        if (abs(ftot(iL,iY)).lt.dynrange) ftot(iL,iY) = 0.
+        faux(iL) = ftot(iL,nY)/lambda(iL)
+     end do
+  enddo
+  do iL = 1,nL
+     ftotL(iL) = fde(iL,1) + fds(iL,1) - ksi*fsR(iL,1)
+     ftotR(iL) = fsL(iL,nY) + fde(iL,nY) + fds(iL,nY)
+     if (abs(ftotL(iL)).lt.dynrange) ftotL(iL) = 0.
+     if (abs(ftotR(iL)).lt.dynrange) ftotR(iL) = 0.
+  end do
+  call Simpson(nL,1,nL,lambda,faux,res)
+  call Simpson(nL,1,nL,lambda,ftotL/lambda,temp1)
+  call Simpson(nL,1,nL,lambda,fsR(:,1)/lambda(:),temp2)
+  xAttTotL = abs(temp2/temp1)
+  call Simpson(npL,1,nL,lambda,fde(:,1)/lambda(:),temp2)
+  xDeTotL = abs(temp2/temp1)
+  call Simpson(npL,1,nL,lambda,fds(:,1)/lambda(:),temp2)
+  xDsTotL = abs(temp2/temp1)
+  call Simpson(npL,1,nL,lambda,ftotR/lambda,temp1)
+  call Simpson(npL,1,nL,lambda,fsL(:,nY)/lambda(:),temp2)
+  xAttTotR = abs(temp2/temp1)
+  call Simpson(npL,1,nL,lambda,fde(:,nY)/lambda(:),temp2)
+  xDeTotR = abs(temp2/temp1)
+  call Simpson(npL,1,nL,lambda,fds(:,nY)/lambda(:),temp2)
+  xDsTotR = abs(temp2/temp1)
+  ! normalization factor for output spectra
+  call Simpson(nL,1,nL,lambda,ftotR/lambda,fnormR)
+  call Simpson(nL,1,nL,lambda,ftotL/lambda,fnormL)
+  ! the emerging bolometric flux
+  FbolR = fnormR * Jext(nY)
+  if (slb) FbolL = fnormL * Jext(1)
+  ! calculation of radiation pressure
+  ! nG + 1 contains the sum of all sigma(iG) 1<=iG<=nG
+  do iY=1,nY
+     call Simpson(npL,1,nL,lambda,(sigmaS(nG+1,:)+sigmaA(nG+1,:))*ftot(:,iY)/lambda(:),temp1)
+     RPr(iY) = temp1/(4*pi*clight*mprot*Gconst)*1.0D4*3.84e26/1.988e30*5.0D-26*Jext(iY)/sigmaVe
+  enddo
+  res = 0.0d00
+  ! this is the cut-off for printout of small values (in spectra)
+  limval = 1.0d-20
+  ! Zeljko's calculation of theta1, the ang. size (in arcsec) of the cavity for Fbol=1e-6 W/m2
+  tht1 = 412.6d0/(dsqrt(Ji*4*pi))
+  ! error in %
+  if (SmC(5,model).lt.0.1d0) then
+     call getfs(SmC(5,model)*100.0d0,0,0,Serr)
+  else if (SmC(5,model).ge.0.1d0.and.SmC(5,model).lt.1.0d0) then
+     call getfs(SmC(5,model)*100.0d0,0,1,Serr)
+  else
+     call getfs(SmC(5,model)*100.0d0,0,2,Serr)
+  end if
+
 !!$!--------------  overall parameters to *.out file -----------------------
 !!$! write header to output file *.out
 !!$  if (model.eq.1) then
@@ -2025,11 +2031,12 @@ end function EMfunc
 !!$ if(allocated(Elems)) deallocate(Elems)
 !!$!-----------------------------------------------------------------------
 !!$
-!!$ return
-!!$end subroutine PrOut
-!!$!***********************************************************************
-!!$
-!!$
+  deallocate(ftotL)
+  deallocate(ftotR)
+  deallocate(faux)
+  return
+end subroutine PrOut
+!***********************************************************************
 
 !***********************************************************************
 subroutine CLLOSE(model,Nmodel)
@@ -2197,25 +2204,25 @@ subroutine CLLOSE(model,Nmodel)
   return
 end subroutine CLLOSE
 !***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$subroutine MakeTable(Elems,rows,cols,unt)
-!!$! =======================================================================
-!!$!     This is an auxiliary subroutine for print out of tables
-!!$!     of Elems(Nrows,Ncols) in output unit 'unt'. Nrows = max{npL,npY}.
-!!$!     The array size is defined in Subroutine PrOut.         [MN, Mar'98]
-!!$! =======================================================================
-!!$      IMPLICIT NONE
-!!$      INTEGER rows, cols, unt, k, i
-!!$      DOUBLE PRECISION Elems(rows,cols)
-!!$! -----------------------------------------------------------------------
-!!$      DO k = 1, rows
-!!$        write(unt,'(1p,21E11.3)') (Elems(k,i),i=1,cols)
-!!$      END DO
-!!$! -----------------------------------------------------------------------
-!!$      RETURN
-!!$END subroutine MakeTable
-!!$!***********************************************************************
+
+!***********************************************************************
+subroutine MakeTable(Elems,rows,cols,unt)
+! =======================================================================
+!     This is an auxiliary subroutine for print out of tables
+!     of Elems(Nrows,Ncols) in output unit 'unt'. Nrows = max{npL,npY}.
+!     The array size is defined in Subroutine PrOut.         [MN, Mar'98]
+! =======================================================================
+      IMPLICIT NONE
+      INTEGER rows, cols, unt, k, i
+      DOUBLE PRECISION Elems(rows,cols)
+! -----------------------------------------------------------------------
+      DO k = 1, rows
+        write(unt,'(1p,21E11.3)') (Elems(k,i),i=1,cols)
+      END DO
+! -----------------------------------------------------------------------
+      RETURN
+END subroutine MakeTable
+!***********************************************************************
 
 !!$!***********************************************************************
 !!$subroutine ReadSpectar(lambdas,Llamstar,Lstar,nLs,is,error)

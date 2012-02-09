@@ -37,11 +37,16 @@ Module common
   double precision,allocatable :: omega(:,:)
   double precision,allocatable :: TAUslb(:,:)
   double precision,allocatable :: TAUtot(:)
+  double precision,allocatable :: Jext(:)
   double precision,allocatable :: fsL(:,:), fsR(:,:), fsLbol(:), fsRbol(:),fsbol(:)
+  double precision,allocatable :: fds(:,:)
+  double precision,allocatable :: fde(:,:)
+  double precision,allocatable :: ftot(:,:)
   double precision,allocatable :: Utot(:,:)
   double precision,allocatable :: Ude(:,:)
   double precision,allocatable :: Uds(:,:)
   double precision,allocatable :: Td(:,:)
+  double precision,allocatable :: RPr(:)
 
   character*4 :: version
   parameter (version='4.00')
@@ -70,7 +75,6 @@ Module common
   double precision,allocatable  :: SigmaA(:,:) ! absorbtion crosssection
   double precision,allocatable  :: SigmaS(:,:) ! scattering crosssection
   double precision :: tauFid    ! optical depth at fiducial wavelength
-  double precision :: sigAfid, sigSfid,sigExfid ! crossection fiducial wavelength
   integer :: ver                ! RDW variable
   double precision :: accFlux   ! flux accuracy
   double precision :: accTemp   ! temperature accuracy ((1.+accFlux)**(1./4.)-1.)*0.1

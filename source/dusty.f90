@@ -29,6 +29,7 @@ PROGRAM DUSTY
   call alloc_mem()
 
   CALL ReadLambda()
+  call alloc_mem_nL()
   IF (error.ne.0) THEN 
      PRINT*,'something wrong with lambda grid!'
      STOP
@@ -182,6 +183,23 @@ subroutine GetTau(tau1,tau2,GridType,Nmodel,tau)
 end subroutine GetTau
 !***********************************************************************
 
+subroutine alloc_mem_nL()
+use common
+implicit none 
+  ! Memory allocation----------------------------------
+  allocate(fsL(nL,npY))
+  allocate(fsR(nL,npY))
+  allocate(TAUtot(nL))
+  allocate(TAUslb(nL,npY))
+  allocate(omega(npG+1,nL))
+  allocate(Utot(nL,npY))
+  allocate(Ude(nL,npY))
+  allocate(Uds(nL,npY))
+  allocate(fds(nL,npY))
+  allocate(fde(nL,npY))
+  allocate(ftot(nL,npY))
+end subroutine alloc_mem_nL
+
 subroutine alloc_mem()
 use common
 implicit none 
@@ -195,18 +213,12 @@ implicit none
   allocate(ETAdiscr(npY))
   allocate(ETAzp(npP,npY))
   allocate(abund(npG,npY))
-  allocate(fsL(npL,npY))
-  allocate(fsR(npL,npY))
   allocate(fsLbol(npY))
   allocate(fsRbol(npY))
   allocate(fsbol(npY))
-  allocate(TAUtot(npL))
-  allocate(TAUslb(npL,npY))
-  allocate(omega(npG+1,npL))
   allocate(Td(npG,npY))
-  allocate(Utot(npL,npY))
-  allocate(Ude(npL,npY))
-  allocate(Uds(npL,npY))
+  allocate(Jext(npY))
+  allocate(RPr(npY))
 end subroutine alloc_mem
 
 subroutine dealloc_mem()
@@ -234,4 +246,9 @@ implicit none
   deallocate(Utot)
   deallocate(Ude)
   deallocate(Uds)
+  deallocate(fds)
+  deallocate(fde)
+  deallocate(ftot)
+  deallocate(Jext)
+  deallocate(RPr)
 end subroutine dealloc_mem

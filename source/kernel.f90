@@ -46,7 +46,7 @@ subroutine Kernel(path,lpath,tau,Nmodel)
         if (error.eq.0) then
            ! call Spectral(model) ! no more spectral props.
            ! if (iVerb.eq.2) write(*,*) 'Done with Spectral'
-!!$           call PrOut(model,nG,delta)
+           call PrOut(nY,model,delta)
            print*, 'Done with prOut'
         else
            go to 10
@@ -75,9 +75,14 @@ subroutine GetTauMax(tau0,taumax)
 !=======================================================================
   use common
   implicit none
+  !---parameter
+  double precision tau0,taumax
+  !---local variables
   integer iL
-  double precision tau0,taumax,tau_tmp
+  double precision :: sigAfid, sigSfid,sigExfid ! crossection fiducial wavelength
+  double precision :: tau_tmp
   double precision,allocatable :: faux1(:), faux2(:)
+
   !-------------------------------------------------------------------
   allocate(faux1(nL))
   allocate(faux2(nL))
@@ -210,8 +215,8 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
      ! solve the radiative transfer problem
      call Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss,iterfbol,T4_ext)
      if (iVerb.eq.2) write(*,*)' Done with radiative transfer. '
-!!$     ! calculate diffuse flux
-!!$     ! for slab
+     ! calculate diffuse flux
+     ! for slab
 !!$     if(slb) then
 !!$        ! find the diffuse scattered flux(fl=1 for scatt. and fl=0 is for emission)
 !!$        call SLBdiff(nG,1,omega,TAUslb,T4_ext,em,fdsp,fdsm)
@@ -1101,7 +1106,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
 
   !---- local variable
   integer :: itlim,conv,iter,iG,iL,iY,iY1, moment
-
+  double precision aux1,maxerrT
 !!$  integer i,iY,iY1,iL,iG,nn,itlim,imu,conv,iter,iPstar, iP, iZ, nZ, &
 !!$           iOut, istop
 !!$  double precision  em(npG,npL,npY), tauaux(npY), pstar, result1, omega(npG+1,npL),&
@@ -1196,16 +1201,16 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
      T_old = Td
      ! find Td
      call Find_Temp(nY,T4_ext)
-!!$     ! check convergence for dust temperature
-!!$     maxerrT = 0.0d0
-!!$     aux1 = 0.0d0
-!!$     do iG = 1,nG
-!!$        do iY = 1,nY
-!!$           aux1 = dabs(T_old(iG,iY) - Td(iG,iY))/Td(iG,iY)
-!!$           if (aux1.gt.maxerrT) maxerrT = aux1
-!!$        enddo
-!!$     end do
-!!$     if (maxerrT.le.accConv) conv = 1
+     ! check convergence for dust temperature
+     maxerrT = 0.0d0
+     aux1 = 0.0d0
+     do iG = 1,nG
+        do iY = 1,nY
+           aux1 = dabs(T_old(iG,iY) - Td(iG,iY))/Td(iG,iY)
+           if (aux1.gt.maxerrT) maxerrT = aux1
+        enddo
+     end do
+     if (maxerrT.le.accTemp) conv = 1
 !!$     IF(iInn.eq.1) THEN
 !!$        CALL Bolom(utot,Ubol)
 !!$        CALL Bolom(u_old,Ubol_old)
@@ -1218,15 +1223,15 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
 !!$     END IF
      if (iter.eq.itlim) print'(A,I6,A)','  !!! Reached iteration limit of ',itlim,' !!!!'
   enddo
-!!$  !=== the end of iterations over Td ===
-!!$  if(iVerb.eq.2) write(*,'(1p,A,I4,A,E8.2)') &
-!!$       '  Done with finding dust temperature after ',iter,' iterations. ERR:',maxerrT
-!!$  ! find T_external for the converged dust temperature
-!!$  if (typentry(1).eq.5) call find_Text(nG,T4_ext)
-!!$  ! find Jext, needed in PrOut [MN]
-!!$  do iY = 1, nY
-!!$     Jext(iY) = sigma/pi * T4_ext(iY)
-!!$  end do
+  !=== the end of iterations over Td ===
+  if(iVerb.eq.2) write(*,'(1p,A,I4,A,E8.2)') &
+       '  Done with finding dust temperature after ',iter,' iterations. ERR:',maxerrT
+  ! find T_external for the converged dust temperature
+  if (typentry(1).eq.5) call find_Text(nY,T4_ext)
+  ! find Jext, needed in PrOut [MN]
+  do iY = 1, nY
+     Jext(iY) = sigma/pi * T4_ext(iY)
+  end do
 !!$  ! calculate the emission term using the converged Td
 !!$  call Emission(nG,T4_ext,em)
 !!$  ! calculate total energy density and diffuse flux using the converged Td
@@ -1898,9 +1903,9 @@ subroutine Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
               end do
            end do
         elseif (moment_loc.eq.2) then
-!!$           ! Find diffuse fluxes
-!!$           call SPH_diff(nG,1,initial,iter,iterfbol,T4_ext,em,us,omega,fde)
-!!$           call SPH_diff(nG,2,initial,iter,iterfbol,T4_ext,em,us,omega,fds)
+           ! Find diffuse fluxes
+           call SPH_diff(nY,nP,1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,fde)
+	   call SPH_diff(nY,nP,2,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,fds)
         end if
      end do
   end if
