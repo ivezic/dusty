@@ -1,3 +1,5 @@
+!
+
 !***********************************************************************
 subroutine Kernel(path,lpath,tau,Nmodel)
 !=======================================================================
@@ -119,9 +121,24 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
   integer model,iterfbol,fbolOK,etaOK,iPstar,itereta,y_incr, &
        nY, nYprev, nP, nCav, nIns, nY_old
   logical initial
-  double precision delta,taulim,pstar,taumax, em(npG,npL,npY)
-  double precision, allocatable:: fs(:,:),us(:,:),T4_ext(:)
+  double precision delta,taulim,pstar,taumax
+  double precision, allocatable :: fs(:,:),us(:,:),T4_ext(:)
+  double precision, allocatable :: emiss(:,:,:)
 
+
+  INTERFACE
+     subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
+     iterfbol,T4_ext)
+       use common
+       logical, intent(in) :: initial
+       integer, intent(in) :: y_incr,iterfbol
+       integer :: nY,nP,nYprev,itereta
+       double precision pstar
+       double precision,allocatable :: us(:,:), fs(:,:) 
+       double precision,allocatable :: T4_ext(:)
+       double precision,allocatable :: emiss(:,:,:)
+     end subroutine Rad_Transf
+  END INTERFACE
 !!$  integer model, iterfbol, fbolOK,grid,iY,iL,nY_old,y_incr,imu, &
 !!$       iPstar,EtaOK , iP, iZ, nZ, iOut
 !!$  double precision pstar,taulim, us(npL,npY),comp_fdiff_bol(npY),comp_fdiff_bol1(npY),calc_fdiff(npY), &
@@ -131,9 +148,10 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
 !!$       Udbol(npY), Usbol(npY), fDebol(npY),fDsbol(npY), maxFerr
 
 !--------------------------------------------------------------------------
-  allocate(fs(npL,npY))
-  allocate(us(npL,npY))
-  allocate(T4_ext(npY))
+  allocate(fs(nL,nY))
+  allocate(us(nL,nY))
+  allocate(T4_ext(nY))
+  allocate(emiss(nG,nL,nY))
   if (iX.ne.0) then
      call line(0,2,18)
      write(18,'(a7,i3,a20)') ' model ',model,'  RUN-TIME MESSAGES '
@@ -190,7 +208,7 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
         end if
      end if
      ! solve the radiative transfer problem
-     call Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em,iterfbol,T4_ext)
+     call Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss,iterfbol,T4_ext)
      if (iVerb.eq.2) write(*,*)' Done with radiative transfer. '
 !!$     ! calculate diffuse flux
 !!$     ! for slab
@@ -391,7 +409,7 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
   !---------------------------------------------------------------------
   deallocate(fs)
   deallocate(us)
-  deallocate(T4_ext)
+  deallocate(emiss)
 999 return
 end subroutine solve
 !***********************************************************************
@@ -681,7 +699,7 @@ subroutine Ygrid(pstar,iPstar,itereta,iterfbol,taux,taumax,nY,nYprev,nP,&
      DO iY = 1, nY
         Yloc = Y(iY)
         IF (iterETA.GT.1) THEN
-           CALL LinInter(npY,nYprev,Yprev,EtaTemp,Yloc,iYdummy,ee)
+           CALL LinInter(nY,nYprev,Yprev,EtaTemp,Yloc,iYdummy,ee)
            ETAdiscr(iY) = ee
         ELSE
            ETAdiscr(iY) = ETA(Yloc,nY,nYprev,itereta)
@@ -855,7 +873,7 @@ end subroutine pgrid
       ! if this is iteration over eta (but not the first one) in the case
       ! of dynamical calculation for radiatively driven winds calculate
       ! eta by linear interpolation of eta from the previous iteration
-      call lininter(npY,nYprev,Yprev,etadiscr,Yy,iYdummy,eta)
+      call lininter(nY,nYprev,Yprev,etadiscr,Yy,iYdummy,eta)
       ! otherwise use prescribed formulae for different cases
    else
       ! smooth power-law
@@ -971,13 +989,13 @@ end subroutine pgrid
             endif
             ! or interpolate from the previous solution
          else
-            call lininter(npY,nYprev,Yprev,etadiscr,Yy,iYdummy,eta)
+            call lininter(nY,nYprev,Yprev,etadiscr,Yy,iYdummy,eta)
          end if
       end if
       ! user specified function for eta
       if (denstyp.eq.5) then
          if (Yy.lt.yetaf(nYetaf)) then
-            call lininter(npY,nYetaf,yetaf,etaf,Yy,iYdummy,eta)
+            call lininter(nY,nYetaf,yetaf,etaf,Yy,iYdummy,eta)
          else
             eta = etaf(nYetaf)
          end if
@@ -1037,7 +1055,7 @@ end subroutine Insert
 !***********************************************************************
 
 !********************************************************************
-subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em, &
+subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
      iterfbol,T4_ext)
 !======================================================================
   use common
@@ -1045,8 +1063,44 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em, &
   logical, intent(in) :: initial
   integer, intent(in) :: y_incr,iterfbol
   integer :: nY,nP,nYprev,itereta
-  double precision pstar, us(npL,npY), fs(npL,npY), em(npG,npL,npY), &
-       T4_ext(npY)
+  double precision pstar
+  double precision,allocatable :: us(:,:), fs(:,:)
+  double precision,allocatable :: T_old(:,:),u_old(:,:),T4_ext(:)
+  double precision,allocatable :: emiss(:,:,:)
+  INTERFACE
+     subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
+       integer nY, nP
+       double precision :: pstar
+       double precision, allocatable :: T4_ext(:)
+       double precision, allocatable :: fs(:,:),us(:,:)
+     end subroutine Find_Tran
+     subroutine find_Text(nY,T4_ext)
+       integer nY
+       double precision, allocatable :: T4_ext(:)
+     end subroutine find_Text
+     subroutine Emission(nY,T4_ext,emiss)
+       integer nY
+       double precision, allocatable :: T4_ext(:),emiss(:,:,:)
+     end subroutine Emission
+     subroutine find_diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
+       integer nY,nP,iter,iterfbol,moment
+       logical initial
+       double precision, allocatable :: T4_ext(:)
+       double precision, allocatable :: us(:,:)
+       double precision, allocatable :: emiss(:,:,:)
+     end subroutine find_diffuse
+     subroutine init_temp(nY,T4_ext,us)
+       integer nY
+       double precision,allocatable :: us(:,:),T4_ext(:)
+     end subroutine init_temp
+     subroutine find_temp(nY,T4_ext)
+       integer :: nY
+       double precision, allocatable :: T4_ext(:)
+     end subroutine find_temp
+  END INTERFACE
+
+  !---- local variable
+  integer :: itlim,conv,iter,iG,iL,iY,iY1, moment
 
 !!$  integer i,iY,iY1,iL,iG,nn,itlim,imu,conv,iter,iPstar, iP, iZ, nZ, &
 !!$           iOut, istop
@@ -1058,6 +1112,8 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em, &
 !!$  double precision, dimension(:), allocatable:: xg, wg
   external eta
 
+  allocate(T_old(nG,nY))
+  allocate(u_old(nL,nY))
   !------------------------------------------------------------------------
   error = 0
   if(sph) then
@@ -1080,71 +1136,66 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em, &
   call getOmega(nY)
   ! generate stellar spectrum
   call Find_Tran(pstar,nY,nP,T4_ext,us,fs)
-!!$  if(iVerb.eq.2) write(*,*)' Done with transmitted radiation.'
-!!$  ! issue a message in fname.out about the condition for neglecting
-!!$  ! occultation only if T1 is given in input:
-!!$  if(typentry(1).eq.5.and.sph) then
-!!$     if(iterfbol.eq.1.and.itereta.eq.1.and.right.eq.0) call OccltMSG(us)
-!!$  end if
-!!$  ! finish when file with the stellar spectrum is not available
-!!$  if (error.eq.3) goto 999
-!!$  ! in the case of first (lowest) optical depth,
-!!$  ! us is the intial approximation for utot(iL,iY) for the first iteration over Td
-!!$  ! Find initial approximation of Td for the case of first (lowest) optical depth.
-!!$  if (initial.and.iterfbol.eq.1) then
-!!$     call Init_Temp(nG,T4_ext,us)
-!!$     if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
-!!$  end if
-!!$  !!**  added to check convergence, recorded in 'fname.err' (unit=38)[MN]
-!!$  IF(iInn.eq.1) write(38,'(2(a8,f5.0))') 'taufid0=',taufid0
-!!$  IF(iInn.eq.1) write(38,*)'iter    maxerrT    maxerrU'
-!!$  !!**
-!!$  itlim = 50000
-!!$  conv = 0
-!!$  iter = 0
-!!$  !=== iterations over dust temperature =========
-!!$  do while (conv.eq.0.and.iter.le.itlim)
-!!$     iter = iter + 1
-!!$     ! if y-grid points are increased, linearly interpolate previous
-!!$     ! dust temperature for the new y-grid
-!!$     if (y_incr.eq.1.and.iter.eq.1) then
-!!$        T_old = Td
-!!$        u_old = utot
-!!$        do iY = 1, nY, 2
-!!$           iY1 = int((iY + 1)/2)
-!!$           do iG = 1, nG
-!!$              Td(iG,iY) = T_old(iG,iY1)
-!!$           end do
-!!$           do iL = 1, nL
-!!$              utot(iL,iY) = u_old(iL,iY1)
-!!$           end do
-!!$        end do
-!!$        do  iY = 2, nY-1, 2
-!!$           do iG = 1, nG
-!!$              Td(iG,iY) = abs(Td(iG,iY+1) + Td(iG,iY-1))/2.0d0
-!!$           end do
-!!$           do iL = 1, nL
-!!$              utot(iL,iY) =  abs(utot(iL,iY+1) + utot(iL,iY-1))/2.0d0
-!!$           end do
-!!$        end do
-!!$     end if
-!!$     ! find T_external for the new y-grid if T(1) given in input
-!!$     if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
-!!$        call find_Text(nG,T4_ext)
-!!$     elseif (.not.initial.and.typentry(1).eq.5) then
-!!$        call find_Text(nG,T4_ext)
-!!$     end if
-!!$     !!** this is to check convergence on U [MN]
-!!$     U_prev = Utot
-!!$     ! find emission term
-!!$     call Emission(nG,T4_ext,em)
-!!$     ! moment = 1 is for finding total energy density only
-!!$     moment = 1
-!!$     call Find_Diffuse(nG,initial,iter,iterfbol,T4_ext,us,em,omega,error)
-!!$     ! assign previus Td to T_old
-!!$     T_old = Td
-!!$     ! find Td
-!!$     call Find_Temp(nG,T4_ext)
+  if(iVerb.eq.2) write(*,*)' Done with transmitted radiation.'
+  ! issue a message in fname.out about the condition for neglecting
+  ! occultation only if T1 is given in input:
+  if(typentry(1).eq.5.and.sph) then
+     if(iterfbol.eq.1.and.itereta.eq.1.and.right.eq.0) call OccltMSG(us)
+  end if
+  ! finish when file with the stellar spectrum is not available
+  if (error.eq.3) goto 999
+  ! in the case of first (lowest) optical depth,
+  ! us is the intial approximation for utot(iL,iY) for the first iteration over Td
+  ! Find initial approximation of Td for the case of first (lowest) optical depth.
+  if (initial.and.iterfbol.eq.1) then
+     call Init_Temp(nY,T4_ext,us)
+     if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
+  end if
+!  itlim = 50000
+  itlim = 500
+  conv = 0
+  iter = 0
+  !=== iterations over dust temperature =========
+  do while (conv.eq.0.and.iter.le.itlim)
+     iter = iter + 1
+     T_old = Td
+     u_old = utot
+     ! if y-grid points are increased, linearly interpolate previous
+     ! dust temperature for the new y-grid
+     if (y_incr.eq.1.and.iter.eq.1) then
+        do iY = 1, nY, 2
+           iY1 = int((iY + 1)/2)
+           do iG = 1, nG
+              Td(iG,iY) = T_old(iG,iY1)
+           end do
+           do iL = 1, nL
+              utot(iL,iY) = u_old(iL,iY1)
+           end do
+        end do
+        do  iY = 2, nY-1, 2
+           do iG = 1, nG
+              Td(iG,iY) = abs(Td(iG,iY+1) + Td(iG,iY-1))/2.0d0
+           end do
+           do iL = 1, nL
+              utot(iL,iY) =  abs(utot(iL,iY+1) + utot(iL,iY-1))/2.0d0
+           end do
+        end do
+     end if
+     ! find T_external for the new y-grid if T(1) given in input
+     if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
+        call find_Text(nY,T4_ext)
+     elseif (.not.initial.and.typentry(1).eq.5) then
+        call find_Text(nY,T4_ext)
+     end if
+     ! find emission term
+     call Emission(nY,T4_ext,emiss)
+     ! moment = 1 is for finding total energy density only
+     moment = 1
+     call Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
+     ! assign previus Td to T_old
+     T_old = Td
+     ! find Td
+     call Find_Temp(nY,T4_ext)
 !!$     ! check convergence for dust temperature
 !!$     maxerrT = 0.0d0
 !!$     aux1 = 0.0d0
@@ -1157,7 +1208,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em, &
 !!$     if (maxerrT.le.accConv) conv = 1
 !!$     IF(iInn.eq.1) THEN
 !!$        CALL Bolom(utot,Ubol)
-!!$        CALL Bolom(U_prev,Ubol_old)
+!!$        CALL Bolom(u_old,Ubol_old)
 !!$        maxerrU = 0.0d0  !just for info, iterations are over Td [MN]
 !!$        do iY = 1,nY
 !!$           aux1 = dabs(Ubol_old(iY) - Ubol(iY)) / Ubol(iY)
@@ -1165,7 +1216,8 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em, &
 !!$        enddo
 !!$        write(38,'(i4,1p,2e12.3)') iter, maxerrT, maxerrU
 !!$     END IF
-!!$  enddo
+     if (iter.eq.itlim) print'(A,I6,A)','  !!! Reached iteration limit of ',itlim,' !!!!'
+  enddo
 !!$  !=== the end of iterations over Td ===
 !!$  if(iVerb.eq.2) write(*,'(1p,A,I4,A,E8.2)') &
 !!$       '  Done with finding dust temperature after ',iter,' iterations. ERR:',maxerrT
@@ -1225,6 +1277,9 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,em, &
 !!$        END DO
 !!$      END DO
 !!$   END IF
+  deallocate(T_old)
+  deallocate(u_old)
+  deallocate(T4_ext)
 999 return
 end subroutine Rad_Transf
 !***********************************************************************
@@ -1238,38 +1293,58 @@ subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
 !=======================================================================
   use common
   implicit none
-  integer i, iY, iL, iz, is, nZ, nn, nY, nP
-  double precision  usL(npL,npY),arg, dyn2,usR(npL,npY), &
-       eint2, eint3, x, res, &
-       denom, expow, m0(npL,npY), m1(npL,npY),m1p(npL,npY), &
-       m1m(npL,npY), tauaux(npL,npY), zeta, result1, eta
-  double precision, intent(in) :: pstar
-  double precision, intent(out) :: fs(npL,npY),us(npL,npY),T4_ext(npY)
-  external eta
+  !--- parameter
+  integer nY, nP
+  double precision :: pstar
+  double precision, allocatable :: T4_ext(:)
+  double precision, allocatable :: fs(:,:),us(:,:)
+
+  integer i, iY, iL, iz, is, nZ, nn
+  double precision  arg, dyn2, eint2, eint3, x, res, &
+       denom, expow,  tauaux(npL,npY), zeta, result1, eta
+  double precision,allocatable ::  usL(:,:),usR(:,:),&
+       m0(:,:), m1(:,:),m1p(:,:),m1m(:,:)
+  
+external eta
+  INTERFACE
+     subroutine BOLOM(q,qbol,nY)
+       integer nY
+       double precision, allocatable :: q(:,:), qbol(:)
+     end subroutine BOLOM
+     subroutine SPH_ext_illum(m0,m1,m1p,m1m,nY,nP)
+       integer nY, nP
+       double precision,allocatable ::  m0(:,:), m1(:,:),m1p(:,:),m1m(:,:)
+     end subroutine SPH_ext_illum
+  END INTERFACE
 !-----------------------------------------------------------------------
 
+  allocate(usL(nL,nY))
+  allocate(usR(nL,nY))
+  allocate(m0(nL,nY))
+  allocate(m1(nL,nY))
+  allocate(m1p(nL,nY))
+  allocate(m1m(nL,nY))
+
   dyn2 = 1.0d-30
-  ! intialise
-  usL = 0.0d0
-  usR = 0.0d0
-  us = 0.0d0
-  fsL = 0.0d0
-  fsR = 0.0d0
-  fs = 0.0d0
-  fsLbol = 0.0d0
-  fsRbol = 0.0d0
-  fsbol = 0.0d0
-!!$  ! left-side source is always present
-!!$  if(left.gt.0) then
-!!$     call getSpShape(shpL,1)
-!!$  else
-!!$     shpl = 0.0d0
-!!$  end if
-!!$  if(right.gt.0) then
-!!$     call getSpShape(shpR,2)
-!!$  else
-!!$     shpr = 0.0d0
-!!$  end if
+!!$  ! intialise
+!!$  usL = 0.0d0
+!!$  usR = 0.0d0
+!!$  fsL = 0.0d0
+!!$  fsR = 0.0d0
+!!$  fsLbol = 0.0d0
+!!$  fsRbol = 0.0d0
+!!$  fsbol = 0.0d0
+!!$ !!$  ! left-side source is always present
+!!$ !!$  if(left.gt.0) then
+!!$ !!$     call getSpShape(shpL,1)
+!!$ !!$  else
+!!$ !!$     shpl = 0.0d0
+!!$ !!$  end if
+!!$ !!$  if(right.gt.0) then
+!!$ !!$     call getSpShape(shpR,2)
+!!$ !!$  else
+!!$ !!$     shpr = 0.0d0
+!!$ !!$  end if
   ! define T_external for typEntry(1).ne.5
   if (typEntry(1).ne.5) then
      ! for slab
@@ -1309,6 +1384,7 @@ subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
      end if
   else
   end if
+  print*,ksi
   do iY = 1, nY
      ! loop over wavelengths
      do iL = 1, nL
@@ -1433,6 +1509,12 @@ subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
   write(12,*)' ***************************************************'
   error = 3
   !--------------------------------------------------------------------
+  deallocate(usL)
+  deallocate(usR)
+  deallocate(m0)
+  deallocate(m1)
+  deallocate(m1p)
+  deallocate(m1m)
 999 return
 end subroutine Find_Tran
 !***********************************************************************
@@ -1533,11 +1615,12 @@ subroutine Bolom(q,qbol,nY)
 ! (nL,nY) [coming from grids.inc], and qBol is an array of physical size
 ! (npY) and real size nY.                              [Z.I., Mar. 1996]
 !=======================================================================
-  use common, only: npL, nL, lambda, npY
+  use common
   implicit none
 
   integer iL, iY, nY
-  double precision q(npL,npY), qaux(npL), qbol(npY), resaux
+  double precision  qaux(npL), resaux
+  double precision, allocatable :: q(:,:), qbol(:)
   !---------------------------------------------------------------------
   ! loop over iY (radial coordinate)
 
@@ -1547,7 +1630,7 @@ subroutine Bolom(q,qbol,nY)
      do iL = 1, nL
         qaux(iL) = q(iL,iY)/lambda(iL)
      end do
-     call Simpson(npL,1,nL,lambda,qaux,resaux)
+     call Simpson(nL,1,nL,lambda,qaux,resaux)
      qbol(iY) = resaux
   end do
   !---------------------------------------------------------------------
@@ -1563,12 +1646,23 @@ subroutine SPH_ext_illum(m0,m1,m1p,m1m,nY,nP)
 !=======================================================================
   use common
   implicit none
-  integer i,ii, iP,iL, n,nn,nZ, iz, izz, iY,iNloc, nY, nP
-  double precision eta,tauaux(npY), z(np,nY), m0(npL,npY), m1(npL,npY), &
-       m1m(npL,npY),m1p(npL,npY),result1, result2, term1(npL,npP),term2(npL,npP), &
-       term_aux1(npP), x1, x2, p1, dyn2,p_loc,Yloc1, angle(npP), expow1, expow2
-  double precision, dimension(:), allocatable:: xg,  wg
+  !--- parameter
+  integer nY, nP
+  double precision,allocatable ::  m0(:,:), m1(:,:),m1p(:,:),m1m(:,:)
+  !--- local variables
+  integer i,ii, iP,iL, n,nn,nZ, iz, izz, iY,iNloc
+  double precision eta, result1, result2, &
+        x1, x2, p1, dyn2,p_loc,Yloc1,  expow1, expow2
+  double precision,allocatable :: term1(:,:),term2(:,:),term_aux1(:), &
+       tauaux(:), z(:,:),angle(:),xg(:),  wg(:)
   external eta
+
+  allocate(term1(nL,nP))
+  allocate(term2(nL,nP)) 
+  allocate(term_aux1(nP))
+  allocate(tauaux(nY)) 
+  allocate(z(nP,nY))
+  allocate(angle(nP))
 !-----------------------------------------------------------------------
   dyn2 = 1.0d-30
   error = 0
@@ -1658,73 +1752,103 @@ subroutine SPH_ext_illum(m0,m1,m1p,m1m,nY,nP)
      end do
   end do
   !-----------------------------------------------------------------------
+  deallocate(term1)
+  deallocate(term2) 
+  deallocate(term_aux1)
+  deallocate(tauaux) 
+  deallocate(z)
+  deallocate(angle)
   return
 end subroutine SPH_ext_illum
 !***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$subroutine Emission(nG,T4_ext,emiss)
-!!$!=======================================================================
-!!$! This subroutine calculates emission term from the temperature and abund
-!!$! arrays for flag=0, and adds U to it for flag=1.
-!!$!                                                      [Z.I., Mar. 1996]
-!!$!=======================================================================
-!!$  use common, only: npG,nY,npY,nL,npL,lambda,Td, abund,dynrange
-!!$  implicit none
-!!$  integer iG, iY, iL, nG
-!!$  double precision  emiss(npG,npL,npY),emig, tt, xP,Planck,T4_ext(npY)
-!!$  ! -------------------------------------------------------------------
-!!$
-!!$  ! first initialize Emiss
-!!$  emiss = 0.0d0
-!!$  ! calculate emission term for each component and add it to emiss
-!!$  ! loop over wavelengths
-!!$  do iL = 1, nL
-!!$     ! loop over radial coordinate
-!!$     do iY = 1, nY
-!!$        ! loop over grains
-!!$        do iG = 1, nG
-!!$           xP = 14400.0d0/(lambda(iL)*Td(iG,iY))
-!!$           tt = (Td(iG,iY)**4.0d0) / T4_ext(iY)
-!!$           emig = abund(iG,iY)*tt*Planck(xP)
-!!$           if (emig.lt.dynrange*dynrange) emig = 0.0d0
-!!$           ! add contribution for current grains
-!!$           emiss(iG,iL,iY) = emig
-!!$           if (emiss(iG,iL,iY).lt.dynrange*dynrange) emiss(iG,iL,iY) = 0.0d0
-!!$        end do
-!!$     end do
-!!$  end do
-!!$  ! --------------------------------------------------------------------
-!!$  return
-!!$end subroutine Emission
-!!$!***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$subroutine Find_Diffuse(nG,initial,iter,iterfbol,T4_ext,us,em,omega,error)
-!!$!=======================================================================
-!!$! This subroutine finds the diffuse en.density for slab and sphere,
-!!$! and the diffuse flux for sphere.                       [Deka,'08]
-!!$! Renamed some variables for easier reading:
-!!$! faux becomes Sfn_em, faux1 becomes Sfn_sc, removed b(npY),using Utot directly instead.
-!!$!                                                        [MN'10]
-!!$!=======================================================================
-!!$  use common
-!!$  implicit none
-!!$  integer iL,iY,iP,j, iYaux, kronecker, error,iter,iterfbol,flag, nZ,nG,iG
-!!$  double precision us(npL,npY), em(npG,npL,npY), omega(npG+1,npL),eint2, &
-!!$       sph_em(npL,npY),sph_sc(npL,npY),tau(npY),T4_ext(npY),Sfn_em(npY), &
-!!$       Sfn_sc(npY),sum1,sum2,dyn2, frac
-!!$  logical initial
-!!$  external eint2
-!!$  !----------------------------------------------------------------------
-!!$  dyn2 = 1.0d-30
-!!$  error = 0
-!!$  Sfn_em(:) = 0.0d0
-!!$  Sfn_sc(:) = 0.0d0
-!!$  ! for slab calculate new energy density
-!!$  ! loop over wavelengths
-!!$  !------------for slab ----------------
-!!$  if(slb) then 
+
+!***********************************************************************
+subroutine Emission(nY,T4_ext,emiss)
+!=======================================================================
+! This subroutine calculates emission term from the temperature and abund
+! arrays for flag=0, and adds U to it for flag=1.
+!                                                      [Z.I., Mar. 1996]
+!=======================================================================
+  use common
+  implicit none
+  ! ---- parameter
+  integer nY
+  double precision, allocatable :: T4_ext(:)
+  double precision, allocatable :: emiss(:,:,:)
+  ! ---- local variable 
+  integer iG, iY, iL
+  double precision  emig, tt, xP,Planck
+  ! -------------------------------------------------------------------
+
+  ! first initialize Emiss
+  emiss = 0.0d0
+  ! calculate emission term for each component and add it to emiss
+  ! loop over wavelengths
+  do iL = 1, nL
+     ! loop over radial coordinate
+     do iY = 1, nY
+        ! loop over grains
+        do iG = 1, nG
+           xP = 14400.0d0/(lambda(iL)*Td(iG,iY))
+           tt = (Td(iG,iY)**4.0d0) / T4_ext(iY)
+           emig = abund(iG,iY)*tt*Planck(xP)
+           if (emig.lt.dynrange*dynrange) emig = 0.0d0
+           ! add contribution for current grains
+           emiss(iG,iL,iY) = emig
+           if (emiss(iG,iL,iY).lt.dynrange*dynrange) emiss(iG,iL,iY) = 0.0d0
+        end do
+     end do
+  end do
+  ! --------------------------------------------------------------------
+  return
+end subroutine Emission
+!***********************************************************************
+
+!***********************************************************************
+subroutine Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
+!=======================================================================
+! This subroutine finds the diffuse en.density for slab and sphere,
+! and the diffuse flux for sphere.                       [Deka,'08]
+! Renamed some variables for easier reading:
+! faux becomes Sfn_em, faux1 becomes Sfn_sc, removed b(npY),using Utot directly instead.
+!                                                        [MN'10]
+!=======================================================================
+  use common
+  implicit none
+  ! --- parameter
+  integer nY,nP,iter,iterfbol,moment
+  logical initial
+  double precision, allocatable :: T4_ext(:)
+  double precision, allocatable :: us(:,:)
+  double precision, allocatable :: emiss(:,:,:)
+  ! --- local variabels
+  integer iL,iY,iP,j, iYaux, kronecker,flag, nZ,iG, moment_loc
+  double precision eint2, &
+       Sfn_sc(npY),sum1,sum2,dyn2, frac
+  double precision,allocatable :: sph_em(:,:),sph_sc(:,:),tau(:),Sfn_em(:)
+  external eint2
+
+  INTERFACE 
+     subroutine SPH_DIFF(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,vec2)
+       integer nY,nP,flag1,moment_loc,iter,iterfbol
+       double precision, allocatable :: T4_ext(:),emiss(:,:,:),us(:,:),vec2(:,:)
+       logical initial
+     end subroutine SPH_DIFF
+  END INTERFACE
+
+  allocate(sph_em(nL,nY))
+  allocate(sph_sc(nL,nY))
+  allocate(tau(nY))
+  allocate(Sfn_em(nY))
+  !----------------------------------------------------------------------
+  dyn2 = 1.0d-30
+  error = 0
+  Sfn_em(:) = 0.0d0
+  Sfn_sc(:) = 0.0d0
+  ! for slab calculate new energy density
+  ! loop over wavelengths
+  !------------for slab ----------------
+  if(slb) then 
 !!$     do iL = 1, nL
 !!$        do iY = 1,nY
 !!$           tau(iY) = TAUslb(iL,iY)
@@ -1759,296 +1883,333 @@ end subroutine SPH_ext_illum
 !!$        end do
 !!$     end do  !end do over lambda
 !!$  !-----------for sphere ----------------
-!!$  elseif(sph) then 
-!!$     do moment_loc = 1, moment
-!!$        if (moment_loc.eq.1) then
-!!$           ! Find diffuse en.density
-!!$           call SPH_diff(nG,1,initial,iter,iterfbol,T4_ext,em,us,omega,sph_em)
-!!$	   call SPH_diff(nG,2,initial,iter,iterfbol,T4_ext,em,us,omega,sph_sc)
-!!$           ! find total energy density
-!!$           do iY = 1, nY
-!!$              do  iL = 1, nL
-!!$                 utot(iL,iY) = us(iL,iY) + sph_em(iL,iY) + sph_sc(iL,iY)
-!!$                 Ude(iL,iY) = sph_em(iL,iY)
-!!$                 Uds(iL,iY) = sph_sc(iL,iY)
-!!$              end do
-!!$           end do
-!!$        elseif (moment_loc.eq.2) then
+  elseif(sph) then 
+     do moment_loc = 1, moment
+        if (moment_loc.eq.1) then
+           ! Find diffuse en.density
+           call SPH_diff(nY,nP,1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,sph_em)
+	   call SPH_diff(nY,nP,2,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,sph_sc)
+           ! find total energy density
+           do iY = 1, nY
+              do  iL = 1, nL
+                 utot(iL,iY) = us(iL,iY) + sph_em(iL,iY) + sph_sc(iL,iY)
+                 Ude(iL,iY) = sph_em(iL,iY)
+                 Uds(iL,iY) = sph_sc(iL,iY)
+              end do
+           end do
+        elseif (moment_loc.eq.2) then
 !!$           ! Find diffuse fluxes
 !!$           call SPH_diff(nG,1,initial,iter,iterfbol,T4_ext,em,us,omega,fde)
 !!$           call SPH_diff(nG,2,initial,iter,iterfbol,T4_ext,em,us,omega,fds)
-!!$        end if
-!!$     end do
-!!$  end if
-!!$  !---------------------------------------------------------------------
-!!$  return
-!!$end subroutine Find_Diffuse
-!!$!***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$subroutine Find_Temp(nG,T4_ext)
-!!$!=======================================================================
-!!$! This subroutine finds new temperature from Utot.
-!!$! Temperature is obtained by solving:
-!!$!   f2(y)*f1(y) - g(T) = 0
-!!$! where
-!!$!   f1(y) = Int(Qabs*Utot*dlambda)
-!!$!   f2(y) = T4_ext
-!!$!   g(T) = qP(Td)*Td**4
-!!$!   T_ext is the effective T of the illuminating radiation
-!!$!                                                [ZI'96, MN,'00, Deka, 2008]
-!!$!=======================================================================
-!!$  use common
-!!$  implicit none
-!!$  integer iG, iY, iL,nG
-!!$  double precision  fnum(npL),fdenum(npL),xP,Planck, qpt1,qu1,us(npL,npY),&
-!!$       T4_ext(npY),gg, ff(npL), fnum1
-!!$  !---------------------------------------------------------------------
-!!$
-!!$  ! if T1 given in input:
-!!$  if(typentry(1).eq.5) call find_Text(nG,T4_ext)
-!!$  ! loop over grains
-!!$  do iG = 1, nG
-!!$     ! loop over radial positions (solving f1-f2*g(t)=0)
-!!$     do iY = 1, nY
-!!$        ! calculate f1 and f2
-!!$        do iL = 1, nL
-!!$           fnum(iL) = sigmaA(iG,iL)*utot(iL,iY)/lambda(iL)
-!!$           xP = 14400.0d0/lambda(iL)/Td(iG,iY)
-!!$           ff(iL) = sigmaA(iG,iL)*Planck(xP)/ lambda(iL)
-!!$        end do
-!!$        call Simpson(npL,1,nL,lambda,fnum,fnum1)
-!!$        call Simpson(npL,1,nL,lambda,ff,gg)
-!!$        Td(iG,iY) = (fnum1*T4_ext(iY)/gg)**(1.0d0/4.0d0)
-!!$     end do
-!!$  end do
-!!$  !---------------------------------------------------------------------
-!!$  return
-!!$end subroutine Find_Temp
-!!$!***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$subroutine Find_Text(nG,T4_ext)
-!!$!=======================================================================
-!!$  use common
-!!$  implicit none
-!!$  integer iG,iY,iL,nG
-!!$  double precision  fnum(npL),fdenum(npL),xP,Planck, qPT1,qU1,T4_ext(npY)
-!!$  !----------------------------------------------------------------------
-!!$
-!!$  ! set to fiducial Grain
-!!$  do iL = 1, nL
-!!$     fnum(iL) = sigmaA(ifidG,iL)*utot(iL,1)/lambda(iL)
-!!$!     print*,sigmaA(ifidG,iL),utot(iL,1)
-!!$     xP = 14400.0d0/lambda(iL)/ Tsub(ifidG)
-!!$     fdenum(iL) = sigmaA(ifidG,iL)*Planck(xP)/lambda(iL)
-!!$  end do
-!!$  call Simpson(npL,1,nL,lambda,fnum,qU1)
-!!$  call Simpson(npL,1,nL,lambda,fdenum,qPT1)
-!!$  if (sph) then
-!!$     do iY = 1, nY
-!!$        T4_ext(iY) = (Tsub(ifidG)**4.0d0)*(qPT1/qU1)/(Y(iY)**2.0d0)
-!!$     end do
-!!$  elseif(slb) then
-!!$     do iY = 1, nY
-!!$        T4_ext(iY) = Tsub(ifidG)**4.0d0*(qPT1/qU1)
-!!$     end do
-!!$  end if
-!!$  do iG=1,nG
-!!$     if (iG.ne.ifidG) then
-!!$        do iL = 1, nL
-!!$           fnum(iL) = sigmaA(iG,iL)*utot(iL,1)/lambda(iL)
-!!$           xP = 14400.0d0/lambda(iL) / Tsub(ifidG)
-!!$           fdenum(iL) = sigmaA(iG,iL)*Planck(xP)/lambda(iL)
-!!$        end do
-!!$        call Simpson(npL,1,nL,lambda,fnum,qU1)
-!!$        call Simpson(npL,1,nL,lambda,fdenum,qPT1)
-!!$        Tsub(iG) = (T4_ext(1)*qU1/qPT1)**(1.0d0/4.0d0)
-!!$     end if
-!!$  end do
-!!$  if (typentry(1).eq.5) then
-!!$     Ji = sigma/pi*T4_ext(1)
-!!$     Jo = ksi * Ji
-!!$  endif
-!!$!-----------------------------------------------------------------------
-!!$  return
-!!$end subroutine Find_Text
-!!$!***********************************************************************
-!!$
-!!$
-!!$!***********************************************************************
-!!$subroutine SPH_diff(nG,flag1,initial,iter,iterfbol,T4_ext,em,us,omega,vec2)
-!!$!=======================================================================
-!!$! This subroutine finds the diffuse part for both emission and scattering
-!!$! for spherical shell                                        [Deka, 2008]
-!!$!! If flag1=1 for vec1=Em; flag1=2 for vec1=Us
-!!$!!** Introduced integration of diffuse radiation with Nordlund, as in old Dusty.
-!!$!!** Restored ETAzp instead of the time-consuming GauLeg integration
-!!$!!** New commments added.                                   [MN, July'10]
-!!$!=======================================================================
-!!$  use omp_lib
-!!$  use common
-!!$  implicit none
-!!$  integer iP,iL,iZ,iZz,nZ,iY,iYy,iter,iterfbol, iNloc, flag1,flagN, error,iG,nG
-!!$  integer thread_id
-!!$  double precision vec2(npL,npY), omega(npG+1,npL), Iplus1(npP,npL)
-!!$  double precision Iplus2(npP,npL), Iminus(npP,npL), T4_ext(npY), aux2(npY,max_threads)
-!!$  double precision diff(npY,max_threads), S_fun(npY,max_threads), func(npY,max_threads)
-!!$  double precision faux3(npY,max_threads), xN(npP,max_threads), yN(npP,max_threads), expow1
-!!$  double precision result1, result2, res1, frac, us(npL,npY),em(npG,npL,npY), S_loc, p_loc
-!!$  logical initial
-!!$!-----------------------------------------------------------------------
-!!$  Iplus1 = 0.0d0
-!!$  Iplus2 = 0.0d0
-!!$  Iminus = 0.0d0
-!!$  !!** for each radial grid point calculate the integrals from Sec.4.1 in Blueprint:
-!!$  do iY = 1, nY
-!!$     do iP = 1, Plast(iY)
-!!$        iZz  = iY + 1 - iYfirst(iP)  !this is for z in eq.(4.1.5)
-!!$        ! upper limit for the counter of z position
-!!$        nZ  = nY + 1 - iYfirst(iP)   !nZ is index for zmax=sqrt(Y**2-p**2) [MN]
-!!$        !$OMP PARALLEL DO FIRSTPRIVATE(thread_id,frac,iYy,p_loc,S_loc,iNloc,expow1,res1)
-!!$        do iL = 1, nL
-!!$           thread_id = omp_get_thread_num()+1
-!!$           do iYy = 1, nY
-!!$              S_fun(iYy,thread_id) = 0
-!!$              do iG =1, nG
-!!$                 frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
-!!$                 if (flag1.eq.1) then
-!!$                    ! find the diffuse emission term, vec1=em
-!!$                    S_fun(iYy,thread_id) = S_fun(iYy,thread_id) + frac*(1.0d0-omega(iG,iL))*em(iG,iL,iYy)*T4_ext(iYy)
-!!$                 elseif (flag1.eq.2) then
-!!$                    ! find the scattering term, vec1=Us initially, or Utot afterwards
-!!$                    if (initial.and.iter.eq.1.and.iterfbol.eq.1) then
-!!$                       S_fun(iYy,thread_id) = S_fun(iYy,thread_id) + frac*omega(iG,iL)*us(iL,iYy)*T4_ext(iYy)
-!!$                    else
-!!$                       S_fun(iYy,thread_id) = S_fun(iYy,thread_id) + frac*omega(ig,iL)*utot(iL,iYy)*T4_ext(iYy)
-!!$                    end if
-!!$                 end if
-!!$              end do
-!!$           end do ! end do over dummy iYy
-!!$           if (P(iP).le.1.0d0) then
-!!$              ! inside the cavity
-!!$              do iZ = 1, nZ
-!!$                 iYy = iYfirst(iP) + iZ - 1
-!!$                 diff(iZ,thread_id) = S_fun(iYy,thread_id)
-!!$              end do
-!!$           else
-!!$              ! in the shell
-!!$              do iZ = 1, nZ-1
-!!$                 iYy = iYfirst(iP) + iZ - 1
-!!$                 if(iZ.eq.1.and.P(iP).gt.Y(iYy).and.P(iP).lt.Y(iYy+1)) then
-!!$                    p_loc = P(iP)
-!!$                    call LININTER(npY,nY,Y,S_fun(:,thread_id),p_loc,iNloc,S_loc)
-!!$                    diff(iZ,thread_id) = abs(S_loc)
-!!$                 else
-!!$                    diff(iZ,thread_id) = S_fun(iYy,thread_id)
-!!$                 end if
-!!$              end do
-!!$              diff(nZ,thread_id) = S_fun(nY,thread_id)
-!!$           end if
-!!$           do iZ = 1, nZ
-!!$              aux2(iZ,thread_id) = tautot(iL)*ETAzp(iP,iZ)
-!!$              ! 1st term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
-!!$              !     from z0-midpoint to the outer edge of the shell (on the left side)  [MN]
-!!$              faux3(iZ,thread_id) = exp(-aux2(iZ,thread_id))
-!!$!              func(iZ,thread_id) =  diff(iZ,thread_id)
-!!$           end do
-!!$!           CALL Simpson(npY,1,nZ,faux3(:,thread_id),func(:,thread_id),res1)
-!!$           CALL Simpson(npY,1,nZ,faux3(:,thread_id),diff(:,thread_id),res1)
-!!$           Iplus1(iP,iL) = abs(res1)*exp(-aux2(iZz,thread_id))
-!!$           ! 2nd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
-!!$           !     from z0-midpoint to the running z-point
-!!$           DO iZ = 1, iZz
-!!$              expow1 = tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,iZ)) !this is tau(z',z;p)
-!!$              faux3(iZ,thread_id) = exp(-expow1)
-!!$!              func(iZ,thread_id) =  diff(iZ,thread_id)
-!!$           END DO
-!!$!           CALL Simpson(npY,1,iZz,faux3(:,thread_id),func(:,thread_id),res1)
-!!$           CALL Simpson(npY,1,iZz,faux3(:,thread_id),diff(:,thread_id),res1)
-!!$           Iplus2(iP,iL) = abs(res1)
-!!$           ! 3rd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
-!!$           !     from the running z-point to the outer edge of the shell [MN]
-!!$           DO iZ = iZz, nZ
-!!$              expow1 = tautot(iL)*abs(ETAzp(iP,iZ) - ETAzp(iP,iZz)) !this is tau(z,z';p)
-!!$              faux3(iZ,thread_id) = exp(-expow1)
-!!$!              func(iZ,thread_id) =  diff(iZ,thread_id)
-!!$           END DO
-!!$!           CALL Simpson(npY,iZz,nZ,faux3(:,thread_id),func(:,thread_id),res1)
-!!$           CALL Simpson(npY,iZz,nZ,faux3(:,thread_id),diff(:,thread_id),res1)
-!!$           Iminus(iP,iL) = abs(res1)
-!!$        end do ! end loop over wavelengths
-!!$        !$OMP END PARALLEL DO
-!!$     end do ! end loop over impact parameters P=1..Plast(iY)
-!!$     !  Find diffuse energy density (U)
-!!$     if (moment_loc.eq.1) then
-!!$        !!**   xN is mu,the integration variable.
-!!$        !!**   U ~ Int[yN*dmu], while flux ~ Int[yN*mu*dmu]. Sub Nordlund takes care of this difference.
-!!$        !!**   When calling NORDLUND(flagN,xN,yN,N1,N2,m,intfdx,error)
-!!$        !!**    flagN=1 is for analytic integration; m=0 for U and m=1 for flux [MN]
-!!$        !$OMP PARALLEL DO FIRSTPRIVATE(FlagN,error,result1,result2,iP,iY,thread_id)
-!!$        do iL = 1, nL
-!!$           thread_id = omp_get_thread_num()+1
-!!$           DO iP = 1, Plast(iY)
-!!$              xN(iP,thread_id) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
-!!$              ! generate intensity array for NORDLUND
-!!$              yN(iP,thread_id) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) + Iminus(iP,iL))
-!!$           END DO
-!!$           CALL NORDLUND(0,xN(:,thread_id),yN(:,thread_id),1,nPcav+1,0,result1,error)
-!!$           ! flag for analytic integration outside cavity
-!!$           !! IF (iY.GT.6) THEN ! this was in the old Dusty
-!!$           IF (iY.GT.4) THEN  ! take it as 4 in case the grid has a few pts. only.
-!!$              flagN = 1
-!!$           ELSE
-!!$              flagN = 0
-!!$           ENDIF
-!!$           ! angular integration outside cavity
-!!$           IF (iY.GT.1) THEN
-!!$              CALL NORDLUND(flagN,xN(:,thread_id),yN(:,thread_id),nPcav+1,Plast(iY),0,result2,error)
-!!$              IF (error.NE.0) STOP
-!!$           ELSE
-!!$              result2 = 0.0
-!!$           END IF
-!!$           !!**result1 is for inside, result2 is for outside the cavity [MN]
-!!$           vec2(iL,iY)= 0.5*(result1 + result2)/T4_ext(iY)
-!!$        end do  !end do over lambda
-!!$        !$OMP END PARALLEL DO
-!!$        !  Find diffuse flux
-!!$     elseif(moment_loc.eq.2) then
-!!$        !$OMP PARALLEL DO FIRSTPRIVATE(FlagN,error,result1,result2,iP,iY,thread_id)
-!!$        do iL = 1, nL
-!!$           thread_id = omp_get_thread_num()+1
-!!$           DO iP = 1, Plast(iY)
-!!$              xN(iP,thread_id) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
-!!$              ! generate intensity array for NORDLUND
-!!$              yN(iP,thread_id) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) - Iminus(iP,iL))
-!!$           END DO
-!!$           ! integration inside the cavity
-!!$           CALL NORDLUND(0,xN(:,thread_id),yN(:,thread_id),1,nPcav+1,1,result1,error)
-!!$           ! flag for analytic integration outside cavity
-!!$           !!IF (iY.GT.6) THEN ! this was in the old Dusty
-!!$           IF (iY.GT.4) THEN
-!!$              flagN = 1
-!!$           ELSE
-!!$              flagN = 0
-!!$           ENDIF
-!!$           ! angular integration outside cavity
-!!$           IF (iY.GT.1) THEN
-!!$              CALL NORDLUND(flagN,xN(:,thread_id),yN(:,thread_id),nPcav+1,Plast(iY),1,result2,error)
-!!$              IF (error.NE.0) STOP
-!!$           ELSE
-!!$              result2 = 0.0
-!!$           END IF
-!!$           !!** result1 is for inside, result2 is for outside the cavity [MN]
-!!$           vec2(iL,iY) = 2.0d0*pi*abs(result1+result2)/T4_ext(iY)
-!!$        end do  !end do over lambda
-!!$        !$OMP END PARALLEL DO
-!!$     end if !end if for diffuse flux
-!!$  end do !end do over radial grid Y(iY)  [MN]
-!!$  !----------------------------------------------------------------------
-!!$999 return
-!!$end subroutine SPH_diff
-!!$!***********************************************************************
+        end if
+     end do
+  end if
+  !---------------------------------------------------------------------
+  deallocate(sph_em)
+  deallocate(sph_sc)
+  deallocate(tau)
+  deallocate(Sfn_em)
+  return
+end subroutine Find_Diffuse
+!***********************************************************************
+
+!***********************************************************************
+subroutine Find_Temp(nY,T4_ext)
+!=======================================================================
+! This subroutine finds new temperature from Utot.
+! Temperature is obtained by solving:
+!   f2(y)*f1(y) - g(T) = 0
+! where
+!   f1(y) = Int(Qabs*Utot*dlambda)
+!   f2(y) = T4_ext
+!   g(T) = qP(Td)*Td**4
+!   T_ext is the effective T of the illuminating radiation
+!                                                [ZI'96, MN,'00, Deka, 2008]
+!=======================================================================
+  use common
+  implicit none
+  !--- parameter
+  integer :: nY
+  double precision, allocatable :: T4_ext(:)
+  !--- local variables
+  integer iG, iY, iL
+  double precision  fnum(npL),fdenum(npL),xP,Planck, qpt1,qu1,us(npL,npY),&
+       gg, ff(npL), fnum1
+  INTERFACE
+     subroutine find_Text(nY,T4_ext)
+       integer nY
+       double precision, allocatable :: T4_ext(:)
+     end subroutine find_Text
+  END INTERFACE
+  !---------------------------------------------------------------------
+
+  ! if T1 given in input:
+  if(typentry(1).eq.5) call find_Text(nY,T4_ext)
+  ! loop over grains
+  do iG = 1, nG
+     ! loop over radial positions (solving f1-f2*g(t)=0)
+     do iY = 1, nY
+        ! calculate f1 and f2
+        do iL = 1, nL
+           fnum(iL) = sigmaA(iG,iL)*utot(iL,iY)/lambda(iL)
+           xP = 14400.0d0/lambda(iL)/Td(iG,iY)
+           ff(iL) = sigmaA(iG,iL)*Planck(xP)/ lambda(iL)
+        end do
+        call Simpson(npL,1,nL,lambda,fnum,fnum1)
+        call Simpson(npL,1,nL,lambda,ff,gg)
+        Td(iG,iY) = (fnum1*T4_ext(iY)/gg)**(1.0d0/4.0d0)
+     end do
+  end do
+  !---------------------------------------------------------------------
+  return
+end subroutine Find_Temp
+!***********************************************************************
+
+!***********************************************************************
+subroutine Find_Text(nY,T4_ext)
+!=======================================================================
+  use common
+  implicit none
+  integer nY
+  double precision, allocatable :: T4_ext(:)
+  integer iG,iY,iL
+  double precision  fnum(npL),fdenum(npL),xP,Planck, qPT1,qU1
+  !----------------------------------------------------------------------
+
+  ! set to fiducial Grain
+  do iL = 1, nL
+     fnum(iL) = sigmaA(ifidG,iL)*utot(iL,1)/lambda(iL)
+!     print*,sigmaA(ifidG,iL),utot(iL,1)
+     xP = 14400.0d0/lambda(iL)/ Tsub(ifidG)
+     fdenum(iL) = sigmaA(ifidG,iL)*Planck(xP)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,fnum,qU1)
+  call Simpson(nL,1,nL,lambda,fdenum,qPT1)
+  if (sph) then
+     do iY = 1, nY
+        T4_ext(iY) = (Tsub(ifidG)**4.0d0)*(qPT1/qU1)/(Y(iY)**2.0d0)
+     end do
+  elseif(slb) then
+     do iY = 1, nY
+        T4_ext(iY) = Tsub(ifidG)**4.0d0*(qPT1/qU1)
+     end do
+  end if
+  do iG=1,nG
+     if (iG.ne.ifidG) then
+        do iL = 1, nL
+           fnum(iL) = sigmaA(iG,iL)*utot(iL,1)/lambda(iL)
+           xP = 14400.0d0/lambda(iL) / Tsub(ifidG)
+           fdenum(iL) = sigmaA(iG,iL)*Planck(xP)/lambda(iL)
+        end do
+        call Simpson(nL,1,nL,lambda,fnum,qU1)
+        call Simpson(nL,1,nL,lambda,fdenum,qPT1)
+        Tsub(iG) = (T4_ext(1)*qU1/qPT1)**(1.0d0/4.0d0)
+     end if
+  end do
+  if (typentry(1).eq.5) then
+     Ji = sigma/pi*T4_ext(1)
+     Jo = ksi * Ji
+  endif
+!-----------------------------------------------------------------------
+  return
+end subroutine Find_Text
+!***********************************************************************
+
+
+!***********************************************************************
+subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,vec2)
+!=======================================================================
+! This subroutine finds the diffuse part for both emission and scattering
+! for spherical shell                                        [Deka, 2008]
+!! If flag1=1 for vec1=Em; flag1=2 for vec1=Us
+!!** Introduced integration of diffuse radiation with Nordlund, as in old Dusty.
+!!** Restored ETAzp instead of the time-consuming GauLeg integration
+!!** New commments added.                                   [MN, July'10]
+!=======================================================================
+  use omp_lib
+  use common
+  implicit none
+  ! --- parameter
+  integer nY,nP,flag1,moment_loc,iter,iterfbol
+  double precision, allocatable :: T4_ext(:),emiss(:,:,:),us(:,:),vec2(:,:)
+  logical initial
+  ! --- local variables 
+  integer iP,iL,iZ,iZz,nZ,iY,iYy, iNloc,flagN,iG,thread_id
+  double precision,allocatable ::  Iplus1(:,:),Iplus2(:,:), Iminus(:,:), &
+       aux2(:,:),diff(:,:), S_fun(:,:), func(:,:), faux3(:,:), xN(:,:), yN(:,:)
+  double precision result1, result2, res1, frac, S_loc, p_loc,expow1
+  !-----------------------------------------------------------------------
+  allocate(Iplus1(nP,nL))
+  allocate(Iplus2(nP,nL))
+  allocate(Iminus(nP,nL))       
+  allocate(aux2(nY,max_threads))
+  allocate(diff(nY,max_threads))
+  allocate(S_fun(nY,max_threads)) 
+  allocate(func(nY,max_threads))
+  allocate(faux3(nY,max_threads))
+  allocate(xN(nP,max_threads))
+  allocate(yN(nP,max_threads))
+  Iplus1 = 0.0d0
+  Iplus2 = 0.0d0
+  Iminus = 0.0d0
+  !!** for each radial grid point calculate the integrals from Sec.4.1 in Blueprint:
+  do iY = 1, nY
+     do iP = 1, Plast(iY)
+        iZz  = iY + 1 - iYfirst(iP)  !this is for z in eq.(4.1.5)
+        ! upper limit for the counter of z position
+        nZ  = nY + 1 - iYfirst(iP)   !nZ is index for zmax=sqrt(Y**2-p**2) [MN]
+        !$OMP PARALLEL DO FIRSTPRIVATE(thread_id,frac,iYy,p_loc,S_loc,iNloc,expow1,res1)
+        do iL = 1, nL
+           thread_id = omp_get_thread_num()+1
+           do iYy = 1, nY
+              S_fun(iYy,thread_id) = 0
+              do iG =1, nG
+                 frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
+                 if (flag1.eq.1) then
+                    ! find the diffuse emission term, vec1=em
+                    S_fun(iYy,thread_id) = S_fun(iYy,thread_id) + frac*(1.0d0-omega(iG,iL))*emiss(iG,iL,iYy)*T4_ext(iYy)
+                 elseif (flag1.eq.2) then
+                    ! find the scattering term, vec1=Us initially, or Utot afterwards
+                    if (initial.and.iter.eq.1.and.iterfbol.eq.1) then
+                       S_fun(iYy,thread_id) = S_fun(iYy,thread_id) + frac*omega(iG,iL)*us(iL,iYy)*T4_ext(iYy)
+                    else
+                       S_fun(iYy,thread_id) = S_fun(iYy,thread_id) + frac*omega(ig,iL)*utot(iL,iYy)*T4_ext(iYy)
+                    end if
+                 end if
+              end do
+           end do ! end do over dummy iYy
+           if (P(iP).le.1.0d0) then
+              ! inside the cavity
+              do iZ = 1, nZ
+                 iYy = iYfirst(iP) + iZ - 1
+                 diff(iZ,thread_id) = S_fun(iYy,thread_id)
+              end do
+           else
+              ! in the shell
+              do iZ = 1, nZ-1
+                 iYy = iYfirst(iP) + iZ - 1
+                 if(iZ.eq.1.and.P(iP).gt.Y(iYy).and.P(iP).lt.Y(iYy+1)) then
+                    p_loc = P(iP)
+                    call LININTER(nY,nY,Y,S_fun(:,thread_id),p_loc,iNloc,S_loc)
+                    diff(iZ,thread_id) = abs(S_loc)
+                 else
+                    diff(iZ,thread_id) = S_fun(iYy,thread_id)
+                 end if
+              end do
+              diff(nZ,thread_id) = S_fun(nY,thread_id)
+           end if
+           do iZ = 1, nZ
+              aux2(iZ,thread_id) = tautot(iL)*ETAzp(iP,iZ)
+              ! 1st term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
+              !     from z0-midpoint to the outer edge of the shell (on the left side)  [MN]
+              faux3(iZ,thread_id) = exp(-aux2(iZ,thread_id))
+!              func(iZ,thread_id) =  diff(iZ,thread_id)
+           end do
+!           CALL Simpson(npY,1,nZ,faux3(:,thread_id),func(:,thread_id),res1)
+           CALL Simpson(nY,1,nZ,faux3(:,thread_id),diff(:,thread_id),res1)
+           Iplus1(iP,iL) = abs(res1)*exp(-aux2(iZz,thread_id))
+           ! 2nd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
+           !     from z0-midpoint to the running z-point
+           DO iZ = 1, iZz
+              expow1 = tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,iZ)) !this is tau(z',z;p)
+              faux3(iZ,thread_id) = exp(-expow1)
+!              func(iZ,thread_id) =  diff(iZ,thread_id)
+           END DO
+!           CALL Simpson(npY,1,iZz,faux3(:,thread_id),func(:,thread_id),res1)
+           CALL Simpson(nY,1,iZz,faux3(:,thread_id),diff(:,thread_id),res1)
+           Iplus2(iP,iL) = abs(res1)
+           ! 3rd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
+           !     from the running z-point to the outer edge of the shell [MN]
+           DO iZ = iZz, nZ
+              expow1 = tautot(iL)*abs(ETAzp(iP,iZ) - ETAzp(iP,iZz)) !this is tau(z,z';p)
+              faux3(iZ,thread_id) = exp(-expow1)
+!              func(iZ,thread_id) =  diff(iZ,thread_id)
+           END DO
+!           CALL Simpson(npY,iZz,nZ,faux3(:,thread_id),func(:,thread_id),res1)
+           CALL Simpson(nY,iZz,nZ,faux3(:,thread_id),diff(:,thread_id),res1)
+           Iminus(iP,iL) = abs(res1)
+        end do ! end loop over wavelengths
+        !$OMP END PARALLEL DO
+     end do ! end loop over impact parameters P=1..Plast(iY)
+     !  Find diffuse energy density (U)
+     if (moment_loc.eq.1) then
+        !!**   xN is mu,the integration variable.
+        !!**   U ~ Int[yN*dmu], while flux ~ Int[yN*mu*dmu]. Sub Nordlund takes care of this difference.
+        !!**   When calling NORDLUND(flagN,xN,yN,N1,N2,m,intfdx,error)
+        !!**   flagN=1 is for analytic integration; m=0 for U and m=1 for flux [MN]
+        !$OMP PARALLEL DO FIRSTPRIVATE(FlagN,error,result1,result2,iP,iY,thread_id)
+        do iL = 1, nL
+           thread_id = omp_get_thread_num()+1
+           DO iP = 1, Plast(iY)
+              xN(iP,thread_id) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
+              ! generate intensity array for NORDLUND
+              yN(iP,thread_id) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) + Iminus(iP,iL))
+           END DO
+           CALL NORDLUND(nY,0,xN(:,thread_id),yN(:,thread_id),1,nPcav+1,0,result1)
+           ! flag for analytic integration outside cavity
+           !! IF (iY.GT.6) THEN ! this was in the old Dusty
+           IF (iY.GT.4) THEN  ! take it as 4 in case the grid has a few pts. only.
+              flagN = 1
+           ELSE
+              flagN = 0
+           ENDIF
+           ! angular integration outside cavity
+           IF (iY.GT.1) THEN
+              CALL NORDLUND(nY,flagN,xN(:,thread_id),yN(:,thread_id),nPcav+1,Plast(iY),0,result2)
+              IF (error.NE.0) STOP
+           ELSE
+              result2 = 0.0
+           END IF
+           !!**result1 is for inside, result2 is for outside the cavity [MN]
+           vec2(iL,iY)= 0.5*(result1 + result2)/T4_ext(iY)
+        end do  !end do over lambda
+        !$OMP END PARALLEL DO
+        !  Find diffuse flux
+     elseif(moment_loc.eq.2) then
+        !$OMP PARALLEL DO FIRSTPRIVATE(FlagN,error,result1,result2,iP,iY,thread_id)
+        do iL = 1, nL
+           thread_id = omp_get_thread_num()+1
+           DO iP = 1, Plast(iY)
+              xN(iP,thread_id) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
+              ! generate intensity array for NORDLUND
+              yN(iP,thread_id) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) - Iminus(iP,iL))
+           END DO
+           ! integration inside the cavity
+           CALL NORDLUND(nY,0,xN(:,thread_id),yN(:,thread_id),1,nPcav+1,1,result1)
+           ! flag for analytic integration outside cavity
+           !!IF (iY.GT.6) THEN ! this was in the old Dusty
+           IF (iY.GT.4) THEN
+              flagN = 1
+           ELSE
+              flagN = 0
+           ENDIF
+           ! angular integration outside cavity
+           IF (iY.GT.1) THEN
+              CALL NORDLUND(nY,flagN,xN(:,thread_id),yN(:,thread_id),nPcav+1,Plast(iY),1,result2)
+              IF (error.NE.0) STOP
+           ELSE
+              result2 = 0.0
+           END IF
+           !!** result1 is for inside, result2 is for outside the cavity [MN]
+           vec2(iL,iY) = 2.0d0*pi*abs(result1+result2)/T4_ext(iY)
+        end do  !end do over lambda
+        !$OMP END PARALLEL DO
+     end if !end if for diffuse flux
+  end do !end do over radial grid Y(iY)  [MN]
+  !----------------------------------------------------------------------
+  deallocate(Iplus1)
+  deallocate(Iplus2)
+  deallocate(Iminus)
+  deallocate(aux2)
+  deallocate(diff)
+  deallocate(S_fun) 
+  deallocate(func)
+  deallocate(faux3)
+  deallocate(xN)
+  deallocate(yN)
+999 return
+end subroutine SPH_diff
+!***********************************************************************
 !!$
 !!$
 !!$
@@ -2163,7 +2324,7 @@ end subroutine SPH_ext_illum
 !!$           DO iP = 1, Plast(iY)
 !!$              yN(iP) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) + Iminus(iP,iL))
 !!$           END DO
-!!$           CALL NORDLUND(0,xN,yN,1,nPcav+1,0,result1,error)
+!!$           CALL NORDLUND(nY,0,xN,yN,1,nPcav+1,0,result1,error)
 !!$           ! flag for analytic integration outside cavity
 !!$           !! IF (iY.GT.6) THEN ! this was in the old Dusty
 !!$           IF (iY.GT.4) THEN  ! take it as 4 in case the grid has a few pts. only.
@@ -2173,7 +2334,7 @@ end subroutine SPH_ext_illum
 !!$           ENDIF
 !!$           ! angular integration outside cavity
 !!$           IF (iY.GT.1) THEN
-!!$              CALL NORDLUND(flagN,xN,yN,nPcav+1,Plast(iY),0,result2,error)
+!!$              CALL NORDLUND(nY,flagN,xN,yN,nPcav+1,Plast(iY),0,result2,error)
 !!$              IF (error.NE.0) GOTO 999
 !!$           ELSE
 !!$              result2 = 0.0
@@ -2193,7 +2354,7 @@ end subroutine SPH_ext_illum
 !!$              yN(iP) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) - Iminus(iP,iL))
 !!$           END DO
 !!$           ! integration inside the cavity
-!!$           CALL NORDLUND(0,xN,yN,1,nPcav+1,1,result1,error)
+!!$           CALL NORDLUND(nY,0,xN,yN,1,nPcav+1,1,result1,error)
 !!$           ! flag for analytic integration outside cavity
 !!$           !!IF (iY.GT.6) THEN ! this was in the old Dusty
 !!$           IF (iY.GT.4) THEN
@@ -2203,7 +2364,7 @@ end subroutine SPH_ext_illum
 !!$           ENDIF
 !!$           ! angular integration outside cavity
 !!$           IF (iY.GT.1) THEN
-!!$              CALL NORDLUND(flagN,xN,yN,nPcav+1,Plast(iY),1,result2,error)
+!!$              CALL NORDLUND(nY,flagN,xN,yN,nPcav+1,Plast(iY),1,result2,error)
 !!$              IF (error.NE.0) GOTO 999
 !!$           ELSE
 !!$              result2 = 0.0
@@ -2218,103 +2379,103 @@ end subroutine SPH_ext_illum
 !!$end subroutine SPH_diff_old
 !!$!***********************************************************************
 !!$
-!!$!***********************************************************************
-!!$SUBROUTINE NORDLUND(flag,x,f,N1,N2,m,intfdx,error)
-!!$!=======================================================================
-!!$! This subroutine calculates integral I(x**m*y(x)*dx). Both y and x are
-!!$! 1D arrays, y(i), x(i) with i=1,npP (npP comes from 'paramet.inc'). Lower
-!!$! and upper integration limits are x(N1) and x(N2), respectively. The
-!!$! method used is approximation of y(x) by a piecewise cubic spline (see
-!!$! Nordlund: Spherical Transfer with Single-Ray Approximation, in
-!!$! 'Methods in radiative transfer', ed. W. Kalkofen, Cambridge University
-!!$! Press, 1984). The resulting integral is sum of y(i)*w(i), i=N1,N2.
-!!$! Weights w(i) are determined from the array x(i). Here w(i) = wSimp(i)
-!!$! + wCorr(i).
-!!$! To improve accuracy of angular integration in radiative
-!!$! transfer, if flag=1 the contribution of the last Nanal (specified
-!!$! below) points is calculated in subroutine ANALINT which fits a
-!!$! function of the form: y = P(x) + d/sqrt(1-x*x), where P(x) is the
-!!$! polynomial of order Nanal-1, to these points and evaluates integral
-!!$! analytically.                                        [Z.I., Nov. 1995]
-!!$! =======================================================================
-!!$  use common
-!!$  IMPLICIT none
-!!$  
-!!$  INTEGER i, flag, N1, N2, N2n, Nanal, m, first, error
-!!$  DOUBLE PRECISION x(npP), f(npP), wSimp(npP), wCorr(npP), wC1, wC2,  &
-!!$       am, intfdx, xaux(4), faux(4), aux
-!!$  ! ------------------------------------------------------------------
-!!$  error = 0
-!!$  ! parameter 'first' selects choice for derivatives at boundary points.
-!!$  ! For first.EQ.0 derivatives are 0 and first*(f2-f1)/(x2-x1) otherwise.
-!!$  ! first=1 works much better for functions encountered here.
-!!$  first = 1
-!!$  ! number of points for analytic integration
-!!$  Nanal = 4
-!!$  ! do not include points for analytic integration
-!!$  IF (flag.EQ.1.AND.N2.GT.N1+Nanal) THEN
-!!$     N2n = N2 - Nanal + 1
-!!$  ELSE
-!!$     N2n = N2
-!!$  END IF
-!!$  ! set integral to 0 and accumulate result in the loop
-!!$  intfdx = 0.0
-!!$  ! generate weighting factors, w(i), and integrate in the same loop
-!!$  DO i = N1, N2n
-!!$     ! first usual Simpson factors (Nordlund, eq. III-14, first term)...
-!!$     IF (i.NE.N1.AND.i.NE.N2n) THEN
-!!$        wSimp(i) = 0.5 * (x(i+1)-x(i-1))
-!!$     ELSE
-!!$        IF (i.eq.N1) wSimp(i) = 0.5 * (x(N1+1)-x(N1))
-!!$        IF (i.eq.N2n) wSimp(i) = 0.5 * (x(N2n)-x(N2n-1))
-!!$     END IF
-!!$     ! ... and then correction term for cubic spline (Nordlund, eq. III-14,
-!!$     ! second term and eq. III-16) (wC1 and wC2 are auxiliary quantities)
-!!$     IF (i.GT.N1+1) THEN
-!!$        wC1 = x(i) - 2.0*x(i-1) + x(i-2)
-!!$     ELSE
-!!$        IF (i.EQ.N1) wC1 =  first * (x(N1+1) - x(N1))
-!!$        IF (i.EQ.N1+1) wC1 = first * (x(N1) - x(N1+1))
-!!$     ENDIF
-!!$     IF (i.LE.(N2n-2)) THEN
-!!$        wC2 = x(i+2) - 2.0*x(i+1) + x(i)
-!!$     ELSE
-!!$        IF (i.EQ.(N2n-1)) wC2 = first * (x(N2n-1) - x(N2n))
-!!$        IF (i.EQ.N2n) wC2 = first * (x(N2n) - x(N2n-1))
-!!$     ENDIF
-!!$     wCorr(i) = (wC1 - wC2) / 12.
-!!$     ! add contribution to the integral
-!!$     IF (m.EQ.0) THEN
-!!$        intfdx = intfdx + f(i) * (wSimp(i) + wCorr(i))
-!!$     ELSE IF(m.EQ.1) THEN
-!!$        intfdx = intfdx + x(i)*f(i)*(wSimp(i) + wCorr(i))
-!!$     ELSE IF(m.EQ.2) THEN
-!!$        intfdx = intfdx + x(i)*x(i)*f(i)*(wSimp(i) + wCorr(i))
-!!$     END IF
-!!$  END DO
-!!$  ! change the sign (x [i.e. mu] array is in descending order!!!)
-!!$  intfdx = -intfdx
-!!$  ! if flag=1 use analytic approximation for the last Nanal points
-!!$  IF (flag.EQ.1.AND.N2n.GT.N1+Nanal) THEN
-!!$     ! generate auxiliary arrays for ANALINT
-!!$     DO i=1,Nanal
-!!$        xaux(i) = x(N2n+Nanal-i)
-!!$        faux(i) = f(N2n+Nanal-i)
-!!$     END DO
-!!$     ! calculate the contribution of the last Nanal points
-!!$     ! produce REAL copy of m
-!!$     am = 1.0*(m)
-!!$     CALL ANALINT(Nanal,xaux,faux,am,aux,error)
-!!$     IF(error.NE.0) THEN
-!!$        RETURN
-!!$     END IF
-!!$     ! add the contribution of the last Nanal points
-!!$     intfdx = intfdx + aux
-!!$  END IF
-!!$  ! ----------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE NORDLUND
-!!$!**********************************************************************
+!***********************************************************************
+SUBROUTINE NORDLUND(nY,flag,x,f,N1,N2,m,intfdx)
+!=======================================================================
+! This subroutine calculates integral I(x**m*y(x)*dx). Both y and x are
+! 1D arrays, y(i), x(i) with i=1,npP (npP comes from 'paramet.inc'). Lower
+! and upper integration limits are x(N1) and x(N2), respectively. The
+! method used is approximation of y(x) by a piecewise cubic spline (see
+! Nordlund: Spherical Transfer with Single-Ray Approximation, in
+! 'Methods in radiative transfer', ed. W. Kalkofen, Cambridge University
+! Press, 1984). The resulting integral is sum of y(i)*w(i), i=N1,N2.
+! Weights w(i) are determined from the array x(i). Here w(i) = wSimp(i)
+! + wCorr(i).
+! To improve accuracy of angular integration in radiative
+! transfer, if flag=1 the contribution of the last Nanal (specified
+! below) points is calculated in subroutine ANALINT which fits a
+! function of the form: y = P(x) + d/sqrt(1-x*x), where P(x) is the
+! polynomial of order Nanal-1, to these points and evaluates integral
+! analytically.                                        [Z.I., Nov. 1995]
+! =======================================================================
+  use common
+  IMPLICIT none
+  
+  INTEGER i, flag, N1, N2, N2n, Nanal, m, first, nY
+  DOUBLE PRECISION x(npP), f(npP), wSimp(npP), wCorr(npP), wC1, wC2,  &
+       am, intfdx, xaux(4), faux(4), aux
+  ! ------------------------------------------------------------------
+  error = 0
+  ! parameter 'first' selects choice for derivatives at boundary points.
+  ! For first.EQ.0 derivatives are 0 and first*(f2-f1)/(x2-x1) otherwise.
+  ! first=1 works much better for functions encountered here.
+  first = 1
+  ! number of points for analytic integration
+  Nanal = 4
+  ! do not include points for analytic integration
+  IF (flag.EQ.1.AND.N2.GT.N1+Nanal) THEN
+     N2n = N2 - Nanal + 1
+  ELSE
+     N2n = N2
+  END IF
+  ! set integral to 0 and accumulate result in the loop
+  intfdx = 0.0
+  ! generate weighting factors, w(i), and integrate in the same loop
+  DO i = N1, N2n
+     ! first usual Simpson factors (Nordlund, eq. III-14, first term)...
+     IF (i.NE.N1.AND.i.NE.N2n) THEN
+        wSimp(i) = 0.5 * (x(i+1)-x(i-1))
+     ELSE
+        IF (i.eq.N1) wSimp(i) = 0.5 * (x(N1+1)-x(N1))
+        IF (i.eq.N2n) wSimp(i) = 0.5 * (x(N2n)-x(N2n-1))
+     END IF
+     ! ... and then correction term for cubic spline (Nordlund, eq. III-14,
+     ! second term and eq. III-16) (wC1 and wC2 are auxiliary quantities)
+     IF (i.GT.N1+1) THEN
+        wC1 = x(i) - 2.0*x(i-1) + x(i-2)
+     ELSE
+        IF (i.EQ.N1) wC1 =  first * (x(N1+1) - x(N1))
+        IF (i.EQ.N1+1) wC1 = first * (x(N1) - x(N1+1))
+     ENDIF
+     IF (i.LE.(N2n-2)) THEN
+        wC2 = x(i+2) - 2.0*x(i+1) + x(i)
+     ELSE
+        IF (i.EQ.(N2n-1)) wC2 = first * (x(N2n-1) - x(N2n))
+        IF (i.EQ.N2n) wC2 = first * (x(N2n) - x(N2n-1))
+     ENDIF
+     wCorr(i) = (wC1 - wC2) / 12.
+     ! add contribution to the integral
+     IF (m.EQ.0) THEN
+        intfdx = intfdx + f(i) * (wSimp(i) + wCorr(i))
+     ELSE IF(m.EQ.1) THEN
+        intfdx = intfdx + x(i)*f(i)*(wSimp(i) + wCorr(i))
+     ELSE IF(m.EQ.2) THEN
+        intfdx = intfdx + x(i)*x(i)*f(i)*(wSimp(i) + wCorr(i))
+     END IF
+  END DO
+  ! change the sign (x [i.e. mu] array is in descending order!!!)
+  intfdx = -intfdx
+  ! if flag=1 use analytic approximation for the last Nanal points
+  IF (flag.EQ.1.AND.N2n.GT.N1+Nanal) THEN
+     ! generate auxiliary arrays for ANALINT
+     DO i=1,Nanal
+        xaux(i) = x(N2n+Nanal-i)
+        faux(i) = f(N2n+Nanal-i)
+     END DO
+     ! calculate the contribution of the last Nanal points
+     ! produce REAL copy of m
+     am = 1.0*(m)
+     CALL ANALINT(nY,Nanal,xaux,faux,am,aux,error)
+     IF(error.NE.0) THEN
+        RETURN
+     END IF
+     ! add the contribution of the last Nanal points
+     intfdx = intfdx + aux
+  END IF
+  ! ----------------------------------------------------------------
+  RETURN
+END SUBROUTINE NORDLUND
+!**********************************************************************
 !!$
 !***********************************************************************
 SUBROUTINE setupETA(nY,nYprev,itereta)
@@ -2497,66 +2658,71 @@ DOUBLE PRECISION FUNCTION IntETA(paux,iW1,w1,w)
   RETURN
 END FUNCTION IntETA
 !***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$subroutine Init_Temp(nG,T4_ext,us)
-!!$!=======================================================================
-!!$! This subroutine calculates the initial approximation for the temperature.
-!!$! Temperature is obtained by solving:
-!!$!   g(T) = f2(y)*f1(y)
-!!$! where
-!!$!   g(T) = qP(Td)*Td**4
-!!$!   f1(y) = Int(Qabs*Utot*dlambda)
-!!$!   f2(y) = T4_ext
-!!$!   T_ext is the effective T of the illuminating radiation [Deka, July'08]
-!!$!
-!!$!!**   Minor editing to avoid having IF's inside do-loops [MN, Aug'10]
-!!$!=======================================================================
-!!$  use common
-!!$  implicit none
-!!$  integer iL, iY, iG, nG, iw
-!!$  double precision xP, Planck, us(npL,npY),T4_ext(npY),fnum(npL),qP,ff(npL), fnum1
-!!$  !--------------------------------------------------------------------------
-!!$  if(typentry(1).eq.5) then
-!!$     ! this is if Tsub(ifidG) given in input
-!!$     if(sph) then
-!!$        do iY = 1, nY
-!!$           T4_ext(iY) = Tsub(ifidG)**4.0d0/Y(iY)**2.0d0   !eq.(4.1.22)
-!!$        end do
-!!$     else if (slb) then
-!!$        ! for slab
-!!$        do iY = 1, nY
-!!$           T4_ext(iY) = Tsub(ifidG)**4.0d0
-!!$        end do
-!!$     end if
-!!$     ! first approximation for temperature
-!!$     do iG = 1, nG
-!!$        do iY = 1, nY
-!!$           Td(iG,iY) = T4_ext(iY)**(1.0d0/4.0d0)
-!!$        end do
-!!$     end do
-!!$  else
-!!$     do iG = 1, nG
-!!$        ! loop over radial positions
-!!$        do iY = 1, nY
-!!$           Td(iG,iY) = T4_ext(iY)**(1.0d0/4.0d0)
-!!$           ! calculate fnum1 and qP integrals
-!!$           do iL = 1, nL
-!!$              fnum(iL) = sigmaA(iG,iL)*us(iL,iY)/lambda(iL)
-!!$              xP = 14400.0d0/(lambda(iL)*Td(iG,iY))
-!!$              ff(iL) = sigmaA(iG,iL)*Planck(xP)/lambda(iL)
-!!$           end do
-!!$           call Simpson(npL,1,nL,lambda,fnum,fnum1)
-!!$           call Simpson(npL,1,nL,lambda,ff,qP)
-!!$           ! get initial temperature
-!!$           Td(iG,iY) = (T4_ext(iY)*fnum1/qP)**(1.0d0/4.0d0)
-!!$        end do
-!!$     end do
-!!$  end if
-!!$  !--------------------------------------------------------------------
-!!$  return
-!!$end subroutine Init_Temp
-!!$!***********************************************************************
+
+!***********************************************************************
+subroutine Init_Temp(nY,T4_ext,us)
+!=======================================================================
+! This subroutine calculates the initial approximation for the temperature.
+! Temperature is obtained by solving:
+!   g(T) = f2(y)*f1(y)
+! where
+!   g(T) = qP(Td)*Td**4
+!   f1(y) = Int(Qabs*Utot*dlambda)
+!   f2(y) = T4_ext
+!   T_ext is the effective T of the illuminating radiation [Deka, July'08]
+!
+!!**   Minor editing to avoid having IF's inside do-loops [MN, Aug'10]
+!=======================================================================
+  use common
+  implicit none
+  !--- Parameter
+  integer nY
+  double precision,allocatable :: us(:,:),T4_ext(:)
+  !--- locale variables
+  integer iL, iY, iG, iw
+  double precision xP, Planck,fnum(npL),qP,ff(npL), fnum1
+  
+  !--------------------------------------------------------------------------
+  if(typentry(1).eq.5) then
+     ! this is if Tsub(ifidG) given in input
+     if(sph) then
+        do iY = 1, nY
+           T4_ext(iY) = Tsub(ifidG)**4.0d0/Y(iY)**2.0d0   !eq.(4.1.22)
+        end do
+     else if (slb) then
+        ! for slab
+        do iY = 1, nY
+           T4_ext(iY) = Tsub(ifidG)**4.0d0
+        end do
+     end if
+     ! first approximation for temperature
+     do iG = 1, nG
+        do iY = 1, nY
+           Td(iG,iY) = T4_ext(iY)**(1.0d0/4.0d0)
+        end do
+     end do
+  else
+     do iG = 1, nG
+        ! loop over radial positions
+        do iY = 1, nY
+           Td(iG,iY) = T4_ext(iY)**(1.0d0/4.0d0)
+           ! calculate fnum1 and qP integrals
+           do iL = 1, nL
+              fnum(iL) = sigmaA(iG,iL)*us(iL,iY)/lambda(iL)
+              xP = 14400.0d0/(lambda(iL)*Td(iG,iY))
+              ff(iL) = sigmaA(iG,iL)*Planck(xP)/lambda(iL)
+           end do
+           call Simpson(nL,1,nL,lambda,fnum,fnum1)
+           call Simpson(nL,1,nL,lambda,ff,qP)
+           ! get initial temperature
+           Td(iG,iY) = (T4_ext(iY)*fnum1/qP)**(1.0d0/4.0d0)
+        end do
+     end do
+  end if
+  !--------------------------------------------------------------------
+  return
+end subroutine Init_Temp
+!***********************************************************************
 !!$
 !!$! *************************************************************************
 !!$SUBROUTINE FindErr(flux,maxFerr)

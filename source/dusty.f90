@@ -203,6 +203,10 @@ implicit none
   allocate(TAUtot(npL))
   allocate(TAUslb(npL,npY))
   allocate(omega(npG+1,npL))
+  allocate(Td(npG,npY))
+  allocate(Utot(npL,npY))
+  allocate(Ude(npL,npY))
+  allocate(Uds(npL,npY))
 end subroutine alloc_mem
 
 subroutine dealloc_mem()
@@ -226,4 +230,8 @@ implicit none
   deallocate(TAUtot)
   deallocate(TAUslb)
   deallocate(omega)
+  deallocate(Td)
+  deallocate(Utot)
+  deallocate(Ude)
+  deallocate(Uds)
 end subroutine dealloc_mem

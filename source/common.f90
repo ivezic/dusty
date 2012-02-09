@@ -16,9 +16,9 @@ Module common
   integer nOutput                       ! number of output columns
   PARAMETER (nOutput=20)
   integer npY,npP,npL,npG
-  PARAMETER (npY = 1000)
-  PARAMETER (npP = 1000)
-  PARAMETER (npL = 1000)
+  PARAMETER (npY = 500)
+  PARAMETER (npP = 200)
+  PARAMETER (npL = 200)
   PARAMETER (npG = 10)
 
   double precision,allocatable :: ETAdiscr(:)
@@ -38,6 +38,10 @@ Module common
   double precision,allocatable :: TAUslb(:,:)
   double precision,allocatable :: TAUtot(:)
   double precision,allocatable :: fsL(:,:), fsR(:,:), fsLbol(:), fsRbol(:),fsbol(:)
+  double precision,allocatable :: Utot(:,:)
+  double precision,allocatable :: Ude(:,:)
+  double precision,allocatable :: Uds(:,:)
+  double precision,allocatable :: Td(:,:)
 
   character*4 :: version
   parameter (version='4.00')

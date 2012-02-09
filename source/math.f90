@@ -517,69 +517,69 @@ subroutine gauleg(x1,x2,xg,wg,n)
   return
 end subroutine gauleg
 !***********************************************************************
-!!$
-!!$!**********************************************************************
-!!$SUBROUTINE ANALINT(Nanal,xaux,yaux,m,aux,error)
-!!$!======================================================================
-!!$! This subroutine calculates integral I(x**m*y(x)*dx). Both y and x are
-!!$! 1D arrays, y(i), x(i) with i=1,Nanal. The method used is approximation
-!!$! of y(x) by y = P(x) + d/sqrt(1-x*x), where P(x) is the polynomial of
-!!$! order Nanal-1, and analytic evaluation of the integral. It is assumed
-!!$! that xaux(1)=0. Coefficients are determined from the set of Nanal
-!!$! linear equations and subsequent call to the linear system solver
-!!$! LINSYS.                                              [Z.I., Nov. 1995]
-!!$! ANALINT is called from Nordlund to evaluate analytically the contribution
-!!$! of Nanal grid points. [MN]
-!!$! =======================================================================
-!!$  use common
-!!$  IMPLICIT none
-!!$
-!!$  INTEGER i, j, Nanal, error
-!!$  DOUBLE PRECISION xaux(Nanal),yaux(Nanal),coeff(Nanal),A(npY,npY),m,aux,b
-!!$  ! ---------------------------------------------------------------------
-!!$  error = 0
-!!$  ! generate matrix A and vector B
-!!$  DO i = 1, Nanal
-!!$     DO j = 1, Nanal-1
-!!$        IF (xaux(i).EQ.0.0.AND.j.EQ.1) THEN
-!!$           A(i,j) = 1.0
-!!$        ELSE
-!!$           A(i,j) = xaux(i)**(1.0*j-1.0)
-!!$        END IF
-!!$     END DO
-!!$     A(i,Nanal) = 1.0/sqrt(1.0-xaux(i)*xaux(i))
-!!$  END DO
-!!$  ! solve for the coefficients
-!!$  CALL LINSYS(Nanal,A,yaux,coeff,error)
-!!$  IF(error.NE.0) THEN
-!!$     CALL MSG(19)
-!!$     iERROR = iERROR + 1
-!!$     RETURN
-!!$  END IF
-!!$  ! upper limit for integration:
-!!$  b = xaux(Nanal)
-!!$  ! evaluate m-dependent contribution of the last term
-!!$  IF (m.GT.0.1) THEN
-!!$     IF (m.GT.1.1) THEN
-!!$        ! this is for m=2
-!!$        aux = 0.5*(DASIN(b)-b*sqrt(1.-b*b))
-!!$     ELSE
-!!$        ! this is for m=1
-!!$        aux = 1.0 - sqrt(1.-b*b)
-!!$     ENDIF
-!!$  ELSE
-!!$     ! this is for m=0
-!!$     aux = DASIN(b)
-!!$  ENDIF
-!!$  aux = aux * coeff(Nanal)
-!!$  ! add contribution from the polynom
-!!$  DO i = 1, Nanal-1
-!!$     aux = aux + coeff(i) * (b**(m+1.0*i)) / (m+1.0*i)
-!!$  END DO
-!!$! -----------------------------------------------------------------------
-!!$999   RETURN
-!!$END SUBROUTINE ANALINT
-!!$!***********************************************************************
+
+!**********************************************************************
+SUBROUTINE ANALINT(nY,Nanal,xaux,yaux,m,aux)
+!======================================================================
+! This subroutine calculates integral I(x**m*y(x)*dx). Both y and x are
+! 1D arrays, y(i), x(i) with i=1,Nanal. The method used is approximation
+! of y(x) by y = P(x) + d/sqrt(1-x*x), where P(x) is the polynomial of
+! order Nanal-1, and analytic evaluation of the integral. It is assumed
+! that xaux(1)=0. Coefficients are determined from the set of Nanal
+! linear equations and subsequent call to the linear system solver
+! LINSYS.                                              [Z.I., Nov. 1995]
+! ANALINT is called from Nordlund to evaluate analytically the contribution
+! of Nanal grid points. [MN]
+! =======================================================================
+  use common
+  IMPLICIT none
+  
+  INTEGER i, j, Nanal, nY
+  DOUBLE PRECISION xaux(Nanal),yaux(Nanal),coeff(Nanal),A(npY,npY),m,aux,b
+  ! ---------------------------------------------------------------------
+  error = 0
+  ! generate matrix A and vector B
+  DO i = 1, Nanal
+     DO j = 1, Nanal-1
+        IF (xaux(i).EQ.0.0.AND.j.EQ.1) THEN
+           A(i,j) = 1.0
+        ELSE
+           A(i,j) = xaux(i)**(1.0*j-1.0)
+        END IF
+     END DO
+     A(i,Nanal) = 1.0/sqrt(1.0-xaux(i)*xaux(i))
+  END DO
+  ! solve for the coefficients
+  CALL LINSYS(nY,Nanal,A,yaux,coeff)
+  IF(error.NE.0) THEN
+     CALL MSG(19)
+     print*,"MSG(19)"
+     RETURN
+  END IF
+  ! upper limit for integration:
+  b = xaux(Nanal)
+  ! evaluate m-dependent contribution of the last term
+  IF (m.GT.0.1) THEN
+     IF (m.GT.1.1) THEN
+        ! this is for m=2
+        aux = 0.5*(DASIN(b)-b*sqrt(1.-b*b))
+     ELSE
+        ! this is for m=1
+        aux = 1.0 - sqrt(1.-b*b)
+     ENDIF
+  ELSE
+     ! this is for m=0
+     aux = DASIN(b)
+  ENDIF
+  aux = aux * coeff(Nanal)
+  ! add contribution from the polynom
+  DO i = 1, Nanal-1
+     aux = aux + coeff(i) * (b**(m+1.0*i)) / (m+1.0*i)
+  END DO
+! -----------------------------------------------------------------------
+999   RETURN
+END SUBROUTINE ANALINT
+!***********************************************************************
 !!$
 !!$! ***********************************************************************
 !!$SUBROUTINE ChkConv(accuracy_loc,Aold,Anew,Aconv_loc)
@@ -606,185 +606,184 @@ end subroutine gauleg
 !!$END SUBROUTINE ChkConv
 !!$! ***********************************************************************
 !!$
-!!$!***********************************************************************
-!!$SUBROUTINE LINSYS(Nreal,A,B,X,error)
-!!$!=======================================================================
-!!$! This subroutine solves the set of linear equations [A]*[X] = [B] for
-!!$! X [A(k,1)*X(1)+A(k,2)*X(2)+...+A(k,Nreal)*X(Nreal) = B(k), k=1,Nreal).
-!!$! The real size of matrix A is Nreal x Nreal and its physical dimension
-!!$! is npY x npY, where npY comes from INCLUDE 'userpar.inc'. Both vectors
-!!$! B and X have real lengths Nreal. The set is solved by calls to LUDCMP
-!!$! and LUBKSB and the solution is improved subsequently by a call to
-!!$! MPROVE. These three subroutines are taken from Numerical Recipes.
-!!$!                                                      [Z.I., Nov. 1995]
-!!$! =======================================================================
-!!$  use common
-!!$  IMPLICIT none
-!!$  
-!!$  INTEGER Nreal, indx(npY), i, j, error
-!!$  DOUBLE PRECISION A(npY,npY), B(npY), X(npY), &
-!!$              A1c(npY,npY), B1(npY), A2c(npY,npY), B2(npY), d
-!!$  ! ---------------------------------------------------------------------
-!!$  error = 0
-!!$  ! generate DOUBLE PRECISION copies of A and B (two copies because they
-!!$  ! are changed in LUDCMP and LUBKSB, but still needed for MPROVE)
-!!$  DO i = 1, Nreal
-!!$     B1(i) = B(i)
-!!$     B2(i) = B(i)
-!!$     DO j = 1, Nreal
-!!$        A1c(i,j) = A(i,j)
-!!$        A2c(i,j) = A(i,j)
-!!$     END DO
-!!$  END DO
-!!$  ! solve the system
-!!$  CALL LUDCMP(A1c,Nreal,npY,indx,d,error)
-!!$  IF (error.NE.0) RETURN
-!!$  CALL LUBKSB(A1c,Nreal,npY,indx,B1)
-!!$  ! improve the solution (saved in B)
-!!$  CALL MPROVE(A2c,A1c,Nreal,npY,indx,B2,B1)
-!!$  ! copy the improved solution to output vector X
-!!$  DO i = 1, Nreal
-!!$     X(i) = B1(i)
-!!$  END DO
-!!$  ! --------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE LINSYS
-!!$!***********************************************************************
-!!$
-!!$! ***********************************************************************
-!!$SUBROUTINE LUBKSB(A,N,NP,INDX,B)
-!!$  ! =====================================================================
-!!$  DIMENSION INDX(NP)
-!!$  DOUBLE PRECISION A(NP,NP),B(NP)
-!!$  ! -------------------------------------------------------------------
-!!$  II=0
-!!$  !impossible to parallelize since B(J) needs to is changed and used!
-!!$  DO I=1,N
-!!$     LL=INDX(I)
-!!$     SUM=B(LL)
-!!$     B(LL)=B(I)
-!!$     IF (II.NE.0)THEN
-!!$        DO J=II,I-1
-!!$           SUM=SUM-A(I,J)*B(J)
-!!$        END DO
-!!$     ELSE IF (SUM.NE.0.) THEN
-!!$        II=I
-!!$     ENDIF
-!!$     B(I)=SUM
-!!$  END DO
-!!$  !impossible to parallelize since B(J) needs to is changed and used!
-!!$  DO I=N,1,-1
-!!$     SUM=B(I)
-!!$     IF(I.LT.N)THEN
-!!$        DO J=I+1,N
-!!$           SUM=SUM-A(I,J)*B(J)
-!!$        END DO
-!!$     ENDIF
-!!$     B(I)=SUM/A(I,I)
-!!$  END DO
-!!$  ! -------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE LUBKSB
-!!$! ***********************************************************************
-!!$
-!!$! ***********************************************************************
-!!$SUBROUTINE LUDCMP(A,N,NP,INDX,D,error)
-!!$  ! =====================================================================
-!!$  PARAMETER (NMAX=10000,TINY=1.0E-20)
-!!$  DIMENSION INDX(NP)
-!!$  INTEGER error
-!!$  DOUBLE PRECISION A(NP,NP),VV(NMAX), D, SUM
-!!$  ! ------------------------------------------------------------------
-!!$  error = 0
-!!$  D = 1.
-!!$  DO I = 1, N
-!!$     AAMAX=0.
-!!$     DO J = 1, N
-!!$        IF (DABS(A(I,J)).GT.AAMAX) AAMAX=DABS(A(I,J))
-!!$     END DO
-!!$     ! IF (AAMAX.EQ.0.) PAUSE 'Singular matrix.'
-!!$     IF (AAMAX.EQ.0.) THEN
-!!$        error = 5
-!!$        RETURN
-!!$     ENDIF
-!!$     VV(I)=1./AAMAX
-!!$  END DO
-!!$!!  !$OMP PARALLEL DO private(J,I,SUM,DUM,IMAX,AAMAX,D)
-!!$  DO J = 1 , N
-!!$     IF (J.GT.1) THEN
-!!$        DO I = 1, J-1
-!!$           SUM=A(I,J)
-!!$           IF (I.GT.1)THEN
-!!$              DO K = 1, I-1
-!!$                 SUM=SUM-A(I,K)*A(K,J)
-!!$              END DO
-!!$              A(I,J)=SUM
-!!$           ENDIF
-!!$        END DO
-!!$     ENDIF
-!!$     AAMAX=0.
-!!$     DO I = J, N
-!!$        SUM=A(I,J)
-!!$        IF (J.GT.1)THEN
-!!$           DO K = 1, J-1
-!!$              SUM=SUM-A(I,K)*A(K,J)
-!!$           END DO
-!!$           A(I,J)=SUM
-!!$        ENDIF
-!!$        DUM=VV(I)*DABS(SUM)
-!!$        IF (DUM.GE.AAMAX) THEN
-!!$           IMAX=I
-!!$           AAMAX=DUM
-!!$        ENDIF
-!!$     END DO
-!!$     IF (J.NE.IMAX)THEN
-!!$        DO K = 1, N
-!!$           DUM=A(IMAX,K)
-!!$           A(IMAX,K)=A(J,K)
-!!$           A(J,K)=DUM
-!!$        END DO
-!!$        D=-D
-!!$        VV(IMAX)=VV(J)
-!!$     ENDIF
-!!$     INDX(J)=IMAX
-!!$     IF(J.NE.N)THEN
-!!$        IF(A(J,J).EQ.0.)A(J,J)=TINY
-!!$        DUM=1./A(J,J)
-!!$        DO I = J+1, N
-!!$           A(I,J)=A(I,J)*DUM
-!!$        END DO
-!!$     ENDIF
-!!$  END DO
-!!$!!  !$OMP END PARALLEL DO
-!!$  IF(A(N,N).EQ.0.)A(N,N)=TINY
-!!$  !------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE LUDCMP
-!!$! ***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$SUBROUTINE MPROVE(A,ALUD,N,NP,INDX,B,X)
-!!$!=======================================================================
-!!$  PARAMETER (NMAX=10000)
-!!$  DIMENSION INDX(N)
-!!$  DOUBLE PRECISION SDP,A(NP,NP),ALUD(NP,NP),B(N),X(N),R(NMAX)
-!!$  ! ---------------------------------------------------------------------
-!!$  DO i = 1, N
-!!$     SDP = -B(i)
-!!$     DO j = 1, N
-!!$        SDP = SDP + A(i,j)*X(j)
-!!$     END DO
-!!$     R(i) = SDP
-!!$  END DO
-!!$  CALL LUBKSB(ALUD,N,NP,INDX,R)
-!!$  DO i = 1, N
-!!$     X(i) = X(i) - R(i)
-!!$  END DO
-!!$  ! -----------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE MPROVE
-!!$!***********************************************************************
-!!$
+!***********************************************************************
+SUBROUTINE LINSYS(nY,Nreal,A,B,X)
+!=======================================================================
+! This subroutine solves the set of linear equations [A]*[X] = [B] for
+! X [A(k,1)*X(1)+A(k,2)*X(2)+...+A(k,Nreal)*X(Nreal) = B(k), k=1,Nreal).
+! The real size of matrix A is Nreal x Nreal and its physical dimension
+! is npY x npY, where npY comes from INCLUDE 'userpar.inc'. Both vectors
+! B and X have real lengths Nreal. The set is solved by calls to LUDCMP
+! and LUBKSB and the solution is improved subsequently by a call to
+! MPROVE. These three subroutines are taken from Numerical Recipes.
+!                                                      [Z.I., Nov. 1995]
+! =======================================================================
+  use common
+  IMPLICIT none
+  
+  INTEGER Nreal, indx(npY), i, j, nY
+  DOUBLE PRECISION A(npY,npY), B(npY), X(npY), &
+              A1c(npY,npY), B1(npY), A2c(npY,npY), B2(npY), d
+  ! ---------------------------------------------------------------------
+  error = 0
+  ! generate DOUBLE PRECISION copies of A and B (two copies because they
+  ! are changed in LUDCMP and LUBKSB, but still needed for MPROVE)
+  DO i = 1, Nreal
+     B1(i) = B(i)
+     B2(i) = B(i)
+     DO j = 1, Nreal
+        A1c(i,j) = A(i,j)
+        A2c(i,j) = A(i,j)
+     END DO
+  END DO
+  ! solve the system
+  CALL LUDCMP(A1c,Nreal,nY,indx,d)
+  IF (error.NE.0) RETURN
+  CALL LUBKSB(A1c,Nreal,nY,indx,B1)
+  ! improve the solution (saved in B)
+  CALL MPROVE(A2c,A1c,Nreal,nY,indx,B2,B1)
+  ! copy the improved solution to output vector X
+  DO i = 1, Nreal
+     X(i) = B1(i)
+  END DO
+  ! --------------------------------------------------------------------
+  RETURN
+END SUBROUTINE LINSYS
+!***********************************************************************
+
+! ***********************************************************************
+SUBROUTINE LUBKSB(A,N,NP,INDX,B)
+  ! =====================================================================
+  DIMENSION INDX(NP)
+  DOUBLE PRECISION A(NP,NP),B(NP)
+  ! -------------------------------------------------------------------
+  II=0
+  !impossible to parallelize since B(J) needs to is changed and used!
+  DO I=1,N
+     LL=INDX(I)
+     SUM=B(LL)
+     B(LL)=B(I)
+     IF (II.NE.0)THEN
+        DO J=II,I-1
+           SUM=SUM-A(I,J)*B(J)
+        END DO
+     ELSE IF (SUM.NE.0.) THEN
+        II=I
+     ENDIF
+     B(I)=SUM
+  END DO
+  !impossible to parallelize since B(J) needs to is changed and used!
+  DO I=N,1,-1
+     SUM=B(I)
+     IF(I.LT.N)THEN
+        DO J=I+1,N
+           SUM=SUM-A(I,J)*B(J)
+        END DO
+     ENDIF
+     B(I)=SUM/A(I,I)
+  END DO
+  ! -------------------------------------------------------------------
+  RETURN
+END SUBROUTINE LUBKSB
+! ***********************************************************************
+
+! ***********************************************************************
+SUBROUTINE LUDCMP(A,N,NP,INDX,D)
+  ! =====================================================================
+  PARAMETER (NMAX=10000,TINY=1.0E-20)
+  DIMENSION INDX(NP)
+  DOUBLE PRECISION A(NP,NP),VV(NMAX), D, SUM
+  ! ------------------------------------------------------------------
+  error = 0
+  D = 1.
+  DO I = 1, N
+     AAMAX=0.
+     DO J = 1, N
+        IF (DABS(A(I,J)).GT.AAMAX) AAMAX=DABS(A(I,J))
+     END DO
+     ! IF (AAMAX.EQ.0.) PAUSE 'Singular matrix.'
+     IF (AAMAX.EQ.0.) THEN
+        error = 5
+        RETURN
+     ENDIF
+     VV(I)=1./AAMAX
+  END DO
+!!  !$OMP PARALLEL DO private(J,I,SUM,DUM,IMAX,AAMAX,D)
+  DO J = 1 , N
+     IF (J.GT.1) THEN
+        DO I = 1, J-1
+           SUM=A(I,J)
+           IF (I.GT.1)THEN
+              DO K = 1, I-1
+                 SUM=SUM-A(I,K)*A(K,J)
+              END DO
+              A(I,J)=SUM
+           ENDIF
+        END DO
+     ENDIF
+     AAMAX=0.
+     DO I = J, N
+        SUM=A(I,J)
+        IF (J.GT.1)THEN
+           DO K = 1, J-1
+              SUM=SUM-A(I,K)*A(K,J)
+           END DO
+           A(I,J)=SUM
+        ENDIF
+        DUM=VV(I)*DABS(SUM)
+        IF (DUM.GE.AAMAX) THEN
+           IMAX=I
+           AAMAX=DUM
+        ENDIF
+     END DO
+     IF (J.NE.IMAX)THEN
+        DO K = 1, N
+           DUM=A(IMAX,K)
+           A(IMAX,K)=A(J,K)
+           A(J,K)=DUM
+        END DO
+        D=-D
+        VV(IMAX)=VV(J)
+     ENDIF
+     INDX(J)=IMAX
+     IF(J.NE.N)THEN
+        IF(A(J,J).EQ.0.)A(J,J)=TINY
+        DUM=1./A(J,J)
+        DO I = J+1, N
+           A(I,J)=A(I,J)*DUM
+        END DO
+     ENDIF
+  END DO
+!!  !$OMP END PARALLEL DO
+  IF(A(N,N).EQ.0.)A(N,N)=TINY
+  !------------------------------------------------------------------
+  RETURN
+END SUBROUTINE LUDCMP
+! ***********************************************************************
+
+!***********************************************************************
+SUBROUTINE MPROVE(A,ALUD,N,NP,INDX,B,X)
+!=======================================================================
+  PARAMETER (NMAX=10000)
+  DIMENSION INDX(N)
+  DOUBLE PRECISION SDP,A(NP,NP),ALUD(NP,NP),B(N),X(N),R(NMAX)
+  ! ---------------------------------------------------------------------
+  DO i = 1, N
+     SDP = -B(i)
+     DO j = 1, N
+        SDP = SDP + A(i,j)*X(j)
+     END DO
+     R(i) = SDP
+  END DO
+  CALL LUBKSB(ALUD,N,NP,INDX,R)
+  DO i = 1, N
+     X(i) = X(i) - R(i)
+  END DO
+  ! -----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE MPROVE
+!***********************************************************************
+
 ! ***********************************************************************
 SUBROUTINE Maple3(w,z,p,MpInt)
 ! =====================================================================
@@ -889,3 +888,39 @@ END SUBROUTINE Maple3
 !!$  RETURN
 !!$END FUNCTION Bessel
 !!$!***********************************************************************
+
+!***********************************************************************
+subroutine LinInter(nn,n,x,y,xloc,iNloc,Yloc)
+!=======================================================================
+! This subroutine performs linear interpolation for y(x) such that
+! Yloc = y(xloc). It is assumed that x is monotonously increasing.
+!                                                      [Z.I., Mar. 1996]
+!=======================================================================
+  implicit none
+  integer nn, n, i, istop, iNloc
+  double precision x(nn), y(nn), xloc, Yloc
+  !---------------------------------------------------------------------
+  if (n.gt.1) then
+     if ((x(1)-xloc)*(x(n)-xloc).le.0.0d0) then
+        istop = 0
+        i = 1
+        do while (istop.ne.1)
+           i = i + 1
+           if (i.gt.n) stop 'lininter ???'
+           if (x(i).ge.xloc) then
+              istop = 1
+              iNloc = i
+              Yloc = y(i-1) + (y(i)-y(i-1))/(x(i)-x(i-1))*(xloc-x(i-1))
+           end if
+        end do
+     else
+        if (xloc.le.x(1)) Yloc = y(1)
+        if (xloc.ge.x(n)) Yloc = y(n)
+     end if
+  else
+     Yloc = y(1)
+  end if
+  !---------------------------------------------------------------------
+  return
+end subroutine LinInter
+!***********************************************************************

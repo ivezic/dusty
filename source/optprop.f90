@@ -510,39 +510,4 @@ double precision function SizeDist(q,aa,sdtype,a0)
 end function SizeDist
 !***********************************************************************
 
-!***********************************************************************
-subroutine LinInter(nn,n,x,y,xloc,iNloc,Yloc)
-!=======================================================================
-! This subroutine performs linear interpolation for y(x) such that
-! Yloc = y(xloc). It is assumed that x is monotonously increasing.
-!                                                      [Z.I., Mar. 1996]
-!=======================================================================
-  implicit none
-  integer nn, n, i, istop, iNloc
-  double precision x(nn), y(nn), xloc, Yloc
-  !---------------------------------------------------------------------
-  if (n.gt.1) then
-     if ((x(1)-xloc)*(x(n)-xloc).le.0.0d0) then
-        istop = 0
-        i = 1
-        do while (istop.ne.1)
-           i = i + 1
-           if (i.gt.n) stop 'lininter ???'
-           if (x(i).ge.xloc) then
-              istop = 1
-              iNloc = i
-              Yloc = y(i-1) + (y(i)-y(i-1))/(x(i)-x(i-1))*(xloc-x(i-1))
-           end if
-        end do
-     else
-        if (xloc.le.x(1)) Yloc = y(1)
-        if (xloc.ge.x(n)) Yloc = y(n)
-     end if
-  else
-     Yloc = y(1)
-  end if
-  !---------------------------------------------------------------------
-  return
-end subroutine LinInter
-!***********************************************************************
 
