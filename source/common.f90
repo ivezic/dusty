@@ -15,11 +15,12 @@ Module common
   PARAMETER (dynrange = 1.d20)
   integer nOutput                       ! number of output columns
   PARAMETER (nOutput=20)
-  integer npY,npP,npL,npG
+  integer npY,npP,npL,npG,npR
   PARAMETER (npY = 500)
-  PARAMETER (npP = 200)
-  PARAMETER (npL = 200)
+  PARAMETER (npP = 20*npY+20)
+  PARAMETER (npL = 125)
   PARAMETER (npG = 10)
+  PARAMETER (npR = 90)
 
   double precision,allocatable :: ETAdiscr(:)
   integer,allocatable ::  iYfirst(:), YPequal(:), Plast(:)
@@ -36,6 +37,8 @@ Module common
   double precision,allocatable :: abund(:,:)
   double precision,allocatable :: omega(:,:)
   double precision,allocatable :: TAUslb(:,:)
+  double precision,allocatable :: SLBIntm(:,:)
+  double precision,allocatable :: SLBIntp(:,:)
   double precision,allocatable :: TAUtot(:)
   double precision,allocatable :: Jext(:)
   double precision,allocatable :: fsL(:,:), fsR(:,:), fsLbol(:), fsRbol(:),fsbol(:)
@@ -46,7 +49,16 @@ Module common
   double precision,allocatable :: Ude(:,:)
   double precision,allocatable :: Uds(:,:)
   double precision,allocatable :: Td(:,:)
+  double precision,allocatable :: tauF(:)
   double precision,allocatable :: RPr(:)
+  double precision,allocatable :: Eps(:)
+  double precision,allocatable :: ugas(:)
+  double precision,allocatable :: vrat(:,:)
+  double precision,allocatable :: IntOut(:,:)
+  double precision,allocatable :: IstR(:)
+  double precision,allocatable :: bOut(:)
+  double precision,allocatable :: tauZout(:)
+  double precision :: SmC(30,99)
 
   character*4 :: version
   parameter (version='4.00')
@@ -64,7 +76,7 @@ Module common
   logical :: slb,sph            ! geometry
   ! remove TypEntry ???? --- not necessary ??? 
   integer :: TypEntry(2)        ! type of ilumination for (0-left and 1-right)
-  integer :: denstyp            ! density type   
+  integer :: denstyp            ! density type  1(POWD) 2(EXPD) 3(RDW) 4(RDWA) 5(USER_SUPPLIED) 6(RDWPR)
   double precision ksi          ! the ratio of the right/left bol. fluxes (<1) for slab
   double precision Ji,Jo        ! input mean energy density - scaling in dusty
   double precision Tinner       ! Temperature at the inner boundary for fiducial grain
@@ -82,6 +94,8 @@ Module common
   double precision :: psi,psi0   ! psi as defined in IE97
   double precision :: ETAcoef(npY,4)
   ! output parameter - should be a structure and not in global ... search if it is used elseweher
+  double precision CMdot, CM, Cve, Cr1, G1, Ginf, Phi, Prdw, QV, Qstar, r1rs, Te_min, winf, &
+       zeta1
   integer psftype, Npsf, iLambda
   integer :: iA,iB,iC,iX,iPSF,iV,NlambdaOut,Nconv,nMu,Nvisi,iD,iJ,nJOut
   double precision,allocatable :: theta(:)

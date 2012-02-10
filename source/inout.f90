@@ -1460,7 +1460,7 @@ end function EMfunc
 !***********************************************************************
 
 !***********************************************************************
-subroutine PrOut(nY,model,delta)
+subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
 !=======================================================================
 ! This subroutine prints the results out.        [ZI,Feb'96; MN,Mar'99]
 !=======================================================================
@@ -1468,18 +1468,20 @@ subroutine PrOut(nY,model,delta)
   use common
   implicit none
   !---parameter
-  integer :: model,nY
+  integer :: model,nY,nP,nYprev,itereta
   double precision :: delta
   !---local variables
-  integer :: iLV,iG,iL,iY
+  integer :: i, j, iLV, iG, iL, iY, unt, imu
   double precision, allocatable::Elems(:,:),ftotL(:),ftotR(:),faux(:)
   double precision :: sigmaVs,sigmaVa,sigmaVe
   double precision :: FbolL, FbolR, FbolIL,FbolIR,res, xAttTotL,&
        xAttTotR,xDsTotL,xDsTotR,xDeTotL,xDeTotR,temp1,temp2, &
-       fnormL, fnormR, limval, tht1
+       fnormL, fnormR, limval, tht1, dmax, GinfG1, xs, xde, xds, tr, &
+       eta
   character*120 STemp,Serr,hdint, hdcon,hdvis, s1, su1, s2, su2, tstr*10
   character*132 hdsp1,hdsp2,hdrslb1,hdrslb2,hdrsph1,hdrsph2,hdrdyn
   character*255 crossfilename
+  external eta
   
 !!$  integer iG, iY, iL, i, model, j, unt, imu, nrows, ncols,nG, iOut, iNloc , iLV
 !!$!  parameter (nrows=200, ncols=25)
@@ -1580,79 +1582,79 @@ subroutine PrOut(nY,model,delta)
   else
      call getfs(SmC(5,model)*100.0d0,0,2,Serr)
   end if
-
-!!$!--------------  overall parameters to *.out file -----------------------
-!!$! write header to output file *.out
-!!$  if (model.eq.1) then
-!!$   write(12,*)'         '
-!!$   write(12,*)' RESULTS:'
-!!$   write(12,*)' --------'
-!!$   if (slb) then
-!!$!    slab output
-!!$      s1=' ###   Tau0   Psi/Psi0    FiL     FiR      FbolL   FbolR    r1(cm)   TdL(K)   TdR(K)   RPr(1)  e(%)'
-!!$     su1=' ###     1       2         3       4         5       6        7         8        9      10     11'
-!!$     write(12,'(a)') s1
-!!$     write(12,'(a)') su1
-!!$     write(12,'(a)') &
-!!$         ' ==================================================================================================='
-!!$!  output for sphere
-!!$   elseif(sph) then
-!!$      s1= ' ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1   T1(K)    Td(K)    RPr(1)  e(%)'
-!!$     su1= ' ###     1       2        3        4        5        6        7        8        9      10'
-!!$     if(rdwa.or.rdw) then
-!!$      s2='  Mdot      Ve       M> '
-!!$     su2='   11       12       13 '
-!!$     write(12,'(a,a)') s1,s2
-!!$     write(12,'(a,a)')su1,su2
-!!$     write(12,'(a)') &
-!!$     ' ====================================================================================================================='
-!!$! **  private rdw file **
-!!$      if (rdwpr) then
-!!$       s1= '###   tau0      tauF     Mdot      Ve       M>       '
-!!$       su1='###    1          2        3        4       5       6'
-!!$       s2= 'Ginf/G1   P    delta  d/sqrt(w1)  winf     Phi    zeta(1)'
-!!$       su2='        7        8        9        10       11       12'
-!!$       write(66,'(a53,a57)') s1,s2
-!!$       write(66,'(a53,a55)')su1,su2
-!!$      end if
-!!$     else
-!!$      write(12,'(a)') s1
-!!$      write(12,'(a)') su1
-!!$      write(12,'(a)') &
-!!$         ' ========================================================================================'
-!!$     end if
-!!$   end if !end if for sphere
-!!$  end if
+!!$
+!--------------  overall parameters to *.out file -----------------------
+! write header to output file *.out
+  if (model.eq.1) then
+   write(12,*)'         '
+   write(12,*)' RESULTS:'
+   write(12,*)' --------'
+   if (slb) then
+!    slab output
+      s1=' ###   Tau0   Psi/Psi0    FiL     FiR      FbolL   FbolR    r1(cm)   TdL(K)   TdR(K)   RPr(1)  e(%)'
+     su1=' ###     1       2         3       4         5       6        7         8        9      10     11'
+     write(12,'(a)') s1
+     write(12,'(a)') su1
+     write(12,'(a)') &
+         ' ==================================================================================================='
+!  output for sphere
+   elseif(sph) then
+      s1= ' ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1   T1(K)    Td(K)    RPr(1)  e(%)'
+     su1= ' ###     1       2        3        4        5        6        7        8        9      10'
+     if((denstyp.eq.3).or.(denstyp.eq.4)) then ! 3(RDW) 4(RDWA)
+      s2='  Mdot      Ve       M> '
+     su2='   11       12       13 '
+     write(12,'(a,a)') s1,s2
+     write(12,'(a,a)')su1,su2
+     write(12,'(a)') &
+     ' ====================================================================================================================='
+! **  private rdw file **
+      if (denstyp.eq.6) then ! 6(RDWPR)
+       s1= '###   tau0      tauF     Mdot      Ve       M>       '
+       su1='###    1          2        3        4       5       6'
+       s2= 'Ginf/G1   P    delta  d/sqrt(w1)  winf     Phi    zeta(1)'
+       su2='        7        8        9        10       11       12'
+       write(66,'(a53,a57)') s1,s2
+       write(66,'(a53,a55)')su1,su2
+      end if
+     else
+      write(12,'(a)') s1
+      write(12,'(a)') su1
+      write(12,'(a)') &
+         ' ========================================================================================'
+     end if
+   end if !end if for sphere
+  end if
 !!$! print output tables for ea.model
-!!$!---------------- Output for slab: ---------------------------
-!!$  if(slb) then
-!!$     write(12,'(i4,1p,10e9.2,a3)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
-!!$!---------- for spherical shell ------------------------------
-!!$  elseif(sph) then
-!!$     if (rdwa.or.rdw.or.rdwpr) then
-!!$        write(12,'(i4,1p,9e9.2,a1,a3,a1,1p,3e9.2)') &
-!!$             model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr,' ',CMdot, CVe, CM
-!!$     else
-!!$        write(12,'(i4,1p,9e9.2,a1,a3)') &
-!!$             model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr
-!!$     end if
-!!$     if (rdwpr) then
-!!$        !** private rdw file **
-!!$        if (model.eq.1) then
-!!$           write(66,'(a11,1p,e9.3,a10,1p,e9.3,a12,1p,e9.3,a13,e9.3)')  &
-!!$                '###   qv = ',qv,', Qstar = ',Qstar,', v1/vinf = ',pow, &
-!!$                ', (g/r)max = ',ptr(1)
-!!$        end if
-!!$        dmax = dsqrt(pow*winf)
-!!$        if (G1.gt.0) then
-!!$           GinfG1 =  Ginf / G1
-!!$        else
-!!$           GinfG1 = 0
-!!$        end if
-!!$        write(66,'(i4,1p,5e9.2,7e9.2)') &
-!!$             model, taufid, tauF(nY), CMdot, CVe, CM, &
-!!$             GinfG1, Prdw, delta, delta/dmax, winf, Phi, zeta1
-!!$     end if
+!---------------- Output for slab: ---------------------------
+  if(slb) then
+     write(12,'(i4,1p,10e9.2,a3)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
+!---------- for spherical shell ------------------------------
+  elseif(sph) then
+     if ((denstyp.eq.3).or.(denstyp.eq.4).or.(denstyp.eq.6)) then ! 3(RDW) 4(RDWA) 6(RDWPR)
+        write(12,'(i4,1p,9e9.2,a1,a3,a1,1p,3e9.2)') &
+             model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr,' ',CMdot, CVe, CM
+     else
+        write(12,'(i4,1p,9e9.2,a1,a3)') &
+             model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr
+     end if
+     if ((denstyp.eq.6)) then ! 6(RDWPR)
+        !** private rdw file **
+        if (model.eq.1) then
+           write(66,'(a11,1p,e9.3,a10,1p,e9.3,a12,1p,e9.3,a13,e9.3)')  &
+                '###   qv = ',qv,', Qstar = ',Qstar,', v1/vinf = ',pow, &
+                ', (g/r)max = ',ptr(1)
+        end if
+        dmax = dsqrt(pow*winf)
+        if (G1.gt.0) then
+           GinfG1 =  Ginf / G1
+        else
+           GinfG1 = 0
+        end if
+        write(66,'(i4,1p,5e9.2,7e9.2)') &
+             model, taufid, tauF(nY), CMdot, CVe, CM, &
+             GinfG1, Prdw, delta, delta/dmax, winf, Phi, zeta1
+     end if
 !!$     if(right.eq.0) then
 !!$        if (startyp(1).eq.1.or.startyp(1).eq.2) then
 !!$           if(Tstar(1).lt.Te_min) then
@@ -1665,269 +1667,271 @@ subroutine PrOut(nY,model,delta)
 !!$           end if
 !!$        end if
 !!$     end if
-!!$     ! end if for geometry
-!!$  end if
-!!$  !--------------   spectrum to *.s##  file   ------------------------
-!!$  if (iA.ne.0) then
-!!$   unt = 15
-!!$   call line(1,2,unt)
-!!$   if(slb) then
-!!$    write(unt,'(a7,i3,a8,f8.3,a36)')'# model',model,' taufid=',taufid,'  spectrum from the right slab side'
-!!$    write(unt,'(a13,1p,e9.2)') '# Fbol[W/m2]=',FbolR
-!!$   else
-!!$    write(unt,'(a7,i3,a8,f8.3,a10)') '# model',model,' taufid=',taufid,'  spectrum'
-!!$    write(unt,'(a13,1p,e9.2)') '# Fbol[W/m2]=',FbolR
-!!$   end if
-!!$   call line(1,1,unt)
-!!$   call getOmega(nG,omega)
-!!$   do iL = 1, nL
-!!$    if (ftot(iL,nY).ne.0.0d0) then
-!!$     xs = fsL(iL,nY)/ftotR(iL)
-!!$     xds = fds(iL,nY)/ftotR(iL)
-!!$     xde = fde(iL,nY)/ftotR(iL)
-!!$    else
-!!$     xs = 0.0d0
-!!$     xds = 0.0d0
-!!$     xde = 0.0d0
-!!$    end if
-!!$!  no need to print negligible values
-!!$    if (dabs(xs).lt.limval) xs = 0.0d0
-!!$    if (dabs(xds).lt.limval) xds = 0.0d0
-!!$    if (dabs(xde).lt.limval) xde = 0.0d0
-!!$    if (dabs(fsL(iL,1)).lt.limval) fsL(iL,1) = 0.0d0
-!!$!   Printing normalized spectral shapes. Bol. flux values are in the headers. [MN]
-!!$    if (dabs(ftot(iL,nY)).lt.limval) ftot(iL,nY) = 0.0d0
-!!$    Elems(iL,1) = lambda(iL)
-!!$    Elems(iL,2) = ftotR(iL)/fnormR
-!!$    Elems(iL,3) = xs
-!!$    Elems(iL,4) = xds
-!!$    Elems(iL,5) = xde
-!!$    Elems(iL,6) = fsL(iL,1)/fsLbol(1)
-!!$    Elems(iL,7) = tautot(iL)
-!!$    Elems(iL,8) = omega(nG+1,iL)
-!!$   end do
-!!$!------ tabulate the spectra in the desired form ----------
-!!$   if(slb) then
-!!$    hdsp1 = '#   lambda     fRight     xAtt       xDs        xDe        fInp_L     TauTot     albedo'
-!!$   else
-!!$    hdsp1 = '#   lambda     fTot       xAtt       xDs        xDe        fInp       TauTot     albedo'
-!!$   end if
-!!$   write(unt,'(A90)') hdsp1
-!!$   if(slb) then
-!!$      write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3,A)')  '    -1      ',FbolR,' ',xAttTotR,' ',&
-!!$           xDsTotR,' ',xDeTotR,' ',FbolIL,'     -1.       -1.'
-!!$   else
-!!$      write(hdsp1,'(A,E9.3,A,E9.3,A)')  '   -1.       ',FbolR,'                                   ',FbolIL,'      -1.         -1.'
-!!$   end if
-!!$   write(unt,'(A90)') hdsp1
-!!$   call maketable(Elems,npL,8,unt)
-!!$!  spectra from the left (illuminated) slab side (file *.z##)
-!!$   if (slb) then
-!!$    call getOmega(nG,omega)
-!!$    do iL = 1, nL
-!!$       if (ftot(iL,1).ne.0.0d0) then
-!!$          xs =  fsR(iL,1)/ftotL(iL)
-!!$          xds = fds(iL,1)/ftotL(iL)
-!!$          xde = fde(iL,1)/ftotL(iL)
-!!$       else
-!!$          xs = 0.0d0
-!!$          xds = 0.0d0
-!!$          xde = 0.0d0
-!!$       end if
-!!$       if (dabs(xs).lt.limval) xs =0.0d0
-!!$       if (dabs(xds).lt.limval) xds =0.0d0
-!!$       if (dabs(xde).lt.limval) xde =0.0d0
-!!$       if (dabs(fsR(iL,nY)).lt.limval) fsR(iL,nY) = 0.0d0
-!!$       ! rescale ftot with the bolom flux for z-spectra
-!!$       if (dabs(ftot(iL,1)).lt.limval) ftot(iL,1) = 0.0d0
-!!$       Elems(iL,1) = lambda(iL)
-!!$       Elems(iL,2) = ftotL(iL)/fnormL
-!!$       Elems(iL,3) = xs
-!!$       Elems(iL,4) = xds
-!!$       Elems(iL,5) = xde
-!!$       if (ksi.gt.0) then
-!!$          Elems(iL,6) = ksi*fsR(iL,nY)/fsRbol(nY)
-!!$       else
-!!$          Elems(iL,6) = 0.0d0
-!!$       end if
-!!$       Elems(iL,7) = tautot(iL)
-!!$       Elems(iL,8) = omega(nG+1,iL)
-!!$    end do
-!!$    if (iA.eq.3) unt=25
-!!$    ! append to the .s## file or write in a separate .z## file (if iA=3)
-!!$    call line(1,1,unt)
-!!$    write(unt,'(a7,i3,a8,f8.3,a33)') '# model',model,' taufid=',taufid,' spectrum from the left slab side'
-!!$    write(unt,'(a13,1p,e9.2)') '# Fbol[W/m2]=',FbolL
-!!$    call line(1,1,unt)
-!!$    write(unt,'(a)')'#   lambda     fLeft      xAtt       xDs        xDe        fInp_R     TauTot     albedo'
-!!$    write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3,A)')  '    -1      ',&
-!!$         FbolL,' ',xAttTotL,' ',xDsTotL,' ',xDeTotL,' ',FbolIR,'     -1.       -1.'
-!!$    write(unt,'(A)') hdsp1
-!!$    call maketable(Elems,nL,8,unt)
-!!$   end if
-!!$  end if
-!!$
-!!$!-----------  radial quantities to *.r## (old *.bxx) file -------------
-!!$  if (iB.ne.0) then
-!!$   if(allocated(Elems)) deallocate(Elems)
-!!$   allocate(Elems(nY,9+nG))
-!!$   hdrslb1= '#     t        epsilon     tauF       RPr   '
-!!$   do iG = 1,nG
-!!$      write(hdrslb2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)'), '    Td(',iG,') '
-!!$   end do
-!!$   hdrsph1= '#     y         Td         eta         t '
-!!$   hdrsph2= '     tauF      epsilon        RPr'
-!!$   hdrdyn= '         u        drift'
-!!$   unt = 16
-!!$   call line(1,2,unt)
-!!$   if(slb) then
-!!$    write(unt,'(a7,i3,a8,f8.3,a18)') '# model',model,' taufid=',taufid,'  spatial profiles'
-!!$   else
-!!$    write(unt,'(a7,i3,a8,f8.3,a18)') '# model',model,' taufid=',taufid,'  radial profiles '
-!!$   end if
-!!$   call line(1,1,unt)
-!!$!--------- for slab ---------
-!!$   if (slb) then
-!!$    do iY = 1, nY
-!!$     Elems(iY,1) = tr(iY)
-!!$     Elems(iY,2) = eps(iY)
-!!$     Elems(iY,3) = tauF(iY)
-!!$     Elems(iY,4) = RPr(iY)/RPr(1)
-!!$     do iG=1,nG
-!!$        Elems(iY,4+iG) = Td(iG,iY)
-!!$     end do
-!!$    end do
-!!$    write(unt,'(a43,a)') hdrslb1,hdrslb2
-!!$    call maketable(Elems,nY,4+nG,unt)
-!!$!------  for spherical shell --------
-!!$   elseif(sph) then
-!!$    do iY = 1, nY
-!!$     Elems(iY,1) = Y(iY)
-!!$     Elems(iY,2) = Td(1,iY)
-!!$     Elems(iY,3) = eta(Y(iY))
-!!$     Elems(iY,4) = tr(iY)
-!!$     Elems(iY,5) = tauF(iY)
-!!$     Elems(iY,6) = eps(iY)
-!!$     if (RPr(1).ne.0) Elems(iY,7) = RPr(iY)/RPr(1)
-!!$!     Elems(iY,8) = rg(1,iY)*Jext(iY)
-!!$!     if (rdwpr) then
-!!$! redefine for private rdw (denstyp.eq.6) option
-!!$!      Elems(iY,8) = rg(1,iY)
-!!$!      Elems(iY,9) = gamma(iY)
-!!$!      Elems(iY,10) = qF(iY)
-!!$!     end if
-!!$    end do
-!!$! check values:
-!!$    do i = 1, 7
-!!$     do iY = 1, nY
-!!$      if(Elems(iY,i).lt.limval) Elems(iY,i) = 0.0d0
-!!$     end do
-!!$    end do
-!!$! with dynamics
-!!$    if (rdw) then
-!!$     do iY = 1, nY
-!!$        Elems(iY,8) = ugas(iY)/ugas(nY)
-!!$        Elems(iY,9) = vrat(1,iY)
-!!$     end do
-!!$! check values:
-!!$     do i = 8, 9
-!!$      do iY = 1, nY
-!!$       if(Elems(iY,i).lt.limval) Elems(iY,i) = 0.0d0
-!!$      end do
-!!$     end do
-!!$     write(unt,'(a42,a42,a23)') hdrsph1,hdrsph2,hdrdyn
-!!$     call maketable(Elems,nY,9,unt)
-!!$    else
-!!$     write(unt,'(a42,a42)') hdrsph1,hdrsph2
-!!$     call maketable(Elems,nY,7,unt)
-!!$    end if
-!!$! end if for geometry
-!!$   end if
-!!$! end if for the iB (radial) flag
-!!$  end if
-!!$
-!!$!--------------   intensities to *.inn (old *.cxx) file  --------------
-!!$  if (abs(iC).ne.0) then
-!!$! slab intensity (found at the end of subroutine slbradt)
-!!$! theta(nmu) are the angles of output intensities
-!!$     if (slb) then
-!!$        if(allocated(Elems)) deallocate(Elems)
-!!$        allocate(Elems(npL,nmu+2))
-!!$        hdint = '   lambda'
-!!$        unt = 17
-!!$        call line(1,2,unt)
-!!$        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' transmitted i(theta)*cos(theta)'
-!!$        call line(1,1,unt)
-!!$        do iL = 1, nL
-!!$           Elems(iL,1) = lambda(iL)
-!!$           do imu = 1, nmu
-!!$              !if(iPhys.eq.1) SLBintm(imu,iL) = SLBintm(imu,iL)*Jext(nY)
-!!$              !4pi comes from slbintp since it is divided by 4pi need to be changed!!
-!!$              Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(1)*4*pi
-!!$           end do
-!!$           Elems(iL,nmu+2) = istR(iL)
-!!$        end do
-!!$        ! write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
-!!$        ! printout angles in degrees
-!!$        ! write(unt,'(a9,37f11.1,a9)') hdint,
-!!$        ! &                    (theta(imu)*180.0d0/pi,imu=1,nmu),'     IstR'
-!!$        write(unt,'(a9,100f11.1)') hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
-!!$        call maketable(Elems,npL,nmu+1,unt)
-!!$        ! adding the column with stellar ints at the end of the table
-!!$        !  call maketable(Elems,nL,nmu+2,unt)
-!!$        hdint = '   lambda'
-!!$        unt = 17
-!!$        call line(1,2,unt)
-!!$        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' reflected cos(theta)*i(theta)'
-!!$        call line(1,1,unt)
-!!$        do iL = 1, nL
-!!$           Elems(iL,1) = lambda(iL)
-!!$           do imu = 1, nmu
-!!$!              if(iPhys.eq.1) SLBintp(imu,iL) = SLBintp(imu,iL)*Jext(1)
-!!$               !4pi comes from slbintp since it is divided by 4pi need to be changed!!
-!!$
-!!$              Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(nY)*4*pi !4pi comes from slbintp
-!!$           end do
-!!$        end do
-!!$        !write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
-!!$        !printout angles in degrees
-!!$        write(unt,'(a9,99f11.1)')hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
-!!$        call maketable(Elems,npL,nmu+1,unt)
-!!$     !------  for spherical shell --------
-!!$     elseif(sph) then
-!!$        if(allocated(Elems)) deallocate(Elems)
-!!$        allocate(Elems(np+2,nLambdaOut+2))
-!!$        hdint = '#     b          t(b)'
-!!$        hdcon = '#   offset '
-!!$        hdvis = '#     q    '
-!!$        unt = 17
-!!$        call line(1,2,unt)
-!!$        write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
-!!$        call line(1,1,unt)
-!!$        do i = 1, nP+2
-!!$           Elems(i,1) = bOut(i)
-!!$           Elems(i,2) = tauZout(i)
-!!$           do j = 1, nLambdaOut
-!!$              ! check values:
-!!$              if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
-!!$                 IntOut(j,i) = 0.0d0
-!!$              end if
-!!$              Elems(i,j+2) = IntOut(j,i)
-!!$              ! we want intensity in Jy/arcsec^2
-!!$              ! this was the bug in intensity output for sphere,
-!!$              ! the missing 4piY^2 factor for intensity output [June 2006]
-!!$              ! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
-!!$              IF (iPhys.eq.1) THEN
-!!$                 Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-!!$              ELSE
-!!$                 Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-!!$              END IF
-!!$           end do
-!!$        end do
-!!$        write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
-!!$        call maketable(Elems,nP+2,nLambdaOut+2,unt)
-!!$     end if
-!!$  end if
+     ! end if for geometry
+  end if
+  !--------------   spectrum to *.s##  file   ------------------------
+  if (iA.ne.0) then
+     unt = 15
+     call line(1,2,unt)
+     if(slb) then
+        write(unt,'(a7,i3,a8,f8.3,a36)')'# model',model,' taufid=',taufid,'  spectrum from the right slab side'
+        write(unt,'(a13,1p,e9.2)') '# Fbol[W/m2]=',FbolR
+     else
+        write(unt,'(a7,i3,a8,f8.3,a10)') '# model',model,' taufid=',taufid,'  spectrum'
+        write(unt,'(a13,1p,e9.2)') '# Fbol[W/m2]=',FbolR
+     end if
+     call line(1,1,unt)
+     call getOmega(nY)
+     do iL = 1, nL
+        if (ftot(iL,nY).ne.0.0d0) then
+           xs = fsL(iL,nY)/ftotR(iL)
+           xds = fds(iL,nY)/ftotR(iL)
+           xde = fde(iL,nY)/ftotR(iL)
+        else
+           xs = 0.0d0
+           xds = 0.0d0
+           xde = 0.0d0
+        end if
+        !  no need to print negligible values
+        if (dabs(xs).lt.limval) xs = 0.0d0
+        if (dabs(xds).lt.limval) xds = 0.0d0
+        if (dabs(xde).lt.limval) xde = 0.0d0
+        if (dabs(fsL(iL,1)).lt.limval) fsL(iL,1) = 0.0d0
+        !   Printing normalized spectral shapes. Bol. flux values are in the headers. [MN]
+        if (dabs(ftot(iL,nY)).lt.limval) ftot(iL,nY) = 0.0d0
+        Elems(iL,1) = lambda(iL)
+        Elems(iL,2) = ftotR(iL)/fnormR
+        Elems(iL,3) = xs
+        Elems(iL,4) = xds
+        Elems(iL,5) = xde
+        Elems(iL,6) = fsL(iL,1)/fsLbol(1)
+        Elems(iL,7) = tautot(iL)
+        Elems(iL,8) = omega(nG+1,iL)
+     end do
+     !------ tabulate the spectra in the desired form ----------
+     if(slb) then
+        hdsp1 = '#   lambda     fRight     xAtt       xDs        xDe        fInp_L     TauTot     albedo'
+     else
+        hdsp1 = '#   lambda     fTot       xAtt       xDs        xDe        fInp       TauTot     albedo'
+     end if
+     write(unt,'(A90)') hdsp1
+     if(slb) then
+        write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3,A)')  '    -1      ',FbolR,' ',xAttTotR,' ',&
+             xDsTotR,' ',xDeTotR,' ',FbolIL,'     -1.       -1.'
+     else
+        write(hdsp1,'(A,E9.3,A,E9.3,A)')  '   -1.       ',FbolR,'                                   ',FbolIL,'      -1.         -1.'
+     end if
+     write(unt,'(A90)') hdsp1
+     call maketable(Elems,npL,8,unt)
+     !  spectra from the left (illuminated) slab side (file *.z##)
+     if (slb) then
+        call getOmega(nY)
+        do iL = 1, nL
+           if (ftot(iL,1).ne.0.0d0) then
+              xs =  fsR(iL,1)/ftotL(iL)
+              xds = fds(iL,1)/ftotL(iL)
+              xde = fde(iL,1)/ftotL(iL)
+           else
+              xs = 0.0d0
+              xds = 0.0d0
+              xde = 0.0d0
+           end if
+           if (dabs(xs).lt.limval) xs =0.0d0
+           if (dabs(xds).lt.limval) xds =0.0d0
+           if (dabs(xde).lt.limval) xde =0.0d0
+           if (dabs(fsR(iL,nY)).lt.limval) fsR(iL,nY) = 0.0d0
+           ! rescale ftot with the bolom flux for z-spectra
+           if (dabs(ftot(iL,1)).lt.limval) ftot(iL,1) = 0.0d0
+           Elems(iL,1) = lambda(iL)
+           Elems(iL,2) = ftotL(iL)/fnormL
+           Elems(iL,3) = xs
+           Elems(iL,4) = xds
+           Elems(iL,5) = xde
+           if (ksi.gt.0) then
+              Elems(iL,6) = ksi*fsR(iL,nY)/fsRbol(nY)
+           else
+              Elems(iL,6) = 0.0d0
+           end if
+           Elems(iL,7) = tautot(iL)
+           Elems(iL,8) = omega(nG+1,iL)
+        end do
+        if (iA.eq.3) unt=25
+        ! append to the .s## file or write in a separate .z## file (if iA=3)
+        call line(1,1,unt)
+        write(unt,'(a7,i3,a8,f8.3,a33)') '# model',model,' taufid=',taufid,' spectrum from the left slab side'
+        write(unt,'(a13,1p,e9.2)') '# Fbol[W/m2]=',FbolL
+        call line(1,1,unt)
+        write(unt,'(a)')'#   lambda     fLeft      xAtt       xDs        xDe        fInp_R     TauTot     albedo'
+        write(hdsp1,'(A,1p,E10.3,A,E10.3,A,E10.3,A,E10.3,A,E10.3,A)')  '    -1      ',&
+             FbolL,' ',xAttTotL,' ',xDsTotL,' ',xDeTotL,' ',FbolIR,'     -1.       -1.'
+        write(unt,'(A)') hdsp1
+        call maketable(Elems,nL,8,unt)
+     end if
+  end if
+  !-----------  radial quantities to *.r## (old *.bxx) file -------------
+  if (iB.ne.0) then
+     if(allocated(Elems)) deallocate(Elems)
+     allocate(Elems(nY,9+nG))
+     hdrslb1= '#     t        epsilon     tauF       RPr   '
+     do iG = 1,nG
+        write(hdrslb2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)'), '    Td(',iG,') '
+     end do
+     hdrsph1= '#     y         Td         eta         t '
+     hdrsph2= '     tauF      epsilon        RPr'
+     hdrdyn= '         u        drift'
+     unt = 16
+     call line(1,2,unt)
+     if(slb) then
+        write(unt,'(a7,i3,a8,f8.3,a18)') '# model',model,' taufid=',taufid,'  spatial profiles'
+     else
+        write(unt,'(a7,i3,a8,f8.3,a18)') '# model',model,' taufid=',taufid,'  radial profiles '
+     end if
+     call line(1,1,unt)
+
+     !--------- for slab ---------
+     if (slb) then
+        do iY = 1, nY
+           tr = TAUslb(iLfid,iY)/TAUslb(iLfid,nY)
+           Elems(iY,1) = tr
+           Elems(iY,2) = eps(iY)
+           Elems(iY,3) = tauF(iY)
+           Elems(iY,4) = RPr(iY)/RPr(1)
+           do iG=1,nG
+              Elems(iY,4+iG) = Td(iG,iY)
+           end do
+        end do
+        write(unt,'(a43,a)') hdrslb1,hdrslb2
+        call maketable(Elems,nY,4+nG,unt)
+        !------  for spherical shell --------
+     elseif(sph) then
+        do iY = 1, nY
+           tr = ETAzp(1,iY)/ETAzp(1,nY)
+           Elems(iY,1) = Y(iY)
+           Elems(iY,2) = Td(1,iY)
+           Elems(iY,3) = eta(Y(iY),nYprev,itereta)
+           Elems(iY,4) = tr
+           Elems(iY,5) = tauF(iY)
+           Elems(iY,6) = eps(iY)
+           if (RPr(1).ne.0) Elems(iY,7) = RPr(iY)/RPr(1)
+           !     Elems(iY,8) = rg(1,iY)*Jext(iY)
+           !     if (rdwpr) then
+           ! redefine for private rdw (denstyp.eq.6) option
+           !      Elems(iY,8) = rg(1,iY)
+           !      Elems(iY,9) = gamma(iY)
+           !      Elems(iY,10) = qF(iY)
+           !     end if
+        end do
+        ! check values:
+        do i = 1, 7
+           do iY = 1, nY
+              if(Elems(iY,i).lt.limval) Elems(iY,i) = 0.0d0
+           end do
+        end do
+        ! with dynamics
+        if (denstyp.eq.3) then ! 3(RDW)
+           do iY = 1, nY
+              Elems(iY,8) = ugas(iY)/ugas(nY)
+              Elems(iY,9) = vrat(1,iY)
+           end do
+           ! check values:
+           do i = 8, 9
+              do iY = 1, nY
+                 if(Elems(iY,i).lt.limval) Elems(iY,i) = 0.0d0
+              end do
+           end do
+           write(unt,'(a42,a42,a23)') hdrsph1,hdrsph2,hdrdyn
+           call maketable(Elems,nY,9,unt)
+        else
+           write(unt,'(a42,a42)') hdrsph1,hdrsph2
+           call maketable(Elems,nY,7,unt)
+        end if
+        ! end if for geometry
+     end if
+     ! end if for the iB (radial) flag
+  end if
+
+!--------------   intensities to *.inn (old *.cxx) file  --------------
+  if (abs(iC).ne.0) then
+     ! slab intensity (found at the end of subroutine slbradt)
+     ! theta(nmu) are the angles of output intensities
+     if (slb) then
+        if(allocated(Elems)) deallocate(Elems)
+        allocate(Elems(npL,nmu+2))
+        hdint = '   lambda'
+        unt = 17
+        call line(1,2,unt)
+        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' transmitted i(theta)*cos(theta)'
+        call line(1,1,unt)
+        do iL = 1, nL
+           Elems(iL,1) = lambda(iL)
+           do imu = 1, nmu
+              !if(iPhys.eq.1) SLBintm(imu,iL) = SLBintm(imu,iL)*Jext(nY)
+              !4pi comes from slbintp since it is divided by 4pi need to be changed!!
+              Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(1)*4*pi
+           end do
+           Elems(iL,nmu+2) = istR(iL)
+        end do
+        ! write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
+        ! printout angles in degrees
+        ! write(unt,'(a9,37f11.1,a9)') hdint,
+        ! &                    (theta(imu)*180.0d0/pi,imu=1,nmu),'     IstR'
+        write(unt,'(a9,100f11.1)') hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
+        call maketable(Elems,npL,nmu+1,unt)
+        ! adding the column with stellar ints at the end of the table
+        !  call maketable(Elems,nL,nmu+2,unt)
+        hdint = '   lambda'
+        unt = 17
+        call line(1,2,unt)
+        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' reflected cos(theta)*i(theta)'
+        call line(1,1,unt)
+        do iL = 1, nL
+           Elems(iL,1) = lambda(iL)
+           do imu = 1, nmu
+!              if(iPhys.eq.1) SLBintp(imu,iL) = SLBintp(imu,iL)*Jext(1)
+               !4pi comes from slbintp since it is divided by 4pi need to be changed!!
+
+              Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(nY)*4*pi !4pi comes from slbintp
+           end do
+        end do
+        !write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
+        !printout angles in degrees
+        write(unt,'(a9,99f11.1)')hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
+        call maketable(Elems,npL,nmu+1,unt)
+     !------  for spherical shell --------
+     elseif(sph) then
+        if(allocated(Elems)) deallocate(Elems)
+        allocate(Elems(np+2,nLambdaOut+2))
+        hdint = '#     b          t(b)'
+        hdcon = '#   offset '
+        hdvis = '#     q    '
+        unt = 17
+        call line(1,2,unt)
+        write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
+        call line(1,1,unt)
+        do i = 1, nP+2
+           Elems(i,1) = bOut(i)
+           Elems(i,2) = tauZout(i)
+           do j = 1, nLambdaOut
+              ! check values:
+              if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
+                 IntOut(j,i) = 0.0d0
+              end if
+              Elems(i,j+2) = IntOut(j,i)
+              ! we want intensity in Jy/arcsec^2
+              ! this was the bug in intensity output for sphere,
+              ! the missing 4piY^2 factor for intensity output [June 2006]
+              ! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
+              !IF (iPhys.eq.1) THEN <--- iphys allways 1
+              Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
+              ! ELSE
+              !   Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
+              ! END IF
+           end do
+        end do
+        write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
+        call maketable(Elems,nP+2,nLambdaOut+2,unt)
+     end if
+  end if
 !!$  if (iC.lt.0) then
 !!$     !---------  convolved images either add to .i## file or write in *.c## file --
 !!$     if(iC.eq.-3) unt = 21

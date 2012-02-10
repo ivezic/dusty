@@ -198,6 +198,7 @@ implicit none
   allocate(fds(nL,npY))
   allocate(fde(nL,npY))
   allocate(ftot(nL,npY))
+  allocate(IstR(nL))
 end subroutine alloc_mem_nL
 
 subroutine alloc_mem()
@@ -219,6 +220,15 @@ implicit none
   allocate(Td(npG,npY))
   allocate(Jext(npY))
   allocate(RPr(npY))
+  allocate(tauF(npY))
+  allocate(eps(npY))
+  allocate(ugas(npY))
+  allocate(vrat(npG,npY))
+  allocate(SLBIntm(npR,npL))
+  allocate(SLBIntp(npR,npL))
+  allocate(IntOut(20,npP+2))
+  allocate(bOut(npP+2))
+  allocate(tauZout(npP+2))
 end subroutine alloc_mem
 
 subroutine dealloc_mem()
@@ -251,4 +261,15 @@ implicit none
   deallocate(ftot)
   deallocate(Jext)
   deallocate(RPr)
+  deallocate(tauF)
+  deallocate(eps)
+  deallocate(ugas)
+  deallocate(vrat)
+  deallocate(SLBIntm)
+  deallocate(SLBIntp)
+  deallocate(IntOut)
+  deallocate(IstR)
+  deallocate(bOut)
+  deallocate(tauZout)
+
 end subroutine dealloc_mem

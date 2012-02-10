@@ -1,5 +1,3 @@
-!
-
 !***********************************************************************
 subroutine Kernel(path,lpath,tau,Nmodel)
 !=======================================================================
@@ -10,9 +8,10 @@ subroutine Kernel(path,lpath,tau,Nmodel)
 !=======================================================================
   use common
   implicit none
-  integer iG, iY, iL, i,j, GridType, model, Nmodel, &
+  integer iG, iY, iL, i,j, GridType, model, Nmodel, itereta, &
        iterfbol, fbolOK, istop, lpath, nY, nYprev, nP, nCav, nIns
-  double precision tau(Nmodel), ratio, delta, tau0, taumax
+  double precision ratio, delta, tau0, taumax
+  double precision,allocatable :: tau(:)
   character*235 path
   logical initial
   !----------------------------------------------------------------------
@@ -30,13 +29,15 @@ subroutine Kernel(path,lpath,tau,Nmodel)
         initial = .false.
      end if
      tau0 = tau(model)
+     print*,tau0,'blubb'
+     print*,tau
      taufid = tau0
      call GetTaumax(tau0,taumax)
      if (iVerb.gt.0)  write(*,'(a9,i4,a6,f12.4)') ' model = ',model,', tau=',tau0
      call OPPEN(model,path,lpath)
      if (iVerb.eq.2) write(*,*) ' going to Solve '
      ! solve radiative transfer for this particular optical depth
-     call Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! old dustys way
      ! CALL Solve_matrix(model,nG,error)
 
@@ -46,7 +47,7 @@ subroutine Kernel(path,lpath,tau,Nmodel)
         if (error.eq.0) then
            ! call Spectral(model) ! no more spectral props.
            ! if (iVerb.eq.2) write(*,*) 'Done with Spectral'
-           call PrOut(nY,model,delta)
+           call PrOut(nY,nP,nYprev,itereta,model,delta)
            print*, 'Done with prOut'
         else
            go to 10
@@ -116,7 +117,7 @@ end subroutine GetTauMax
 !!$
 !!$
 !***********************************************************************
-subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
 !=======================================================================
 ! This subroutine solves the continuum radiative transfer problem in
 ! spherical and planar geometry.                       [Deka,'09, MN'09]
@@ -124,7 +125,7 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
   use common
   implicit none
   integer model,iterfbol,fbolOK,etaOK,iPstar,itereta,y_incr, &
-       nY, nYprev, nP, nCav, nIns, nY_old
+       nY, nP, nYprev, nCav, nIns, nY_old
   logical initial
   double precision delta,taulim,pstar,taumax
   double precision, allocatable :: fs(:,:),us(:,:),T4_ext(:)
@@ -153,10 +154,7 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
 !!$       Udbol(npY), Usbol(npY), fDebol(npY),fDsbol(npY), maxFerr
 
 !--------------------------------------------------------------------------
-  allocate(fs(nL,nY))
-  allocate(us(nL,nY))
-  allocate(T4_ext(nY))
-  allocate(emiss(nG,nL,nY))
+
   if (iX.ne.0) then
      call line(0,2,18)
      write(18,'(a7,i3,a20)') ' model ',model,'  RUN-TIME MESSAGES '
@@ -184,6 +182,11 @@ subroutine Solve(model,taumax,nY,nYprev,nP,nCav,nIns,initial,delta,iterfbol,fbol
   itereta = 0
   EtaOK = 0
   y_incr = 0
+  call SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol+1,itereta)
+  allocate(fs(nL,nY))
+  allocate(us(nL,nY))
+  allocate(T4_ext(nY))
+  allocate(emiss(nG,nL,nY))
   !------------ loop over bol.flux conservation ------------
   do while(fbolOK.eq.0)
      fbolOK = 1  !<--- remove this line only temporay !!!!! FH
