@@ -29,17 +29,15 @@ subroutine Kernel(path,lpath,tau,Nmodel)
         initial = .false.
      end if
      tau0 = tau(model)
-     print*,tau0,'blubb'
-     print*,tau
      taufid = tau0
      call GetTaumax(tau0,taumax)
      if (iVerb.gt.0)  write(*,'(a9,i4,a6,f12.4)') ' model = ',model,', tau=',tau0
      call OPPEN(model,path,lpath)
      if (iVerb.eq.2) write(*,*) ' going to Solve '
      ! solve radiative transfer for this particular optical depth
-     call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     ! call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! old dustys way
-     ! CALL Solve_matrix(model,nG,error)
+     CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
 
      ! if flux is conserved, the solution is obtained. So write out the values
      ! to output files for specified models
@@ -124,10 +122,13 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
 !=======================================================================
   use common
   implicit none
-  integer model,iterfbol,fbolOK,etaOK,iPstar,itereta,y_incr, &
-       nY, nP, nYprev, nCav, nIns, nY_old
+  !--- parameter 
+  integer :: model,iterfbol,fbolOK,itereta, nY, nP, nYprev, nCav, nIns
+  double precision :: delta, taumax
   logical initial
-  double precision delta,taulim,pstar,taumax
+  !--- local variables
+  integer etaOK, nY_old, iPstar, y_incr
+  double precision taulim,pstar
   double precision, allocatable :: fs(:,:),us(:,:),T4_ext(:)
   double precision, allocatable :: emiss(:,:,:)
 
@@ -190,7 +191,7 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
   !------------ loop over bol.flux conservation ------------
   do while(fbolOK.eq.0)
      fbolOK = 1  !<--- remove this line only temporay !!!!! FH
-
+     print*,'FbolOK = 1 ! <--- remove this line only temporay !!!!! FH'
      iterfbol = iterfbol + 1
      if (iX.ge.1) then
         write(18,*)'  ',iterfbol,' iteration over fbol'
@@ -2022,7 +2023,6 @@ subroutine Find_Text(nY,T4_ext)
   return
 end subroutine Find_Text
 !***********************************************************************
-
 
 !***********************************************************************
 subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,vec2)

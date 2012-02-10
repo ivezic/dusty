@@ -229,6 +229,7 @@ implicit none
   allocate(IntOut(20,npP+2))
   allocate(bOut(npP+2))
   allocate(tauZout(npP+2))
+  allocate(fbol(npY))
 end subroutine alloc_mem
 
 subroutine dealloc_mem()
@@ -271,5 +272,5 @@ implicit none
   deallocate(IstR)
   deallocate(bOut)
   deallocate(tauZout)
-
+  deallocate(fbol)
 end subroutine dealloc_mem

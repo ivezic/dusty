@@ -401,58 +401,58 @@ END SUBROUTINE SPLINE2
 !!$END SUBROUTINE trapzd
 !!$!***********************************************************************
 !!$
-!!$!***********************************************************************
-!!$subroutine polint(xa,ya,n,x,y,dy)
-!!$  ! For polinomial interpolation, used in Subroutine Romby.
-!!$  ! ====================================================================
-!!$  implicit none
-!!$  integer n,Nmax
-!!$  double precision dy,x,y,xa(n),ya(n)
-!!$  parameter (Nmax=1000)
-!!$  integer i,m,ns
-!!$  double precision den,dif,dift,ho,hp,w,c(Nmax),d(Nmax)
-!!$  !---------------------------------------------------------------------
-!!$  c = 0.0d0
-!!$  d = 0.0d0
-!!$  ns=1
-!!$  dif=dabs(x-xa(1))
-!!$  do i=1,n
-!!$     dift=dabs(x-xa(i))
-!!$     if (dift.lt.dif) then
-!!$        ns=i
-!!$        dif=dift
-!!$     endif
-!!$     c(i)=ya(i)
-!!$     d(i)=ya(i)
-!!$  end do
-!!$  y=ya(ns)
-!!$  ns=ns-1
-!!$  do m=1,n-1
-!!$     do i=1,n-m
-!!$        ho=xa(i)-x
-!!$        hp=xa(i+m)-x
-!!$        w=c(i+1)-d(i)
-!!$        den=ho-hp
-!!$        if(den.eq.0.0d0) then
-!!$           write(6,'(a)') 'failure in polint'
-!!$           stop
-!!$        endif
-!!$        den=w/den
-!!$        d(i)=hp*den
-!!$        c(i)=ho*den
-!!$     end do
-!!$     if (2*ns.lt.n-m)then
-!!$        dy=c(ns+1)
-!!$     else
-!!$        dy=d(ns)
-!!$        ns=ns-1
-!!$     endif
-!!$     y=y+dy
-!!$  end do
-!!$!-----------------------------------------------------------------------
-!!$  return
-!!$end subroutine polint
-!!$!***********************************************************************
+!***********************************************************************
+subroutine polint(xa,ya,n,x,y,dy)
+  ! For polinomial interpolation, used in Subroutine Romby.
+  ! ====================================================================
+  implicit none
+  integer n,Nmax
+  double precision dy,x,y,xa(n),ya(n)
+  parameter (Nmax=1000)
+  integer i,m,ns
+  double precision den,dif,dift,ho,hp,w,c(Nmax),d(Nmax)
+  !---------------------------------------------------------------------
+  c = 0.0d0
+  d = 0.0d0
+  ns=1
+  dif=dabs(x-xa(1))
+  do i=1,n
+     dift=dabs(x-xa(i))
+     if (dift.lt.dif) then
+        ns=i
+        dif=dift
+     endif
+     c(i)=ya(i)
+     d(i)=ya(i)
+  end do
+  y=ya(ns)
+  ns=ns-1
+  do m=1,n-1
+     do i=1,n-m
+        ho=xa(i)-x
+        hp=xa(i+m)-x
+        w=c(i+1)-d(i)
+        den=ho-hp
+        if(den.eq.0.0d0) then
+           write(6,'(a)') 'failure in polint'
+           stop
+        endif
+        den=w/den
+        d(i)=hp*den
+        c(i)=ho*den
+     end do
+     if (2*ns.lt.n-m)then
+        dy=c(ns+1)
+     else
+        dy=d(ns)
+        ns=ns-1
+     endif
+     y=y+dy
+  end do
+!-----------------------------------------------------------------------
+  return
+end subroutine polint
+!***********************************************************************
 !!$
 !!$
 !!$
