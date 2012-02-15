@@ -520,6 +520,7 @@ end subroutine gauleg
 
 !**********************************************************************
 SUBROUTINE ANALINT(nY,Nanal,xaux,yaux,m,aux)
+
 !======================================================================
 ! This subroutine calculates integral I(x**m*y(x)*dx). Both y and x are
 ! 1D arrays, y(i), x(i) with i=1,Nanal. The method used is approximation
@@ -533,31 +534,50 @@ SUBROUTINE ANALINT(nY,Nanal,xaux,yaux,m,aux)
 ! =======================================================================
   use common
   IMPLICIT none
-  
-  INTEGER i, j, Nanal, nY
-  DOUBLE PRECISION xaux(Nanal),yaux(Nanal),coeff(Nanal),A(npY,npY),m,aux,b
+  !---parameter
+  integer nY, Nanal
+  double precision :: xaux(Nanal),yaux(Nanal)
+  double precision :: m,aux
+  !---local
+  INTEGER i, j
+  DOUBLE PRECISION b
+  double precision,allocatable :: A(:,:),xaux_tmp(:),yaux_tmp(:),coeff(:)
+  INTERFACE
+     SUBROUTINE LINSYS(Nreal,A,B,X)
+       integer Nreal
+       DOUBLE PRECISION,allocatable :: A(:,:), B(:), X(:)
+     END SUBROUTINE LINSYS
+  END INTERFACE
   ! ---------------------------------------------------------------------
+  allocate(A(Nanal,Nanal))
+  allocate(xaux_tmp(Nanal))
+  allocate(yaux_tmp(Nanal))
+  allocate(coeff(Nanal))
+  do i=1,Nanal
+     xaux_tmp(i) = xaux(i)
+     yaux_tmp(i) = yaux(i)
+  end do
   error = 0
   ! generate matrix A and vector B
   DO i = 1, Nanal
      DO j = 1, Nanal-1
-        IF (xaux(i).EQ.0.0.AND.j.EQ.1) THEN
+        IF (xaux_tmp(i).EQ.0.0.AND.j.EQ.1) THEN
            A(i,j) = 1.0
         ELSE
-           A(i,j) = xaux(i)**(1.0*j-1.0)
+           A(i,j) = xaux_tmp(i)**(1.0*j-1.0)
         END IF
      END DO
-     A(i,Nanal) = 1.0/sqrt(1.0-xaux(i)*xaux(i))
+     A(i,Nanal) = 1.0/sqrt(1.0-xaux_tmp(i)*xaux_tmp(i))
   END DO
   ! solve for the coefficients
-  CALL LINSYS(nY,Nanal,A,yaux,coeff)
+  CALL LINSYS(Nanal,A,yaux_tmp,coeff)
   IF(error.NE.0) THEN
      CALL MSG(19)
      print*,"MSG(19)"
      RETURN
   END IF
   ! upper limit for integration:
-  b = xaux(Nanal)
+  b = xaux_tmp(Nanal)
   ! evaluate m-dependent contribution of the last term
   IF (m.GT.0.1) THEN
      IF (m.GT.1.1) THEN
@@ -577,7 +597,15 @@ SUBROUTINE ANALINT(nY,Nanal,xaux,yaux,m,aux)
      aux = aux + coeff(i) * (b**(m+1.0*i)) / (m+1.0*i)
   END DO
 ! -----------------------------------------------------------------------
-999   RETURN
+  do i=1,Nanal
+     xaux(i) = xaux_tmp(i)
+     yaux(i) = yaux_tmp(i)
+  end do
+999 deallocate(A)
+  deallocate(xaux_tmp)
+  deallocate(yaux_tmp)
+  deallocate(coeff)
+  RETURN
 END SUBROUTINE ANALINT
 !***********************************************************************
 !!$
@@ -607,7 +635,7 @@ END SUBROUTINE ANALINT
 !!$! ***********************************************************************
 !!$
 !***********************************************************************
-SUBROUTINE LINSYS(nY,Nreal,A,B,X)
+SUBROUTINE LINSYS(Nreal,A,B,X)
 !=======================================================================
 ! This subroutine solves the set of linear equations [A]*[X] = [B] for
 ! X [A(k,1)*X(1)+A(k,2)*X(2)+...+A(k,Nreal)*X(Nreal) = B(k), k=1,Nreal).
@@ -620,11 +648,38 @@ SUBROUTINE LINSYS(nY,Nreal,A,B,X)
 ! =======================================================================
   use common
   IMPLICIT none
-  
-  INTEGER Nreal, indx(npY), i, j, nY
-  DOUBLE PRECISION A(npY,npY), B(npY), X(npY), &
-              A1c(npY,npY), B1(npY), A2c(npY,npY), B2(npY), d
+  !--- parameter
+  integer nY,Nreal
+  DOUBLE PRECISION,allocatable :: A(:,:), B(:), X(:)
+  !--- local
+  INTEGER i, j
+  integer ,allocatable :: indx(:)
+  DOUBLE PRECISION d
+  double precision,allocatable :: A1c(:,:), B1(:), A2c(:,:), B2(:)
   ! ---------------------------------------------------------------------
+  INTERFACE
+     SUBROUTINE LUBKSB(A,N,NP,INDX,B)
+       integer N,NP
+       integer, allocatable :: indx(:)
+       double precision,allocatable :: A(:,:),B(:)
+     END SUBROUTINE LUBKSB
+     SUBROUTINE LUDCMP(A,N,NP,INDX,D)
+       integer N,NP
+       double precision :: D
+       integer, allocatable :: indx(:)
+       double precision,allocatable :: A(:,:),B(:)
+     END SUBROUTINE LUDCMP
+     SUBROUTINE MPROVE(A,ALUD,N,NP,INDX,B,X)
+       integer :: n,np
+       integer,allocatable :: INDX(:)
+       double precision,allocatable :: A(:,:),ALUD(:,:),B(:),X(:)
+     END SUBROUTINE MPROVE
+  END INTERFACE
+  allocate(indx(Nreal))
+  allocate(A1c(Nreal,Nreal))
+  allocate(B1(Nreal))
+  allocate(A2c(Nreal,Nreal))
+  allocate(B2(Nreal))
   error = 0
   ! generate DOUBLE PRECISION copies of A and B (two copies because they
   ! are changed in LUDCMP and LUBKSB, but still needed for MPROVE)
@@ -647,15 +702,27 @@ SUBROUTINE LINSYS(nY,Nreal,A,B,X)
      X(i) = B1(i)
   END DO
   ! --------------------------------------------------------------------
+  deallocate(indx)
+  deallocate(A1c)
+  deallocate(B1)
+  deallocate(A2c)
+  deallocate(B2)
   RETURN
 END SUBROUTINE LINSYS
 !***********************************************************************
 
 ! ***********************************************************************
 SUBROUTINE LUBKSB(A,N,NP,INDX,B)
-  ! =====================================================================
-  DIMENSION INDX(NP)
-  DOUBLE PRECISION A(NP,NP),B(NP)
+  IMPLICIT none
+  !---parameter
+  integer N,NP
+  integer, allocatable :: indx(:)
+  double precision,allocatable :: A(:,:),B(:)
+  !---local
+  integer :: i,j,ii,ll
+  double precision :: sum
+!!$  DIMENSION INDX(NP)
+!!$  DOUBLE PRECISION A(NP,NP),B(NP)
   ! -------------------------------------------------------------------
   II=0
   !impossible to parallelize since B(J) needs to is changed and used!
@@ -689,11 +756,20 @@ END SUBROUTINE LUBKSB
 
 ! ***********************************************************************
 SUBROUTINE LUDCMP(A,N,NP,INDX,D)
-  ! =====================================================================
-  PARAMETER (NMAX=10000,TINY=1.0E-20)
-  DIMENSION INDX(NP)
-  DOUBLE PRECISION A(NP,NP),VV(NMAX), D, SUM
+  IMPLICIT none
+  !---parameter
+  integer N,NP
+  double precision :: D
+  integer, allocatable :: indx(:)
+  double precision,allocatable :: A(:,:),B(:)
+  !---local
+  integer :: i,k,j,imax,error
+  DOUBLE PRECISION TINY
+  PARAMETER (TINY=1.D-20)
+  DOUBLE PRECISION,allocatable :: VV(:)
+  double precision :: SUM,aamax,DUM
   ! ------------------------------------------------------------------
+  allocate(VV(N))
   error = 0
   D = 1.
   DO I = 1, N
@@ -757,17 +833,31 @@ SUBROUTINE LUDCMP(A,N,NP,INDX,D)
 !!  !$OMP END PARALLEL DO
   IF(A(N,N).EQ.0.)A(N,N)=TINY
   !------------------------------------------------------------------
+  deallocate(VV)
   RETURN
 END SUBROUTINE LUDCMP
 ! ***********************************************************************
 
 !***********************************************************************
 SUBROUTINE MPROVE(A,ALUD,N,NP,INDX,B,X)
-!=======================================================================
-  PARAMETER (NMAX=10000)
-  DIMENSION INDX(N)
-  DOUBLE PRECISION SDP,A(NP,NP),ALUD(NP,NP),B(N),X(N),R(NMAX)
+  IMPLICIT none
+  !---parameter
+  integer :: n,np
+  integer,allocatable :: INDX(:)
+  double precision,allocatable :: A(:,:),ALUD(:,:),B(:),X(:)
+  !---local
+  integer i,j
+  DOUBLE PRECISION SDP
+  double precision,allocatable :: R(:)
+  INTERFACE
+     SUBROUTINE LUBKSB(A,N,NP,INDX,B)
+       integer N,NP
+       integer, allocatable :: indx(:)
+       double precision,allocatable :: A(:,:),B(:)
+     END SUBROUTINE LUBKSB
+  END INTERFACE
   ! ---------------------------------------------------------------------
+  allocate(R(NP))
   DO i = 1, N
      SDP = -B(i)
      DO j = 1, N
@@ -780,6 +870,7 @@ SUBROUTINE MPROVE(A,ALUD,N,NP,INDX,B,X)
      X(i) = X(i) - R(i)
   END DO
   ! -----------------------------------------------------------------------
+  deallocate(R)
   RETURN
 END SUBROUTINE MPROVE
 !***********************************************************************
@@ -809,32 +900,32 @@ SUBROUTINE Maple3(w,z,p,MpInt)
 END SUBROUTINE Maple3
 !***********************************************************************
 !!$
-!!$!**********************************************************************
-!!$subroutine add(np1,nr1,np2,nr2,q1,q2,q3,qout)
-!!$!======================================================================
-!!$! This subroutine evaluates the following expression:
-!!$! [qOut] = [q1] + [q2] + [q3]. qout, q1, q2 and q2 are matrices of
-!!$! physical size (np2,np1) and real size (nr2,nr1).     [Z.I., Nov. 1995]
-!!$! ======================================================================
-!!$  implicit none
-!!$  integer npY, npP, npX, npL, npG, npR
-!!$  include '../userpar.inc'
-!!$
-!!$  integer  np1, nr1, np2, nr2, i2, i1
-!!$  double precision  q1(np2,np1), q2(np2,np1), q3(np2,np1),qout(np2,np1)
-!!$! ----------------------------------------------------------------------
-!!$
-!!$! loop over index 2
-!!$  do i2 = 1, nr2
-!!$! loop over index 1
-!!$   do i1 = 1, nr1
-!!$    qout(i2,i1) = q1(i2,i1) +  q2(i2,i1) + q3(i2,i1)
-!!$   end do
-!!$  end do
-!!$! ----------------------------------------------------------------------
-!!$  return
-!!$end subroutine add
-!!$!**********************************************************************
+!**********************************************************************
+subroutine add(np1,nr1,np2,nr2,q1,q2,q3,qout) !only needed in matrix method
+!======================================================================
+! This subroutine evaluates the following expression:
+! [qOut] = [q1] + [q2] + [q3]. qout, q1, q2 and q2 are matrices of
+! physical size (np2,np1) and real size (nr2,nr1).     [Z.I., Nov. 1995]
+! ======================================================================
+  implicit none
+  integer npY, npP, npX, npL, npG, npR
+  include '../userpar.inc'
+
+  integer  np1, nr1, np2, nr2, i2, i1
+  double precision  q1(np2,np1), q2(np2,np1), q3(np2,np1),qout(np2,np1)
+! ----------------------------------------------------------------------
+
+! loop over index 2
+  do i2 = 1, nr2
+! loop over index 1
+   do i1 = 1, nr1
+    qout(i2,i1) = q1(i2,i1) +  q2(i2,i1) + q3(i2,i1)
+   end do
+  end do
+! ----------------------------------------------------------------------
+  return
+end subroutine add
+!**********************************************************************
 !!$
 !!$!***********************************************************************
 !!$SUBROUTINE ChkRange(dr,x)

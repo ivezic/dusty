@@ -2473,7 +2473,7 @@ SUBROUTINE NORDLUND(nY,flag,x,f,N1,N2,m,intfdx)
      ! calculate the contribution of the last Nanal points
      ! produce REAL copy of m
      am = 1.0*(m)
-     CALL ANALINT(nY,Nanal,xaux,faux,am,aux,error)
+     CALL ANALINT(nY,Nanal,xaux,faux,am,aux)
      IF(error.NE.0) THEN
         RETURN
      END IF
@@ -2731,54 +2731,6 @@ subroutine Init_Temp(nY,T4_ext,us)
   return
 end subroutine Init_Temp
 !***********************************************************************
-!!$
-!!$! *************************************************************************
-!!$SUBROUTINE FindErr(flux,maxFerr)
-!!$!========================================================================
-!!$!This subroutine finds maximum err in flux conservation for both
-!!$!spherical and slab case as (fmax-fmin)/(fmax+fmin)   [MN,Aug'99]
-!!$!=========================================================================
-!!$  use common
-!!$  IMPLICIT none
-!!$  INTEGER iY
-!!$  DOUBLE PRECISION flux(npY), maxFerr, fmin, fmax, aux, accFbol, tune_acc
-!!$!---------------------------------------------------------------------
-!!$  ! accFbol = 1e-3 of input flux
-!!$  ! accFbol = max(Ji,Jo)*4*pi*1.0d-03
-!!$  tune_acc = 1e-1
-!!$  if (slb) then 
-!!$     accFbol = min(Ji,Jo)*4*pi*accuracy*tune_acc / Jext(1)
-!!$  else if (sph) then
-!!$     ! in the spherical case the flux is only zero if there is zero no
-!!$     ! central source (Ji=0) therefor accFbok is changed!
-!!$     accFbol = max(Ji,Jo)*4*pi*accuracy*tune_acc / max(Jext(1),Jext(nY))
-!!$  endif
-!!$  ! Find the min and max of fbol values
-!!$  ! The abs and lower limit on fbol are protection for the case
-!!$  ! of completely symmetri! slab illumination. The lower limit
-!!$  ! is bound by the numerical accuracy of the flux calculation
-!!$  fmin = 1.e5
-!!$  fmax = 0.
-!!$  DO iY = 1, nY
-!!$     aux = flux(iY)
-!!$!     IF (ksi.eq.1.0) aux = dabs(aux)
-!!$     IF (dabs(aux).LE.accFbol) aux = accFbol
-!!$     IF(aux.LT.fmin) fmin = aux
-!!$     IF(aux.GT.fmax) fmax = aux
-!!$  END DO
-!!$  if (fmax.LT.0.) then
-!!$     ! bad solution; overall flux cannot be negative
-!!$     maxFerr = 1
-!!$  else if ((fmax.eq.fmin).and.(fmax.eq.accFbol)) then
-!!$     maxFerr = accuracy*tune_acc
-!!$  else
-!!$     maxFerr = (fmax - dabs(fmin))/(fmax + dabs(fmin))
-!!$     ! maxFerr = 2*(fmax-(fmax+fmin)*0.5)/(fmax+fmin)
-!!$  end if
-!!$  ! ----------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE FindErr
-!!$! *************************************************************************
 !!$
 !!$!***********************************************************************
 !!$subroutine Flux_Consv(flux1,flux2,fbolOK,error)

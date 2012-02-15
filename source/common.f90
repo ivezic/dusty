@@ -18,7 +18,7 @@ Module common
   integer nOutput                       ! number of output columns
   PARAMETER (nOutput=20)
   integer npY,npP,npL,npG,npR
-  PARAMETER (npY = 150)
+  PARAMETER (npY = 130)
   PARAMETER (npP = 20*npY+20)
   PARAMETER (npL = 125)
   PARAMETER (npG = 10)
@@ -61,6 +61,7 @@ Module common
   double precision,allocatable :: bOut(:)
   double precision,allocatable :: tauZout(:)
   double precision,allocatable :: fbol(:)
+  double precision,allocatable :: ubol(:)
   double precision :: SmC(30,99)
   double precision :: fmed
 

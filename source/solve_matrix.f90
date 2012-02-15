@@ -73,8 +73,6 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
      EtaOK = 0
      ! iterations over ETA
      DO WHILE (EtaOK.EQ.0)
-        EtaOK = 1  !<--- remove this line only temporay !!!!! FH
-        print*,'EtaOK = 1 ! <--- remove this line only temporay !!!!! FH'
         iterETA = iterETA + 1
         IF (iX.NE.0.AND.denstyp.eq.3) THEN !3(RDW)
            write(18,*)'----------------------------------------'
@@ -85,8 +83,6 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
         iterFbol = 0
         FbolOK = 0
         DO WHILE (FbolOK.EQ.0)
-           FbolOK = 1 ! <--- remove this line only temporay !!!!! FH
-           print*,'FbolOK = 1 ! <--- remove this line only temporay !!!!! FH'
            iterFbol = iterFbol + 1
            IF (iX.NE.0) THEN
               write(18,*)'  ',iterFbol,'. iteration over Fbol'
@@ -224,13 +220,12 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
   END IF
   print*,' ==== SOLVE successfully completed ====='
   ! -----------------------------------------------------------------------
-  deallocate(fs)
+999 deallocate(fs)
   deallocate(us)
   deallocate(T4_ext)
   deallocate(emiss)
-
-999 RETURN
-  END SUBROUTINE solve_matrix
+  RETURN
+END SUBROUTINE solve_matrix
 !***********************************************************************
 
 !***********************************************************************
@@ -248,10 +243,10 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   double precision,allocatable :: us(:,:), fs(:,:),T4_ext(:),emiss(:,:,:)
   logical initial
   !---local
-  integer iaux,nPok,nYok, itlim, iter, conv
-  double precision,allocatable :: T_old(:,:),u_old(:,:)
-  double precision :: mat0(npL,npY,npY), mat1(npL,npY,npY),&
-       miback(npL,npP,npY), mifront(npL,npP,npY)
+  integer iaux,nPok,nYok, itlim, iter, conv, itnum, Fconv, Uconv, aconv, iY
+  double precision,allocatable :: T_old(:,:),u_old(:,:),mat0(:,:,:), mat1(:,:,:),&
+       mifront(:,:,:), miback(:,:,:), UbolChck(:), Uchck(:,:), fbolold(:)
+  double precision ::  BolConv, dmaxF, dmaxU, maxFerr
   INTERFACE
      subroutine CHKFlux(nY,nYprev,flux,tolern,consfl,iterEta)
        DOUBLE PRECISION,allocatable :: flux(:)
@@ -274,6 +269,17 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
        double precision,allocatable :: Us(:,:), Uold(:,:), Em(:,:,:)
        double precision :: mat(npL,npY,npY)
      end subroutine invert
+     subroutine find_temp(nY,T4_ext)
+       integer :: nY
+       double precision, allocatable :: T4_ext(:)
+     end subroutine find_temp
+     subroutine matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
+       ! --- parameter
+       integer nP,nY,nPok,nYok,iPstar
+       double precision :: pstar 
+       double precision,allocatable :: m0(:,:,:), m1(:,:,:), mifront(:,:,:), &
+            miback(:,:,:)
+     end subroutine matrix
   END INTERFACE
   
 !!$  integer iPstar, nG, FbolOK, error, iterFbol, model, &
@@ -291,7 +297,6 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
 !!$
 
 !!$  allocate(T_old(nG,nY))
-  allocate(u_old(nL,nY))
   !------------------------------------------------------------------------
   ! generate, or improve, or do not touch the Y and P grids
   IF (iterETA.EQ.1.OR.iterFbol.GT.1) THEN
@@ -335,10 +340,26 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   END IF
   if (allocated(fs)) deallocate(fs)
   if (allocated(us)) deallocate(us)
+  if (allocated(u_old)) deallocate(u_old)
   if (allocated(T4_ext)) deallocate(T4_ext)
+  if (allocated(mat0)) deallocate(mat0)
+  if (allocated(mat1)) deallocate(mat1)
+  if (allocated(mifront)) deallocate(mifront)
+  if (allocated(miback)) deallocate(miback)
+  if (allocated(UbolChck)) deallocate(UbolChck)
+  if (allocated(Uchck)) deallocate(Uchck)
+  if (allocated(fbolold)) deallocate(fbolold)
+  allocate(mat0(nL,nY,nY))
+  allocate(mat1(nL,nY,nY))
+  allocate(mifront(nL,npP,nY))
+  allocate(miback(nL,npP,nY))
   allocate(fs(nL,nY))
   allocate(us(nL,nY))
+  allocate(u_old(nL,nY))
   allocate(T4_ext(nY))
+  allocate(UbolChck(nY))
+  allocate(Uchck(nL,nY))
+  allocate(fbolold(nY))
   ! generate spline coefficients for ETA
   CALL setupETA(nY,nYprev,itereta)
   ! evaluate ETAzp
@@ -388,89 +409,90 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
      call Emission(nY,T4_ext,emiss)
      ! solve for Utot
      CALL Invert(nY,mat0,Us,Emiss,U_old)
-!!$     IF(error.NE.0) goto 999
-!!$     ! find new Td
-!!$     ! CALL FindTemp(1,Utot,nG,Td) --**--
-!!$     call Find_Temp(nG,T4_ext)
-!!$     ! --------------------------------------
-!!$     ! every itnum-th iteration check convergence:
-!!$     IF (iter.GT.80) THEN
-!!$        itnum = 10
-!!$     ELSE
-!!$        itnum = 6
-!!$     END IF
-!!$     ! first find 'old' flux (i.e. in the previous iteration)
-!!$     IF (MOD(iter+1,itnum).EQ.0) THEN
-!!$        CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
-!!$        CALL Multiply(0,npY,nY,npL,nL,mat1,Em,omega,0,fs,fde,dynrange)
-!!$        CALL Add(npY,nY,npL,nL,fs,fds,fde,ftot)
-!!$        ! find bolometric flux
-!!$        CALL Bolom(ftot,fbolold)
-!!$     END IF
-!!$     IF (MOD(iter,itnum).EQ.0) THEN
-!!$        ! first calculate total flux
-!!$        CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
-!!$        CALL Multiply(0,npY,nY,npL,nL,mat1,Em,omega,0,fs,fde,dynrange)
-!!$        CALL Add(npY,nY,npL,nL,fs,fds,fde,ftot)
-!!$        ! find bolometric flux
-!!$        CALL Bolom(ftot,fbol)
-!!$        ! check convergence of bolometric flux
-!!$        CALL Converg1(fbolold,fbol,Fconv,dmaxF)
-!!$        ! check convergence of energy density
-!!$        CALL Converg2(Uold,Utot,Uconv,dmaxU)
-!!$        ! find maximal fbol error
-!!$        CALL FindErr(fbol,maxFerr,nY)
-!!$        !------  printout of errors and convergence with iter.(inner flag): -------
+     IF(error.NE.0) goto 999
+     ! find new Td
+     ! CALL FindTemp(1,Utot,nG,Td) --**--
+     call Find_Temp(nY,T4_ext)
+     ! --------------------------------------
+     ! every itnum-th iteration check convergence:
+     IF (iter.GT.80) THEN
+        itnum = 10
+     ELSE
+        itnum = 6
+     END IF
+     ! first find 'old' flux (i.e. in the previous iteration)
+     IF (MOD(iter+1,itnum).EQ.0) THEN
+        CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
+        CALL Multiply(0,npY,nY,npL,nL,mat1,Emiss,omega,0,fs,fde,dynrange)
+        CALL Add(npY,nY,npL,nL,fs,fds,fde,ftot)
+        ! find bolometric flux
+        CALL Bolom(ftot,fbolold)
+     END IF
+     IF (MOD(iter,itnum).EQ.0) THEN
+        ! first calculate total flux
+        CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
+        CALL Multiply(0,npY,nY,npL,nL,mat1,Emiss,omega,0,fs,fde,dynrange)
+        CALL Add(npY,nY,npL,nL,fs,fds,fde,ftot)
+        ! find bolometric flux
+        CALL Bolom(ftot,fbol)
+        ! check convergence of bolometric flux
+        CALL Converg1(nY,fbolold,fbol,Fconv,dmaxF)
+        ! check convergence of energy density
+        CALL Converg2(nY,U_old,Utot,Uconv,dmaxU)
+        ! find maximal fbol error
+        CALL FindErr(nY,fbol,maxFerr)
+        !------  printout of errors and convergence with iter.(inner flag): -------
 !!$        IF(iInn.EQ.1) THEN
 !!$           write(38,'(i7,1p,5e12.4)') iter,maxFerr,dmaxU,dmaxF,Td(1,1),sigma*Tei**4.0D+00
 !!$        END IF
-!!$        !--------------------------------------------------------------
-!!$        IF (maxFerr.LE.accuracy) THEN
-!!$           BolConv = 1
-!!$        ELSE
-!!$           BolConv = 0
-!!$        END IF
-!!$        ! total criterion for convergence: Utot must converge, and ftot
-!!$        ! must either converge or have the required accuracy
-!!$        IF (Uconv*(Fconv+BolConv).GT.0) Conv = 1
-!!$     END IF
-!!$     ! --------------------------------------
+        !--------------------------------------------------------------
+        IF (maxFerr.LE.accFlux) THEN
+           BolConv = 1
+        ELSE
+           BolConv = 0
+        END IF
+        ! total criterion for convergence: Utot must converge, and ftot
+        ! must either converge or have the required accuracy
+        IF (Uconv*(Fconv+BolConv).GT.0) Conv = 1
+     END IF
+     ! --------------------------------------
   END DO
-!!$  !    === The End of Iterations over Td ===
-!!$  IF (iX.NE.0) THEN
-!!$     IF (iter.LT.itlim) write(18,*) ' Convergence achieved, number of'
-!!$     write(18,'(a34,i4)') ' iterations over energy density: ',iter
-!!$     write(18,'(a30,1p,e8.1)') ' Flux conservation OK within:',maxFerr
-!!$     IF (iter.GE.itlim) THEN
-!!$        CALL MSG(2)
-!!$        iWARNING = iWARNING + 1
-!!$     END IF
-!!$  END IF
-!!$  ! calculate the emission term for the converged Td
+  !    === The End of Iterations over Td ===
+  IF (iX.NE.0) THEN
+     IF (iter.LT.itlim) write(18,*) ' Convergence achieved, number of'
+     write(18,'(a34,i4)') ' iterations over energy density: ',iter
+     write(18,'(a30,1p,e8.1)') ' Flux conservation OK within:',maxFerr
+     IF (iter.GE.itlim) THEN
+        CALL MSG(2)
+        print*,"MSG(2)"
+     END IF
+  END IF
+  ! calculate the emission term for the converged Td
+  call Emission(nY,T4_ext,emiss)
 !!$  CALL Emission_matrix(1,0,nG,Us,Em)
-!!$  ! calculate flux
-!!$  CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
-!!$  CALL Multiply(0,npY,nY,npL,nL,mat1,Em,omega,0,fs,fde,dynrange)
-!!$  CALL Add(npY,nY,npL,nL,fs,fds,fde,ftot)
-!!$  CALL Bolom(ftot,fbol)
-!!$  ! check whether, and how well, is bolometric flux conserved
-!!$  CALL ChkBolom(fbol,accuracy,deviat,FbolOK)
-!!$  CALL FindErr(fbol,maxFerr,nY)
-!!$  ! added in ver.2.06
-!!$  IF (maxFerr.GT.0.5) FbolOK = 0
-!!$  !***********************************
-!!$  ! calculate additional output quantities
-!!$  ! 1) energy densities
-!!$  CALL Multiply(1,npY,nY,npL,nL,mat0,Utot,omega,0,Us,Uds,dynrange)
-!!$  CALL Multiply(0,npY,nY,npL,nL,mat0,Em,omega,0,Us,Ude,dynrange)
-!!$  CALL Add(npY,nY,npL,nL,Us,Uds,Ude,Uchck)
-!!$  CALL Bolom(Utot,Ubol)
-!!$  CALL Bolom(Uchck,UbolChck)
-!!$  ! 2) scaled radial optical depth, tr
+  ! calculate flux
+  CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
+  CALL Multiply(0,npY,nY,npL,nL,mat1,Emiss,omega,0,fs,fde,dynrange)
+  CALL Add(npY,nY,npL,nL,fs,fds,fde,ftot)
+  CALL Bolom(ftot,fbol)
+  ! check whether, and how well, is bolometric flux conserved
+  CALL ChkBolom(nY,fbol,accFlux,deviat,FbolOK)
+  CALL FindErr(nY,fbol,maxFerr)
+  ! added in ver.2.06
+  IF (maxFerr.GT.0.5) FbolOK = 0
+  !***********************************
+  ! calculate additional output quantities
+  ! 1) energy densities
+  CALL Multiply(1,npY,nY,npL,nL,mat0,Utot,omega,0,Us,Uds,dynrange)
+  CALL Multiply(0,npY,nY,npL,nL,mat0,Emiss,omega,0,Us,Ude,dynrange)
+  CALL Add(npY,nY,npL,nL,Us,Uds,Ude,Uchck)
+  CALL Bolom(Utot,Ubol)
+  CALL Bolom(Uchck,UbolChck)
+  ! 2) scaled radial optical depth, tr
 !!$  DO iY = 1, nY
 !!$     tr(iY) = ETAzp(1,iY) / ETAzp(1,nY)
 !!$  END DO
-!!$  ! 3) calculate intensity (at the outer edge) if required
+  ! 3) calculate intensity (at the outer edge) if required
 !!$  IF(iC.NE.0) THEN
 !!$     IF (iX.NE.0) write(18,*) 'Calculating intensities'
 !!$     !CALL FindInt(nG,ETAzp)  --**--
@@ -509,7 +531,14 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
 !!$     IF (iVerb.GE.1) write(*,*) 'No disk option in this version'
 !!$  END IF
 !!$  !---------------------------------------------------------------------
-999 RETURN
+999 deallocate(mat0)
+  deallocate(mat1)
+  deallocate(mifront)
+  deallocate(miback)
+  deallocate(UbolChck)
+  deallocate(Uchck)
+  deallocate(fbolold)
+  RETURN
 END SUBROUTINE RADTRANSF_matrix
 !***********************************************************************
 
@@ -529,8 +558,17 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold)
   !--- local
   DOUBLE PRECISION  delTAUsc, facc, EtaRat, accFbol
   INTEGER iG,iL,iY, iYaux, Kronecker
-  DOUBLE PRECISION B(npY), A(npY,npY), X(npY)
+  DOUBLE PRECISION,allocatable ::  A(:,:), B(:), X(:)
   !--------------------------------------------------------------------
+  INTERFACE
+     SUBROUTINE LINSYS(Nreal,A,B,X)
+       integer Nreal
+       DOUBLE PRECISION,allocatable :: A(:,:), B(:), X(:)
+     END SUBROUTINE LINSYS
+  END INTERFACE
+  allocate(B(nY))
+  allocate(A(nY,nY))
+  allocate(X(nY))
   error = 0
   ! first copy Utot to Uold
   DO iL = 1, nL
@@ -555,7 +593,7 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold)
         END DO
      END DO
      ! solve the system
-     CALL LINSYS(nY,A,B,X,error)
+     CALL LINSYS(nY,A,B,X)
      IF(error.NE.0) THEN
         CALL MSG(20)
         print*, 'MSG(20)'
@@ -572,144 +610,157 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold)
      END DO
   END DO
   !-----------------------------------------------------------------------
+  deallocate(B)
+  deallocate(A)
+  deallocate(X)
   RETURN
 END SUBROUTINE INVERT
 !***********************************************************************
 !!$
 !!$
-!!$!***********************************************************************
-!!$SUBROUTINE MULTIPLY(type,np1,nr1,np2,nr2,mat,vec1,omat,flag,q1,q2,dynrange)
-!!$!=======================================================================
-!!$!This subroutine evaluates the following expression:
-!!$![q2] = flag*[q1] + [mat]*[tt*vec1]. Here tt is [omat] for type=1 and
-!!$!1-[omat] for type=2. mat is matrix of physical size (np2,np1,np1) and
-!!$!real size (nr2,nr1,nr1). omat, vec1, q1 and q2 are matrices of
-!!$!physical size (np2,np1) and real size (nr2,nr1).     [Z.I., Nov. 1995]
-!!$!=======================================================================
-!!$  IMPLICIT none
-!!$  DOUBLE PRECISION Pi, sigma, Gconst, r_gd, dynrange
-!!$  DOUBLE PRECISION delTAUsc, facc, EtaRat, accFbol
-!!$  INTEGER type, np1, nr1, np2, nr2, flag, i2, i1, idum
-!!$  DOUBLE PRECISION mat(np2,np1,np1), vec1(np2,np1), omat(np2,np1), &
-!!$       aux, q1(np2,np1), q2(np2,np1)
-!!$  !-----------------------------------------------------------------------
-!!$  ! loop over index 2
-!!$  DO i2 = 1, nr2
-!!$     ! loop over index 1
-!!$     DO i1 = 1, nr1
-!!$        q2(i2,i1) = flag * q1(i2,i1)
-!!$        ! loop over dummy index (multiplication)
-!!$        DO idum = 1, nr1
-!!$           IF (type.EQ.1) THEN
-!!$              aux = omat(i2,idum)
-!!$           ELSE
-!!$              aux = 1.0D+00 - omat(i2,idum)
-!!$           END IF
-!!$           q2(i2,i1) = q2(i2,i1) + mat(i2,i1,idum)*aux*vec1(i2,idum)
-!!$        END DO
-!!$        IF (q2(i2,i1).LT.dynrange*dynrange) q2(i2,i1) = 0.0D+00
-!!$     END DO
-!!$  END DO
-!!$  !---------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE MULTIPLY
-!!$!***********************************************************************
-!!$
-!!$
-!!$!***********************************************************************
-!!$SUBROUTINE Converg1(Aold,Anew,Aconv,dmax)
-!!$!=======================================================================
-!!$!This subroutine checks convergence of an array A(nL,nY) between values
-!!$!given in Aold and Anew, when the values are larger than dynrange. If
-!!$!the maximum relative difference is smaller than the required accuracy,
-!!$!Aconv is assigned 1, otherwise 0.              [Z.I.Jul 96;M.N.Apr.97]
-!!$!=======================================================================
-!!$  use common
-!!$  IMPLICIT none
-!!$  INTEGER iY, Aconv
-!!$  DOUBLE PRECISION Aold(npY), Anew(npY), delta, dmax
-!!$  !-----------------------------------------------------------------------
-!!$  Aconv = 1
-!!$  dmax = 0.0D+00
-!!$  ! loop over radial positions
-!!$  DO iY = 1, nY
-!!$     ! do it only for elements larger than dynrange
-!!$     IF (Anew(iY).GE.dynrange) THEN
-!!$        ! find relative difference
-!!$        delta = dabs((Anew(iY)-Aold(iY))/Anew(iY))
-!!$        IF (delta.GT.dmax) dmax = delta
-!!$     END IF
-!!$  END DO
-!!$  IF (dmax.GT.accuracy) Aconv = 0
-!!$  !---------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE Converg1
-!!$!***********************************************************************
-!!$
-!!$
-!!$!***********************************************************************
-!!$SUBROUTINE Converg2(Aold,Anew,Aconv,dmax)
-!!$!=======================================================================
-!!$!This subroutine checks convergence of an array A(nL,nY) between values
-!!$!given in Aold and Anew, when the values are larger than dynrange. If
-!!$!the maximum relative difference is smaller than required accuracy,
-!!$!Aconv is assigned 1, otherwise 0.             [Z.I.Jul 96; M.N.Apr.97]
-!!$!=======================================================================
-!!$  use common
-!!$  IMPLICIT none
-!!$  INTEGER iY, iL, Aconv
-!!$  DOUBLE PRECISION Aold(npL,npY), Anew(npL,npY), delta, dmax
-!!$!-----------------------------------------------------------------------
-!!$  Aconv = 1
-!!$  dmax = 0.0D+00
-!!$  ! loop over wavelengths
-!!$  DO iL = 1, nL
-!!$     ! loop over radial positions
-!!$     DO iY = 1, nY
-!!$        ! do it only for elements larger than dynrange
-!!$        IF (Anew(iL,iY).GE.dynrange) THEN
-!!$           ! find relative difference
-!!$           delta = dabs((Anew(iL,iY)-Aold(iL,iY))/Anew(iL,iY))
-!!$           IF (delta.GT.dmax) dmax = delta
-!!$        END IF
-!!$     END DO
-!!$  END DO
-!!$  IF (dmax.GT.accuracy) Aconv = 0
-!!$  !-----------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE Converg2
-!!$!***********************************************************************
-!!$
-!!$
-!!$!***********************************************************************
-!!$SUBROUTINE ChkBolom(qbol,accur,dev,FbolOK)
-!!$!=======================================================================
-!!$!This subroutine checks if any element of qbol(i), i=1,nY differs for
-!!$!more than accuracy from the median value fmed. If so FbolOK = 0,
-!!$!otherwise FbolOK = 1. dev is maximal deviation from fmed. [ZI,'96;MN'00]
-!!$!=======================================================================
-!!$  use common
-!!$  IMPLICIT none
-!!$  INTEGER iY,FbolOK
-!!$  DOUBLE PRECISION qBol(npY), accur,dev,fmax,AveDev,RMS
-!!$  !-----------------------------------------------------------------------
-!!$  FbolOK = 1
-!!$  dev = 0.0D+00
-!!$  ! loop over iY (radial coordinate)
-!!$  if (slb) then
-!!$     !CALL SLBmisc(qBol,fmax,fmed,AveDev,RMS,nY)
-!!$     PRINT*, 'Matrix method not for slab case'
-!!$  END IF
-!!$  print*,'---!CALL SLBmisc(qBol,fmax,fmed,AveDev,RMS,nY)---'
-!!$  DO iY = 1, nY
-!!$     IF (abs(fmed-qBol(iY)).GT.accur) FbolOK = 0
-!!$     IF (abs(fmed-qBol(iY)).GT.dev) dev = abs(fmed-qBol(iY))
-!!$  END DO
-!!$  !-----------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE ChkBolom
-!!$!***********************************************************************
-!!$
+!***********************************************************************
+SUBROUTINE MULTIPLY(type,np1,nr1,np2,nr2,mat,vec1,omat,flag,q1,q2,dynrange)
+!=======================================================================
+!This subroutine evaluates the following expression:
+![q2] = flag*[q1] + [mat]*[tt*vec1]. Here tt is [omat] for type=1 and
+!1-[omat] for type=2. mat is matrix of physical size (np2,np1,np1) and
+!real size (nr2,nr1,nr1). omat, vec1, q1 and q2 are matrices of
+!physical size (np2,np1) and real size (nr2,nr1).     [Z.I., Nov. 1995]
+!=======================================================================
+  IMPLICIT none
+  DOUBLE PRECISION Pi, sigma, Gconst, r_gd, dynrange
+  DOUBLE PRECISION delTAUsc, facc, EtaRat, accFbol
+  INTEGER type, np1, nr1, np2, nr2, flag, i2, i1, idum
+  DOUBLE PRECISION mat(np2,np1,np1), vec1(np2,np1), omat(np2,np1), &
+       aux, q1(np2,np1), q2(np2,np1)
+  !-----------------------------------------------------------------------
+  ! loop over index 2
+  DO i2 = 1, nr2
+     ! loop over index 1
+     DO i1 = 1, nr1
+        q2(i2,i1) = flag * q1(i2,i1)
+        ! loop over dummy index (multiplication)
+        DO idum = 1, nr1
+           IF (type.EQ.1) THEN
+              aux = omat(i2,idum)
+           ELSE
+              aux = 1.0D+00 - omat(i2,idum)
+           END IF
+           q2(i2,i1) = q2(i2,i1) + mat(i2,i1,idum)*aux*vec1(i2,idum)
+        END DO
+        IF (q2(i2,i1).LT.dynrange*dynrange) q2(i2,i1) = 0.0D+00
+     END DO
+  END DO
+  !---------------------------------------------------------------------
+  RETURN
+END SUBROUTINE MULTIPLY
+!***********************************************************************
+
+
+!***********************************************************************
+SUBROUTINE Converg1(nY,Aold,Anew,Aconv,dmax)
+!=======================================================================
+!This subroutine checks convergence of an array A(nL,nY) between values
+!given in Aold and Anew, when the values are larger than dynrange. If
+!the maximum relative difference is smaller than the required accuracy,
+!Aconv is assigned 1, otherwise 0.              [Z.I.Jul 96;M.N.Apr.97]
+!=======================================================================
+  use common
+  IMPLICIT none
+  !---parameter
+  integer nY,Aconv
+  double precision Aold(npY), Anew(npY), dmax
+  !---local
+  INTEGER iY
+  DOUBLE PRECISION delta
+  !-----------------------------------------------------------------------
+  Aconv = 1
+  dmax = 0.0D+00
+  ! loop over radial positions
+  DO iY = 1, nY
+     ! do it only for elements larger than dynrange
+     IF (Anew(iY).GE.dynrange) THEN
+        ! find relative difference
+        delta = dabs((Anew(iY)-Aold(iY))/Anew(iY))
+        IF (delta.GT.dmax) dmax = delta
+     END IF
+  END DO
+  IF (dmax.GT.accFlux) Aconv = 0
+  !---------------------------------------------------------------------
+  RETURN
+END SUBROUTINE Converg1
+!***********************************************************************
+
+
+!***********************************************************************
+SUBROUTINE Converg2(nY,Aold,Anew,Aconv,dmax)
+!=======================================================================
+!This subroutine checks convergence of an array A(nL,nY) between values
+!given in Aold and Anew, when the values are larger than dynrange. If
+!the maximum relative difference is smaller than required accuracy,
+!Aconv is assigned 1, otherwise 0.             [Z.I.Jul 96; M.N.Apr.97]
+!=======================================================================
+  use common
+  IMPLICIT none
+  !---parameter
+  integer nY,Aconv
+  double precision Aold(npL,npY), Anew(npL,npY), dmax
+  !---local
+  INTEGER iY, iL
+  DOUBLE PRECISION delta
+!-----------------------------------------------------------------------
+  Aconv = 1
+  dmax = 0.0D+00
+  ! loop over wavelengths
+  DO iL = 1, nL
+     ! loop over radial positions
+     DO iY = 1, nY
+        ! do it only for elements larger than dynrange
+        IF (Anew(iL,iY).GE.dynrange) THEN
+           ! find relative difference
+           delta = dabs((Anew(iL,iY)-Aold(iL,iY))/Anew(iL,iY))
+           IF (delta.GT.dmax) dmax = delta
+        END IF
+     END DO
+  END DO
+  IF (dmax.GT.accFlux) Aconv = 0
+  !-----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE Converg2
+!***********************************************************************
+
+
+!***********************************************************************
+SUBROUTINE ChkBolom(nY,qbol,accur,dev,FbolOK)
+!=======================================================================
+!This subroutine checks if any element of qbol(i), i=1,nY differs for
+!more than accuracy from the median value fmed. If so FbolOK = 0,
+!otherwise FbolOK = 1. dev is maximal deviation from fmed. [ZI,'96;MN'00]
+!=======================================================================
+  use common
+  IMPLICIT none
+  ! --- parameter
+  integer nY
+  INTEGER iY,FbolOK
+  DOUBLE PRECISION qBol(npY), accur,dev,fmax,AveDev,RMS
+  !-----------------------------------------------------------------------
+  FbolOK = 1
+  dev = 0.0D+00
+  ! loop over iY (radial coordinate)
+  if (slb) then
+     !CALL SLBmisc(qBol,fmax,fmed,AveDev,RMS,nY)
+     PRINT*, 'Matrix method not for slab case'
+  END IF
+  print*,'---!CALL SLBmisc(qBol,fmax,fmed,AveDev,RMS,nY)---'
+  DO iY = 1, nY
+     IF (abs(fmed-qBol(iY)).GT.accur) FbolOK = 0
+     IF (abs(fmed-qBol(iY)).GT.dev) dev = abs(fmed-qBol(iY))
+  END DO
+  !-----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE ChkBolom
+!***********************************************************************
+
 !***********************************************************************
 SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
 !=======================================================================
@@ -720,16 +771,57 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
 !=======================================================================
   use common
   IMPLICIT none
-  INTEGER m,iP,nZ(npP), flag,iL,iY,iZ,jZ,im,iW,iPstar,nP,nY,nPok,nYok
-  DOUBLE PRECISION haux(npP),H,TAUaux(npL,npP,npY), &
-       m0(npL,npY,npY), m1(npL,npY,npY), pstar, addplus,addminus,&
-       Tplus(npP,npY,npY),Tminus(npP,npY,npY), xN(npP), yN(npP),&
-       result1,result2,resaux,TAUr(npY), wm(npY),wmT(npY),wp(npY),&
-       alpha(npY,npY),beta(npY,npY),gamma2(npY,npY),delta(npY,npY),&
-       wgmatp(npY,npY), wgmatm(npY,npY), mifront(npL,npP,npY),&
-       miback(npL,npP,npY), fact, faux, Yok(npY), Pok(npP)
+  ! --- parameter
+  integer nP,nY,nPok,nYok,iPstar
+  double precision :: pstar 
+  double precision,allocatable :: m0(:,:,:), m1(:,:,:), mifront(:,:,:), &
+       miback(:,:,:)
+  ! --- local
+  INTEGER m,iP, flag,iL,iY,iZ,jZ,im,iW
+  integer,allocatable :: nZ(:)
+  ! double precision :: haux(npP),TAUaux(npL,npP,npY),Tplus(npP,npY,npY), &
+  ! Tminus(npP,npY,npY),xN(npP),yN(npP),TAUr(npY),wm(npY), wmT(npY),wp(npY),
+  ! alpha(npY,npY),beta(npY,npY),gamma2(npY,npY),delta(npY,npY), &
+  ! wgmatp(npY,npY), wgmatm(npY,npY), Yok(npY), Pok(npP)
+  DOUBLE PRECISION H, addplus,addminus, &
+       result1,result2,resaux, &
+       fact, faux
+  double precision,allocatable :: haux(:),TAUaux(:,:,:),Tplus(:,:,:), &
+       Tminus(:,:,:),xN(:),yN(:),TAUr(:),wm(:),wmT(:),wp(:),&
+       alpha(:,:),beta(:,:),gamma2(:,:),delta(:,:),wgmatp(:,:), &
+       wgmatm(:,:), Yok(:), Pok(:)
+  INTERFACE
+     SUBROUTINE MYSPLINE(x,N,alpha,beta,gamma2,delta)
+       integer :: N
+       double precision,allocatable :: x(:),alpha(:,:),beta(:,:),gamma2(:,:),delta(:,:)
+     end SUBROUTINE MYSPLINE
+     SUBROUTINE WEIGHTS(TAUaux,iP,iL,nZ,alpha,beta,gamma2,delta,wgp,wgm,nY)
+       integer iP,iL,nZ,nY
+       double precision,allocatable :: TAUaux(:,:,:),alpha(:,:), beta(:,:),&
+            gamma2(:,:),delta(:,:),wgp(:,:), wgm(:,:)
+     end SUBROUTINE WEIGHTS
+  END INTERFACE
 
   !---------------------------------------------------------------------
+  allocate(nZ(nP))
+  allocate(haux(nP))
+  allocate(TAUaux(nL,nP,nY))
+  allocate(Tplus(nP,nY,nY))
+  allocate(Tminus(nP,nY,nY))
+  allocate(xN(nP))
+  allocate(yN(nP))
+  allocate(TAUr(nY))
+  allocate(wm(nY))
+  allocate(wmT(nY))
+  allocate(wp(npY))
+  allocate(alpha(nY,nY))
+  allocate(beta(nY,nY))
+  allocate(gamma2(nY,nY))
+  allocate(delta(nY,nY))
+  allocate(wgmatp(nY,nY))
+  allocate(wgmatm(nY,nY))
+  allocate(Yok(nY))
+  allocate(Pok(nP))
   error = 0
   ! generate auxiliary arrays haux & nZ
   DO iP = 1, nP
@@ -896,7 +988,26 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
      Pok(iP) = P(iP)
   END DO
   !-----------------------------------------------------------------------
-999 RETURN
+999 deallocate(nZ)
+  deallocate(haux)
+  deallocate(TAUaux)
+  deallocate(Tplus)
+  deallocate(Tminus)
+  deallocate(xN)
+  deallocate(yN)
+  deallocate(TAUr)
+  deallocate(wm)
+  deallocate(wmT)
+  deallocate(wp)
+  deallocate(alpha)
+  deallocate(beta)
+  deallocate(gamma2)
+  deallocate(delta)
+  deallocate(wgmatp)
+  deallocate(wgmatm)
+  deallocate(Yok)
+  deallocate(Pok)
+  RETURN
 END SUBROUTINE matrix
 !***********************************************************************
 
@@ -934,11 +1045,18 @@ SUBROUTINE MYSPLINE(x,N,alpha,beta,gamma2,delta)
 !=======================================================================
   use common
   IMPLICIT none
-  INTEGER N, i, j, dummy, Kron
-  DOUBLE PRECISION x(npY), alpha(npY,npY), beta(npY,npY), &
-       delta(npY,npY), secnder(npY,npY), yaux(npY), deraux(npY),&
-       y2at1, y2atN, D, gamma2(npY,npY)
+  !--- parameter
+  integer :: N,nY
+  double precision,allocatable :: x(:),alpha(:,:),beta(:,:),gamma2(:,:),delta(:,:)
+  !--- local
+  INTEGER i, j, dummy, Kron
+  double precision,allocatable :: secnder(:,:), yaux(:), deraux(:)
+  DOUBLE PRECISION y2at1, y2atN, D
   EXTERNAL Kron
+  
+  allocate(secnder(N,N))
+  allocate(yaux(N))
+  allocate(deraux(N))
   ! -----------------------------------------------------------------------
   ! generate second derivatives, secnder(j,l)
   DO j = 1, N
@@ -969,6 +1087,9 @@ SUBROUTINE MYSPLINE(x,N,alpha,beta,gamma2,delta)
      END DO
   END DO
   !-----------------------------------------------------------------------
+  deallocate(secnder)
+  deallocate(yaux)
+  deallocate(deraux)
   RETURN
 END SUBROUTINE MYSPLINE
 !***********************************************************************
@@ -1010,11 +1131,30 @@ SUBROUTINE WEIGHTS(TAUaux,iP,iL,nZ,alpha,beta,gamma2,delta,wgp,wgm,nY)
 !=======================================================================
   use common
   IMPLICIT none
-  INTEGER iP, iL, nZ, iW, iZ, j,nY
-  DOUBLE PRECISION alpha(npY,npY), beta(npY,npY), gamma2(npY,npY),&
-       delta(npY,npY), TAUaux(npL,npP,npY), K1p(npY),K2p(npY),&
-       K3p(npY),K4p(npY), K1m(npY),K2m(npY),K3m(npY),K4m(npY),&
-       wgp(npY,npY), wgm(npY,npY), waux
+  !---parameter
+  integer iP,iL,nZ,nY
+  double precision,allocatable :: TAUaux(:,:,:),alpha(:,:), beta(:,:),&
+       gamma2(:,:),delta(:,:),wgp(:,:), wgm(:,:)
+  !---local
+  INTEGER iW, iZ, j
+  DOUBLE PRECISION  waux
+  double precision,allocatable :: K1p(:),K2p(:), K3p(:),K4p(:),&
+       K1m(:),K2m(:),K3m(:),K4m(:)
+  INTERFACE
+     SUBROUTINE Kint4(TAUaux,iP,iL,nZ,K1p,K2p,K3p,K4p,K1m,K2m,K3m,K4m)
+       INTEGER iP, iL, nZ
+       DOUBLE PRECISION,allocatable :: TAUaux(:,:,:), K1p(:),K2p(:),K3p(:),&
+            K4p(:), K1m(:), K2m(:), K3m(:), K4m(:)
+     end SUBROUTINE Kint4
+  END INTERFACE
+  allocate(K1p(nY))
+  allocate(K2p(nY))
+  allocate(K3p(nY))
+  allocate(K4p(nY))
+  allocate(K1m(nY))
+  allocate(K2m(nY))
+  allocate(K3m(nY))
+  allocate(K4m(nY))
   !-----------------------------------------------------------------------
   ! generate integrals of 'TAUr**n'
   CALL Kint4(TAUaux,iP,iL,nZ,K1p,K2p,K3p,K4p,K1m,K2m,K3m,K4m)
@@ -1038,6 +1178,14 @@ SUBROUTINE WEIGHTS(TAUaux,iP,iL,nZ,alpha,beta,gamma2,delta,wgp,wgm,nY)
      END DO
   END DO
   !-----------------------------------------------------------------------
+  deallocate(K1p)
+  deallocate(K2p)
+  deallocate(K3p)
+  deallocate(K4p)
+  deallocate(K1m)
+  deallocate(K2m)
+  deallocate(K3m)
+  deallocate(K4m)
   RETURN
 END SUBROUTINE WEIGHTS
 !***********************************************************************
@@ -1062,10 +1210,14 @@ SUBROUTINE Kint4(TAUaux,iP,iL,nZ,K1p,K2p,K3p,K4p,K1m,K2m,K3m,K4m)
 !=======================================================================
   use common
   IMPLICIT none
-  INTEGER iP, iL, nZ, iZ, iW1, iLaux
-  DOUBLE PRECISION TAUaux(npL,npP,npY), K1p(npY),K2p(npY),K3p(npY),&
-       K4p(npY), K1m(npY), K2m(npY), K3m(npY), K4m(npY), Rresult(8),&
-       Kaux(8), deltrton(4),tRL,paux, w1,w2,wL, delTAUzp, z1, z2
+  !---parameter
+  INTEGER iP, iL, nZ
+  DOUBLE PRECISION,allocatable :: TAUaux(:,:,:), K1p(:),K2p(:),K3p(:),&
+       K4p(:), K1m(:), K2m(:), K3m(:), K4m(:)
+  !---local
+  INTEGER iZ, iW1, iLaux
+  double precision :: Rresult(8), Kaux(8), deltrton(4),tRL,paux,&
+       w1,w2,wL, delTAUzp, z1, z2
   !-----------------------------------------------------------------------
   paux = P(iP)
   iLaux = iL
@@ -1368,7 +1520,7 @@ END FUNCTION IntETA_matrix
 !!$  END DO
 !!$  !-------------
 !!$  ! analyze bolometri!flux error (1/2 of the max spread of fbol)
-!!$  CALL FindErr(fbol,maxFerr,nY)
+!!$  CALL FindErr(nY,fbol,maxFerr)
 !!$  ! find the flux averaged optical depth, tauF(y)
 !!$  IF (denstyp.NE.0) THEN
 !!$     ! for spherical shell
@@ -1971,3 +2123,55 @@ END SUBROUTINE SHIFT
 !!$  RETURN
 !!$END SUBROUTINE Emission_matrix
 !!$!***********************************************************************
+
+
+! *************************************************************************
+SUBROUTINE FindErr(nY,flux,maxFerr)
+!========================================================================
+!This subroutine finds maximum err in flux conservation for both
+!spherical and slab case as (fmax-fmin)/(fmax+fmin)   [MN,Aug'99]
+!=========================================================================
+  use common
+  IMPLICIT none
+  !--- parameter
+  integer nY
+  DOUBLE PRECISION flux(npY), maxFerr
+  !--- local
+  INTEGER iY
+  DOUBLE PRECISION fmin, fmax, aux, accFbol, tune_acc
+!---------------------------------------------------------------------
+  ! accFbol = 1e-3 of input flux
+  ! accFbol = max(Ji,Jo)*4*pi*1.0d-03
+  tune_acc = 1e-1
+  if (slb) then 
+     accFbol = min(Ji,Jo)*4*pi*accFlux*tune_acc / Jext(1)
+  else if (sph) then
+     ! in the spherical case the flux is only zero if there is zero no
+     ! central source (Ji=0) therefor accFbok is changed!
+     accFbol = max(Ji,Jo)*4*pi*accFlux*tune_acc / max(Jext(1),Jext(nY))
+  endif
+  ! Find the min and max of fbol values
+  ! The abs and lower limit on fbol are protection for the case
+  ! of completely symmetri! slab illumination. The lower limit
+  ! is bound by the numerical accuracy of the flux calculation
+  fmin = 1.e5
+  fmax = 0.
+  DO iY = 1, nY
+     aux = flux(iY)
+!     IF (ksi.eq.1.0) aux = dabs(aux)
+     IF (dabs(aux).LE.accFbol) aux = accFbol
+     IF(aux.LT.fmin) fmin = aux
+     IF(aux.GT.fmax) fmax = aux
+  END DO
+  if (fmax.LT.0.) then
+     ! bad solution; overall flux cannot be negative
+     maxFerr = 1
+  else if ((fmax.eq.fmin).and.(fmax.eq.accFbol)) then
+     maxFerr = accFlux*tune_acc
+  else
+     maxFerr = (fmax - dabs(fmin))/(fmax + dabs(fmin))
+  end if
+  ! ----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE FindErr
+! *************************************************************************
