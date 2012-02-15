@@ -7,6 +7,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
 !                                        [ZI,NOV'95; MN,JAN'00, MN'09]
 !======================================================================
   use common
+  use interfaces
   implicit none
   logical ::  Equal, noEqual, UCASE
   character(len=235) :: stdf(7), str, nameIn, nameOut, nameEta,& 
@@ -20,15 +21,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
        dilutn,Tstar(2),th1,th2,xC(10),xCuser(10),sum,qsd,a1,a2,&
        x1, ceta, Fi, Fo, psf1
   double precision, allocatable ::aa(:),bb(:),xx(:),e(:) 
-      
-  
-  interface
-     subroutine inp_rad(shp,spec_scale,startyp)
-       double precision :: shp(:),spec_scale
-       integer :: startyp
-     end subroutine inp_rad
-  end interface
-  
+ 
 !!$  integer i, iG, nG, Nmodel, EtaOK,GridType, istop, nLs, Nrec, &
 !!$       ioverflw, Nmax, nLambdam, Nis, imu, denstyp, ang_type, L
 !!$  ! Nmax is the size of user supplied eta file
@@ -96,7 +89,9 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
      if (left.gt.0) then
         write(12,*) ' Central source spectrum described by'
         allocate(shpL(nL))
+  print*,'blubb'
         call inp_rad(shpL,spec_scale,startyp(1))
+  print*,'blubb'
         !typentry give the scale of input radiation
         call rdinps2(Equal,1,str,L,UCASE)
         if (str(1:L).eq.'FLUX') TypEntry(1) = 1
@@ -929,11 +924,15 @@ subroutine inp_rad(shp,spec_scale,startyp)
 !                                                              [MN,Mar'99]
 !=======================================================================
   use common
+  use interfaces
   implicit none
-
-  integer i,iL,iLs,nLs,k, l, nBB,ios1,filetype,nLamtr,kstop,startyp
-  double precision shp(:)
-  double precision sum, tsum, value, RDINP, xSiO, bb, spec_scale, x, planck
+  !---parameter
+  integer :: startyp
+  double precision :: spec_scale
+  double precision,allocatable :: shp(:)
+  !---local
+  integer i,iL,iLs,nLs,k, l, nBB,ios1,filetype,nLamtr,kstop
+  double precision sum, tsum, value, RDINP, xSiO, bb, x, planck
   double precision a,b, EMfunc,fplbol
   double precision,allocatable :: Tbb(:),rellum(:),lambda_s(:),shp_s(:),&
        tmp_sort1(:),tmp_sort2(:),lamTr(:),klam(:),fl(:),fpl(:)
@@ -1464,8 +1463,8 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
 !=======================================================================
 ! This subroutine prints the results out.        [ZI,Feb'96; MN,Mar'99]
 !=======================================================================
-
   use common
+  use interfaces
   implicit none
   !---parameter
   integer :: model,nY,nP,nYprev,itereta
@@ -1519,9 +1518,14 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
      call maketable(Elems,npL,3,855)
   end if
   close(855)
-
-  call Simpson(nL,1,nL,lambda,fsL(:,1)/lambda,FbolIL)
-  call Simpson(nL,1,nL,lambda,fsR(:,nY)/lambda,FbolIR)
+  do iL=1,nL
+     faux(iL) = fsL(iL,1)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,faux,FbolIL)
+  do iL=1,nL
+     faux(iL) = fsR(iL,1)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,faux,FbolIR)
   FbolIL=FbolIL*Jext(1)
   FbolIR=FbolIR*Jext(nY)
   if(allocated(Elems)) deallocate(Elems)
@@ -1542,31 +1546,63 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
      if (abs(ftotL(iL)).lt.dynrange) ftotL(iL) = 0.
      if (abs(ftotR(iL)).lt.dynrange) ftotR(iL) = 0.
   end do
-  call Simpson(nL,1,nL,lambda,faux,res)
-  call Simpson(nL,1,nL,lambda,ftotL/lambda,temp1)
-  call Simpson(nL,1,nL,lambda,fsR(:,1)/lambda(:),temp2)
+  do iL=1,nL
+     faux(iL) = ftotL(iL)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,faux,temp1)
+  do iL=1,nL
+     faux(iL) = fsR(iL,1)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,faux,temp2)
   xAttTotL = abs(temp2/temp1)
-  call Simpson(npL,1,nL,lambda,fde(:,1)/lambda(:),temp2)
+  do iL=1,nL
+     faux(iL) = fde(iL,1)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,faux,temp2)
   xDeTotL = abs(temp2/temp1)
-  call Simpson(npL,1,nL,lambda,fds(:,1)/lambda(:),temp2)
+  do iL=1,nL
+     faux(iL) = fds(iL,1)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,faux,temp2)
   xDsTotL = abs(temp2/temp1)
-  call Simpson(npL,1,nL,lambda,ftotR/lambda,temp1)
-  call Simpson(npL,1,nL,lambda,fsL(:,nY)/lambda(:),temp2)
+  do iL=1,nL
+     faux(iL) = ftotR(iL)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,faux,temp1)
+  do iL=1,nL
+     faux(iL) = fsL(iL,nY)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,faux,temp2)
   xAttTotR = abs(temp2/temp1)
-  call Simpson(npL,1,nL,lambda,fde(:,nY)/lambda(:),temp2)
+  do iL=1,nL
+     faux(iL) = fde(iL,nY)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,faux,temp2)
   xDeTotR = abs(temp2/temp1)
-  call Simpson(npL,1,nL,lambda,fds(:,nY)/lambda(:),temp2)
+  do iL=1,nL
+     faux(iL) = fds(iL,nY)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,faux,temp2)
   xDsTotR = abs(temp2/temp1)
   ! normalization factor for output spectra
-  call Simpson(nL,1,nL,lambda,ftotR/lambda,fnormR)
-  call Simpson(nL,1,nL,lambda,ftotL/lambda,fnormL)
+  do iL=1,nL
+     faux(iL) = ftotR(iL)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,faux,fnormR)
+  do iL=1,nL
+     faux(iL) = ftotL(iL)/lambda(iL)
+  end do
+  call Simpson(nL,1,nL,lambda,faux,fnormL)
   ! the emerging bolometric flux
   FbolR = fnormR * Jext(nY)
   if (slb) FbolL = fnormL * Jext(1)
   ! calculation of radiation pressure
   ! nG + 1 contains the sum of all sigma(iG) 1<=iG<=nG
   do iY=1,nY
-     call Simpson(npL,1,nL,lambda,(sigmaS(nG+1,:)+sigmaA(nG+1,:))*ftot(:,iY)/lambda(:),temp1)
+     do iL=1,nL
+        faux(iL) = (sigmaS(nG+1,iL)+sigmaA(nG+1,iL))*ftot(iL,iY)/lambda(iL)
+     end do
+     call Simpson(npL,1,nL,lambda,faux,temp1)
      RPr(iY) = temp1/(4*pi*clight*mprot*Gconst)*1.0D4*3.84e26/1.988e30*5.0D-26*Jext(iY)/sigmaVe
   enddo
   res = 0.0d00

@@ -7,6 +7,7 @@ subroutine Kernel(path,lpath,tau,Nmodel)
 !                                               [MN, May'10]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   integer iG, iY, iL, i,j, GridType, model, Nmodel, itereta, &
        iterfbol, fbolOK, istop, lpath, nY, nYprev, nP, nCav, nIns
@@ -35,9 +36,9 @@ subroutine Kernel(path,lpath,tau,Nmodel)
      call OPPEN(model,path,lpath)
      if (iVerb.eq.2) write(*,*) ' going to Solve '
      ! solve radiative transfer for this particular optical depth
-     ! call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! old dustys way
-     CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     ! CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
 
      ! if flux is conserved, the solution is obtained. So write out the values
      ! to output files for specified models
@@ -73,6 +74,7 @@ subroutine GetTauMax(tau0,taumax)
 !                                                      [MN, May'10]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   !---parameter
   double precision tau0,taumax
@@ -121,6 +123,7 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
 ! spherical and planar geometry.                       [Deka,'09, MN'09]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   !--- parameter 
   integer :: model,iterfbol,fbolOK,itereta, nY, nP, nYprev, nCav, nIns
@@ -132,20 +135,6 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
   double precision, allocatable :: fs(:,:),us(:,:),T4_ext(:)
   double precision, allocatable :: emiss(:,:,:)
 
-
-  INTERFACE
-     subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
-     iterfbol,T4_ext)
-       use common
-       logical, intent(in) :: initial
-       integer, intent(in) :: y_incr,iterfbol
-       integer :: nY,nP,nYprev,itereta
-       double precision pstar
-       double precision,allocatable :: us(:,:), fs(:,:) 
-       double precision,allocatable :: T4_ext(:)
-       double precision,allocatable :: emiss(:,:,:)
-     end subroutine Rad_Transf
-  END INTERFACE
 !!$  integer model, iterfbol, fbolOK,grid,iY,iL,nY_old,y_incr,imu, &
 !!$       iPstar,EtaOK , iP, iZ, nZ, iOut
 !!$  double precision pstar,taulim, us(npL,npY),comp_fdiff_bol(npY),comp_fdiff_bol1(npY),calc_fdiff(npY), &
@@ -430,6 +419,7 @@ subroutine SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol,
 !                                                     [MN & ZI, July'96]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   integer iL,iY, iPstar, itereta, iterfbol,taux, nY,nYprev, nP, nCav, nIns
   double precision pstar,taumax
@@ -497,6 +487,7 @@ subroutine Ygrid(pstar,iPstar,itereta,iterfbol,taux,taumax,nY,nYprev,nP,&
 !                                       [ZI, Nov'95; MN,Sep'99, Deka'08]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   integer itereta, iterfbol,taux, nY,nYprev, nP, nCav, nIns
   integer i,j, jy,itr,istop,iPstar, iter, iYdummy, iY, ir,irmax
@@ -733,6 +724,7 @@ subroutine Pgrid(pstar,iPstar,nY,nP,nCav,nIns)
 !                                                              [Deka'08]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   integer i,ii,k,iP,iz,iw,nZ,j, Naux, iPstar, istop, NinsLoc
   integer nY,nP,nCav,nIns
@@ -870,6 +862,7 @@ end subroutine pgrid
 !                                                          [ZI'95; ZI'99]
 !=======================================================================
    use common
+   use interfaces
    implicit none
    integer i, istop, iYdummy,nY,nYprev,itereta
    double precision Yy, c, intaux, powaux, prod, eps_loc, facteta
@@ -1026,6 +1019,7 @@ subroutine Insert(pstar,iP,iPstar)
 ! inserted.                                            [Z.I., Feb. 1996]
 ! =======================================================================
   use common
+  use interfaces
   implicit none
   integer iP, iPstar
   double precision pstar
@@ -1068,6 +1062,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
      iterfbol,T4_ext)
 !======================================================================
   use common
+  use interfaces
   implicit none
   logical, intent(in) :: initial
   integer, intent(in) :: y_incr,iterfbol
@@ -1076,38 +1071,6 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   double precision,allocatable :: us(:,:), fs(:,:)
   double precision,allocatable :: T_old(:,:),u_old(:,:),T4_ext(:)
   double precision,allocatable :: emiss(:,:,:)
-  INTERFACE
-     subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
-       integer nY, nP
-       double precision :: pstar
-       double precision, allocatable :: T4_ext(:)
-       double precision, allocatable :: fs(:,:),us(:,:)
-     end subroutine Find_Tran
-     subroutine find_Text(nY,T4_ext)
-       integer nY
-       double precision, allocatable :: T4_ext(:)
-     end subroutine find_Text
-     subroutine Emission(nY,T4_ext,emiss)
-       integer nY
-       double precision, allocatable :: T4_ext(:),emiss(:,:,:)
-     end subroutine Emission
-     subroutine find_diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
-       integer nY,nP,iter,iterfbol,moment
-       logical initial
-       double precision, allocatable :: T4_ext(:)
-       double precision, allocatable :: us(:,:)
-       double precision, allocatable :: emiss(:,:,:)
-     end subroutine find_diffuse
-     subroutine init_temp(nY,T4_ext,us)
-       integer nY
-       double precision,allocatable :: us(:,:),T4_ext(:)
-     end subroutine init_temp
-     subroutine find_temp(nY,T4_ext)
-       integer :: nY
-       double precision, allocatable :: T4_ext(:)
-     end subroutine find_temp
-  END INTERFACE
-
   !---- local variable
   integer :: itlim,conv,iter,iG,iL,iY,iY1, moment
   double precision aux1,maxerrT
@@ -1301,6 +1264,7 @@ subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
 !                                               [MN, Feb.'99, Deka, 2008]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   !--- parameter
   integer nY, nP
@@ -1313,18 +1277,7 @@ subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
        denom, expow,  tauaux(npL,npY), zeta, result1, eta
   double precision,allocatable ::  usL(:,:),usR(:,:),&
        m0(:,:), m1(:,:),m1p(:,:),m1m(:,:)
-  
-external eta
-  INTERFACE
-     subroutine BOLOM(q,qbol,nY)
-       integer nY
-       double precision, allocatable :: q(:,:), qbol(:)
-     end subroutine BOLOM
-     subroutine SPH_ext_illum(m0,m1,m1p,m1m,nY,nP)
-       integer nY, nP
-       double precision,allocatable ::  m0(:,:), m1(:,:),m1p(:,:),m1m(:,:)
-     end subroutine SPH_ext_illum
-  END INTERFACE
+  external eta
 !-----------------------------------------------------------------------
 
   allocate(usL(nL,nY))
@@ -1625,14 +1578,18 @@ subroutine Bolom(q,qbol,nY)
 ! (npY) and real size nY.                              [Z.I., Mar. 1996]
 !=======================================================================
   use common
+  use interfaces
   implicit none
-
-  integer iL, iY, nY
-  double precision  qaux(npL), resaux
+  !---parameter
+  integer nY
   double precision, allocatable :: q(:,:), qbol(:)
+  !---local
+  integer iL, iY
+  double precision  resaux
+  double precision, allocatable :: qaux(:)
   !---------------------------------------------------------------------
   ! loop over iY (radial coordinate)
-
+  allocate(qaux(nL))
   do iY = 1, nY
      ! generate auxiliary function for integration
      ! loop over iL (wavelength)
@@ -1643,6 +1600,7 @@ subroutine Bolom(q,qbol,nY)
      qbol(iY) = resaux
   end do
   !---------------------------------------------------------------------
+  deallocate(qaux)
   return
 end subroutine Bolom
 !***********************************************************************
@@ -1654,6 +1612,7 @@ subroutine SPH_ext_illum(m0,m1,m1p,m1m,nY,nP)
 ! if there is external illumination.                          [Deka, 2008]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   !--- parameter
   integer nY, nP
@@ -1779,6 +1738,7 @@ subroutine Emission(nY,T4_ext,emiss)
 !                                                      [Z.I., Mar. 1996]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   ! ---- parameter
   integer nY
@@ -1823,6 +1783,7 @@ subroutine Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
 !                                                        [MN'10]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   ! --- parameter
   integer nY,nP,iter,iterfbol,moment
@@ -1836,15 +1797,7 @@ subroutine Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
        Sfn_sc(npY),sum1,sum2,dyn2, frac
   double precision,allocatable :: sph_em(:,:),sph_sc(:,:),tau(:),Sfn_em(:)
   external eint2
-
-  INTERFACE 
-     subroutine SPH_DIFF(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,vec2)
-       integer nY,nP,flag1,moment_loc,iter,iterfbol
-       double precision, allocatable :: T4_ext(:),emiss(:,:,:),us(:,:),vec2(:,:)
-       logical initial
-     end subroutine SPH_DIFF
-  END INTERFACE
-
+  !----------------------------------------------------------------------
   allocate(sph_em(nL,nY))
   allocate(sph_sc(nL,nY))
   allocate(tau(nY))
@@ -1936,22 +1889,19 @@ subroutine Find_Temp(nY,T4_ext)
 !                                                [ZI'96, MN,'00, Deka, 2008]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   !--- parameter
   integer :: nY
   double precision, allocatable :: T4_ext(:)
   !--- local variables
   integer iG, iY, iL
-  double precision  fnum(npL),fdenum(npL),xP,Planck, qpt1,qu1,us(npL,npY),&
-       gg, ff(npL), fnum1
-  INTERFACE
-     subroutine find_Text(nY,T4_ext)
-       integer nY
-       double precision, allocatable :: T4_ext(:)
-     end subroutine find_Text
-  END INTERFACE
+  double precision  xP,Planck, qpt1,qu1, gg, fnum1
+  double precision, allocatable :: fnum(:),ff(:)
+  external Planck
   !---------------------------------------------------------------------
-
+  allocate(fnum(nL))
+  allocate(ff(nL))
   ! if T1 given in input:
   if(typentry(1).eq.5) call find_Text(nY,T4_ext)
   ! loop over grains
@@ -1964,12 +1914,14 @@ subroutine Find_Temp(nY,T4_ext)
            xP = 14400.0d0/lambda(iL)/Td(iG,iY)
            ff(iL) = sigmaA(iG,iL)*Planck(xP)/ lambda(iL)
         end do
-        call Simpson(npL,1,nL,lambda,fnum,fnum1)
-        call Simpson(npL,1,nL,lambda,ff,gg)
+        call Simpson(nL,1,nL,lambda,fnum,fnum1)
+        call Simpson(nL,1,nL,lambda,ff,gg)
         Td(iG,iY) = (fnum1*T4_ext(iY)/gg)**(1.0d0/4.0d0)
      end do
   end do
   !---------------------------------------------------------------------
+  deallocate(fnum)
+  deallocate(ff)
   return
 end subroutine Find_Temp
 !***********************************************************************
@@ -1978,13 +1930,18 @@ end subroutine Find_Temp
 subroutine Find_Text(nY,T4_ext)
 !=======================================================================
   use common
+  use interfaces
   implicit none
-  integer nY
+  !--- parameter
+  integer :: nY
   double precision, allocatable :: T4_ext(:)
+  !--- local variables
   integer iG,iY,iL
-  double precision  fnum(npL),fdenum(npL),xP,Planck, qPT1,qU1
+  double precision  xP,Planck, qPT1,qU1
+  double precision, allocatable :: fnum(:),fdenum(:)
   !----------------------------------------------------------------------
-
+  allocate(fnum(nL))
+  allocate(fdenum(nL))
   ! set to fiducial Grain
   do iL = 1, nL
      fnum(iL) = sigmaA(ifidG,iL)*utot(iL,1)/lambda(iL)
@@ -2020,6 +1977,8 @@ subroutine Find_Text(nY,T4_ext)
      Jo = ksi * Ji
   endif
 !-----------------------------------------------------------------------
+  deallocate(fnum)
+  deallocate(fdenum)
   return
 end subroutine Find_Text
 !***********************************************************************
@@ -2036,15 +1995,17 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
 !=======================================================================
   use omp_lib
   use common
+  use interfaces
   implicit none
   ! --- parameter
   integer nY,nP,flag1,moment_loc,iter,iterfbol
   double precision, allocatable :: T4_ext(:),emiss(:,:,:),us(:,:),vec2(:,:)
   logical initial
   ! --- local variables 
-  integer iP,iL,iZ,iZz,nZ,iY,iYy, iNloc,flagN,iG,thread_id
+  integer iP,iL,iZ,iZz,nZ,iY,iYy, iNloc,flagN,iG,thread_id,iaux
   double precision,allocatable ::  Iplus1(:,:),Iplus2(:,:), Iminus(:,:), &
-       aux2(:,:),diff(:,:), S_fun(:,:), func(:,:), faux3(:,:), xN(:,:), yN(:,:)
+       aux2(:,:),diff(:,:), S_fun(:,:), func(:,:), faux3(:,:), xN(:,:), yN(:,:), &
+       aux(:),daux(:)
   double precision result1, result2, res1, frac, S_loc, p_loc,expow1
   !-----------------------------------------------------------------------
   allocate(Iplus1(nP,nL))
@@ -2057,16 +2018,19 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
   allocate(faux3(nY,max_threads))
   allocate(xN(nP,max_threads))
   allocate(yN(nP,max_threads))
+  allocate(aux(nY))
+  allocate(daux(nY))
   Iplus1 = 0.0d0
   Iplus2 = 0.0d0
   Iminus = 0.0d0
+  print*,'! extreme inefficient parallelization need to be changed !!!!!!'
   !!** for each radial grid point calculate the integrals from Sec.4.1 in Blueprint:
   do iY = 1, nY
      do iP = 1, Plast(iY)
         iZz  = iY + 1 - iYfirst(iP)  !this is for z in eq.(4.1.5)
         ! upper limit for the counter of z position
         nZ  = nY + 1 - iYfirst(iP)   !nZ is index for zmax=sqrt(Y**2-p**2) [MN]
-        !$OMP PARALLEL DO FIRSTPRIVATE(thread_id,frac,iYy,p_loc,S_loc,iNloc,expow1,res1)
+        !$OMP PARALLEL DO FIRSTPRIVATE(thread_id,frac,iYy,p_loc,S_loc,iNloc,expow1,res1) PRIVATE(aux,iaux,daux)
         do iL = 1, nL
            thread_id = omp_get_thread_num()+1
            do iYy = 1, nY
@@ -2098,7 +2062,10 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
                  iYy = iYfirst(iP) + iZ - 1
                  if(iZ.eq.1.and.P(iP).gt.Y(iYy).and.P(iP).lt.Y(iYy+1)) then
                     p_loc = P(iP)
-                    call LININTER(nY,nY,Y,S_fun(:,thread_id),p_loc,iNloc,S_loc)
+                    do iaux=1,nY
+                       aux(iaux) = S_fun(iaux,thread_id)
+                    end do
+                    call LININTER(nY,nY,Y,aux,p_loc,iNloc,S_loc)
                     diff(iZ,thread_id) = abs(S_loc)
                  else
                     diff(iZ,thread_id) = S_fun(iYy,thread_id)
@@ -2113,8 +2080,12 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
               faux3(iZ,thread_id) = exp(-aux2(iZ,thread_id))
 !              func(iZ,thread_id) =  diff(iZ,thread_id)
            end do
-!           CALL Simpson(npY,1,nZ,faux3(:,thread_id),func(:,thread_id),res1)
-           CALL Simpson(nY,1,nZ,faux3(:,thread_id),diff(:,thread_id),res1)
+           ! extreme inefficient need to be changed !!!!!!
+           do iaux=1,nY
+              aux(iaux) = faux3(iaux,thread_id)
+              daux(iaux) = diff(iaux,thread_id)
+           end do
+           CALL Simpson(nY,1,nZ,aux,daux,res1)
            Iplus1(iP,iL) = abs(res1)*exp(-aux2(iZz,thread_id))
            ! 2nd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
            !     from z0-midpoint to the running z-point
@@ -2123,8 +2094,11 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
               faux3(iZ,thread_id) = exp(-expow1)
 !              func(iZ,thread_id) =  diff(iZ,thread_id)
            END DO
-!           CALL Simpson(npY,1,iZz,faux3(:,thread_id),func(:,thread_id),res1)
-           CALL Simpson(nY,1,iZz,faux3(:,thread_id),diff(:,thread_id),res1)
+           do iaux=1,nY
+              aux(iaux) = faux3(iaux,thread_id)
+              daux(iaux) = diff(iaux,thread_id)
+           end do
+           CALL Simpson(nY,1,iZz,aux,daux,res1)
            Iplus2(iP,iL) = abs(res1)
            ! 3rd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
            !     from the running z-point to the outer edge of the shell [MN]
@@ -2133,8 +2107,11 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
               faux3(iZ,thread_id) = exp(-expow1)
 !              func(iZ,thread_id) =  diff(iZ,thread_id)
            END DO
-!           CALL Simpson(npY,iZz,nZ,faux3(:,thread_id),func(:,thread_id),res1)
-           CALL Simpson(nY,iZz,nZ,faux3(:,thread_id),diff(:,thread_id),res1)
+           do iaux=1,nY
+              aux(iaux) = faux3(iaux,thread_id)
+              daux(iaux) = diff(iaux,thread_id)
+           end do
+           CALL Simpson(nY,iZz,nZ,aux,daux,res1)
            Iminus(iP,iL) = abs(res1)
         end do ! end loop over wavelengths
         !$OMP END PARALLEL DO
@@ -2205,6 +2182,8 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
      end if !end if for diffuse flux
   end do !end do over radial grid Y(iY)  [MN]
   !----------------------------------------------------------------------
+  deallocate(aux)
+  deallocate(daux)
   deallocate(Iplus1)
   deallocate(Iplus2)
   deallocate(Iminus)
@@ -2407,6 +2386,7 @@ SUBROUTINE NORDLUND(nY,flag,x,f,N1,N2,m,intfdx)
 ! analytically.                                        [Z.I., Nov. 1995]
 ! =======================================================================
   use common
+  use interfaces
   IMPLICIT none
   
   INTEGER i, flag, N1, N2, N2n, Nanal, m, first, nY
@@ -2498,6 +2478,7 @@ SUBROUTINE setupETA(nY,nYprev,itereta)
 !                                                [ZI, Feb'96; MN,Aug'97]
 ! =======================================================================
   use common
+  use interfaces
   implicit none
   INTEGER iY, nY,nYprev,itereta, iCoeff
   DOUBLE PRECISION coef(npY,4), ETA, maxerr, Ymid, Yinverse(npY), &
@@ -2541,6 +2522,7 @@ SUBROUTINE CHKSPLIN(x,fun,funmid,N,coef,maxerr)
 ! x(i) and x(i+1).                                   [Z.I., Feb. 1995]
 ! ======================================================================
   use common
+  use interfaces
   IMPLICIT none
   INTEGER N, i, iCoeff
   DOUBLE PRECISION x(npY), fun(npY), funmid(npY), coef(npY,4),   &
@@ -2600,6 +2582,7 @@ SUBROUTINE getETAzp(nY,nP)
 !                                               [ZI,Feb'95; MN,Aug'97]
 ! =======================================================================
   use common
+  use interfaces
   implicit none
   INTEGER iP, nZ, iZ, iW, nY, nP
   DOUBLE PRECISION IntETA, auxEta, w1, w2
@@ -2646,6 +2629,7 @@ DOUBLE PRECISION FUNCTION IntETA(paux,iW1,w1,w)
 ! soubroutine Maple3).                         [ZI,Feb'96,MN,Aug'97]
 ! =======================================================================
   use common
+  use interfaces
   implicit none
   INTEGER iW1, iCoeff
   DOUBLE PRECISION  paux, w1, w, aux(4), z, z1, aux1(4)
@@ -2682,13 +2666,18 @@ subroutine Init_Temp(nY,T4_ext,us)
 !!**   Minor editing to avoid having IF's inside do-loops [MN, Aug'10]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   !--- Parameter
   integer nY
   double precision,allocatable :: us(:,:),T4_ext(:)
   !--- locale variables
   integer iL, iY, iG, iw
-  double precision xP, Planck,fnum(npL),qP,ff(npL), fnum1
+  double precision xP, Planck, fnum1,qP
+  double precision,allocatable ::fnum(:),ff(:)
+
+  allocate(fnum(nL))
+  allocate(ff(nL))
   
   !--------------------------------------------------------------------------
   if(typentry(1).eq.5) then
@@ -2728,6 +2717,8 @@ subroutine Init_Temp(nY,T4_ext,us)
      end do
   end if
   !--------------------------------------------------------------------
+  deallocate(fnum)
+  deallocate(ff)
   return
 end subroutine Init_Temp
 !***********************************************************************
@@ -3319,16 +3310,29 @@ end subroutine Init_Temp
 !!$  end subroutine SLBintensity
 !!$! ***********************************************************************
 !!$
-!!$!***********************************************************************
-!!$ subroutine Analysis(nG,model,error,us,T4_ext,delta)
-!!$!=======================================================================
-!!$! This subroutine analyzes the solution. It finds the flux conservation
-!!$! accuracy and evaluates many output quantites (e.g. QF(y), TAUF(y),Psi, F1
-!!$! the rad.pressure force, dynamical quantities etc.)
-!!$! This is with new additions acc. to IE'00           [ZI,Mar'96;MN,Mar'99]
-!!$!=======================================================================
-!!$  use common
-!!$  implicit none
+!***********************************************************************
+ subroutine Analysis(nY,model,us,T4_ext,delta)
+!=======================================================================
+! This subroutine analyzes the solution. It finds the flux conservation
+! accuracy and evaluates many output quantites (e.g. QF(y), TAUF(y),Psi, F1
+! the rad.pressure force, dynamical quantities etc.)
+! This is with new additions acc. to IE'00           [ZI,Mar'96;MN,Mar'99]
+!=======================================================================
+  use common
+  use interfaces
+  implicit none
+  !---parameter
+  integer nY,model
+  double precision :: delta
+  double precision, allocatable ::  us(:,:),T4_ext(:)
+  !---local
+  integer :: i,iL,iY,iG
+  double precision eta, maxFerr, resaux, aux, s4, Planck, xp, qutot1
+  double precision, allocatable :: spectrum(:),qaux(:), K1(:), K2(:),&
+       qpTd(:,:), qpstar(:), qaux2(:)
+  external eta,Planck
+  !-------------------------------------------------------------------
+
 !!$  integer i, iL, iY, nn, model, iP, error, iG, nG
 !!$  double precision eta, qpTd(npG,npY), qpstar(npY), &
 !!$       qaux(npL), qaux2(npL), resaux, xP, Planck, qutot1,       &
@@ -3337,47 +3341,54 @@ end subroutine Init_Temp
 !!$       delta, us(npL,npY), x1, x2, result1, T4_ext(npY), maxFerr, &
 !!$       L4, Mo, Tc3, sig_22
 !!$  external eta
-!!$!---------------------------------------------------------------------
-!!$  ! spectrum (flux at the outer edge as a function of wavelength)
-!!$  do iL = 1, nL
-!!$     spectrum(iL) = dabs(ftot(iL,nY))
-!!$     ! to prevent taking log from zero in spectral [MN]:
-!!$     if (spectrum(iL).le.1.0d-20) spectrum(iL) = 1.0d-20
-!!$  end do
-!!$  !-------------
-!!$  ! analyze bolometric flux error (1/2 of the max spread of fbol)
-!!$  CALL FindErr(fbol,maxFerr)
-!!$  ! find the flux averaged optical depth, tauF(y)
-!!$  if (sph) then
-!!$     ! for spherical shell
-!!$     tauF(1) = 0.0
-!!$     DO iY = 2, nY
-!!$        ! generate auxiliary function for integration:
-!!$        ! loop over iL (wavelength)
-!!$        ! N.B. the definition: ETAzp(1,y) = taur(y)/tauT so that
-!!$        ! tau(iL,iY) = TAUtot(iL)*ETAzp(1,iY)
-!!$        DO iL = 1, nL
-!!$           qaux(iL)=TAUtot(iL)*ETAzp(1,iY)*dabs(ftot(iL,iY))/lambda(iL)
-!!$        END DO
-!!$        CALL Simpson(npL,1,nL,lambda,qaux,resaux)
-!!$        ! tauF(iY) = <tau(iL,iY)*ftot(iL,iY)>
-!!$        tauF(iY) = resaux
-!!$     END DO
-!!$     ! for full RDW calculation redo tauF to be consistent with CalcEta
-!!$     IF (RDW) THEN
-!!$        ! generate ETA and its integral (normalization constant)
-!!$        DO iY = 1, nY
-!!$           K1(iY) = vrat(1,iY)/ugas(iY)/Y(iY)/Y(iY)
-!!$        END DO
-!!$        CALL SIMPSON(npY,1,nY,Y,K1,resaux)
-!!$        ! find tauF
-!!$        DO iY = 1, nY
-!!$           K2(iY) = qF(iY)*K1(iY)/resaux
-!!$           CALL SIMPSON(npY,1,iY,Y,K2,aux)
-!!$           tauF(iY) = TAUfid*aux
-!!$        END DO
-!!$     END IF
-!!$  elseif(slb) then
+
+  allocate(spectrum(nL))
+  allocate(qaux(nL))
+  allocate(qaux2(nL))
+  allocate(K1(nY))
+  allocate(K2(nY))
+  allocate(qpTd(nG,nY))
+  allocate(qpstar(nY))
+  ! spectrum (flux at the outer edge as a function of wavelength)
+  do iL = 1, nL
+     spectrum(iL) = dabs(ftot(iL,nY))
+     ! to prevent taking log from zero in spectral [MN]:
+     if (spectrum(iL).le.1.0d-20) spectrum(iL) = 1.0d-20
+  end do
+  !-------------
+  ! analyze bolometric flux error (1/2 of the max spread of fbol)
+  CALL FindErr(nY,fbol,maxFerr)
+  ! find the flux averaged optical depth, tauF(y)
+  if (sph) then
+     ! for spherical shell
+     tauF(1) = 0.0
+     DO iY = 2, nY
+        ! generate auxiliary function for integration:
+        ! loop over iL (wavelength)
+        ! N.B. the definition: ETAzp(1,y) = taur(y)/tauT so that
+        ! tau(iL,iY) = TAUtot(iL)*ETAzp(1,iY)
+        DO iL = 1, nL
+           qaux(iL)=TAUtot(iL)*ETAzp(1,iY)*dabs(ftot(iL,iY))/lambda(iL)
+        END DO
+        CALL Simpson(npL,1,nL,lambda,qaux,resaux)
+        ! tauF(iY) = <tau(iL,iY)*ftot(iL,iY)>
+        tauF(iY) = resaux
+     END DO
+     ! for full RDW calculation redo tauF to be consistent with CalcEta
+     IF (denstyp.eq.3) THEN !3(RDW)
+        ! generate ETA and its integral (normalization constant)
+        DO iY = 1, nY
+           K1(iY) = vrat(1,iY)/ugas(iY)/Y(iY)/Y(iY)
+        END DO
+        CALL SIMPSON(npY,1,nY,Y,K1,resaux)
+        ! find tauF
+        DO iY = 1, nY
+           K2(iY) = qF(iY)*K1(iY)/resaux
+           CALL SIMPSON(npY,1,iY,Y,K2,aux)
+           tauF(iY) = TAUfid*aux
+        END DO
+     END IF
+  elseif(slb) then
 !!$     ! for slab
 !!$     tauF(1) = 0.0d0
 !!$     do iY = 1, nY
@@ -3388,60 +3399,60 @@ end subroutine Init_Temp
 !!$           tauF(iY) = resaux
 !!$        end do
 !!$     end do
-!!$  end if
-!!$  ! ------------
-!!$  ! ratio of gravitational to radiation pressure force (isotropic scattering) per unit volume
-!!$  ! s4 = (L4sol/Msol)/(4*Pi*G*c*rho_s)/1e-6;
-!!$  ! rho_s=3000 kg.m-3, grain radius 'a' is in microns, aveV=4/3*Pi*<a^3>
-!!$  IF(sph) THEN
-!!$     s4 = 1.925 / (4.0*Pi*Gconst*3.0d08*3000.0*1.0D-06)
-!!$     ! in case of sigma's from a file aveV=1 (initialized in GetOptPr)
-!!$     print*,' !!fix multi grain line 2961 RDW'
-!!$     DO iY = 1, nY
-!!$        DO iL = 1, nL
-!!$           qaux(iL)=(SigmaA(nG+1,iL)+SigmaS(nG+1,iL))/aveV*dabs(ftot(iL,iY))/lambda(iL)
-!!$        END DO
-!!$        CALL Simpson(npL,1,nL,lambda,qaux,resaux)
-!!$        rg(1,iY) = s4 * resaux / r_gd
-!!$        ! If dust drift (dynamics case):
-!!$        IF (RDW) rg(1,iY) = rg(1,iY)*vrat(1,iY)
-!!$        IF (iY.EQ.1) THEN
-!!$           Phi = resaux
-!!$        END IF
-!!$     END DO
-!!$     ! the terminal value of the reddening profile, normalized to y=1
-!!$     Phi = resaux / Phi
-!!$  END IF
-!!$  !-------------
-!!$  ! Find the Planck averaged absorption efficiencies
-!!$  do iG = 1,nG
-!!$     DO iY = 1, nY
-!!$        ! generate auxiliary function for integration over wavelengths:
-!!$        DO iL = 1, nL
-!!$           qaux(iL) = SigmaA(iG,iL) * Us(iL,iY) / lambda(iL)
-!!$           xP = 14400.0 / Td(iG,iY) / lambda(iL)
-!!$           qaux2(iL) = SigmaA(iG,iL) * Planck(xP) / lambda (iL)
-!!$        END DO
-!!$        CALL Simpson(npL,1,nL,lambda,qaux,resaux)
-!!$        QpStar(iY) = resaux
-!!$        CALL Simpson(npL,1,nL,lambda,qaux2,resaux)
-!!$        QpTd(iG,iY) = resaux
-!!$     END DO
-!!$  end do
-!!$  ! ----------
-!!$  ! find parameter Psi (see Ivezic & Elitzur, 1996)
-!!$  ! generate auxiliary function for integration:
-!!$  ! loop over iL (wavelength)
-!!$  print*,'!!!!!!PSI still single grain L2989'
-!!$  DO iL = 1, nL
-!!$     qaux(iL) = SigmaA(nG+1,iL) * Utot(iL,1) / lambda (iL)
-!!$  END DO
-!!$  CALL Simpson(npL,1,nL,lambda,qaux,resaux)
-!!$  QUtot1 = resaux
-!!$  Psi = QUtot1 / QpTd(1,1)
-!!$  !!**  added Psi0 from eq.(41) of IE'01 [MN]
-!!$  Psi0 = QpStar(1) / QpTd(1,1)
-!!$  ! for slab Psi is defined by the flux at normal ill.
+  end if
+  ! ------------
+  ! ratio of gravitational to radiation pressure force (isotropic scattering) per unit volume
+  ! s4 = (L4sol/Msol)/(4*Pi*G*c*rho_s)/1e-6;
+  ! rho_s=3000 kg.m-3, grain radius 'a' is in microns, aveV=4/3*Pi*<a^3>
+  IF(sph) THEN
+     s4 = 1.925 / (4.0*Pi*Gconst*3.0d08*3000.0*1.0D-06)
+     ! in case of sigma's from a file aveV=1 (initialized in GetOptPr)
+     print*,' !!fix multi grain line 2961 RDW'
+     DO iY = 1, nY
+        DO iL = 1, nL
+           qaux(iL)=(SigmaA(nG+1,iL)+SigmaS(nG+1,iL))/aveV*dabs(ftot(iL,iY))/lambda(iL)
+        END DO
+        CALL Simpson(nL,1,nL,lambda,qaux,resaux)
+        rg(1,iY) = s4 * resaux / r_gd
+        ! If dust drift (dynamics case):
+        IF (denstyp.eq.3) rg(1,iY) = rg(1,iY)*vrat(1,iY) !3(RDW)
+        IF (iY.EQ.1) THEN
+           Phi = resaux
+        END IF
+     END DO
+     ! the terminal value of the reddening profile, normalized to y=1
+     Phi = resaux / Phi
+  END IF
+  !-------------
+  ! Find the Planck averaged absorption efficiencies
+  do iG = 1,nG
+     DO iY = 1, nY
+        ! generate auxiliary function for integration over wavelengths:
+        DO iL = 1, nL
+           qaux(iL) = SigmaA(iG,iL) * Us(iL,iY) / lambda(iL)
+           xP = 14400.0 / Td(iG,iY) / lambda(iL)
+           qaux2(iL) = SigmaA(iG,iL) * Planck(xP) / lambda (iL)
+        END DO
+        CALL Simpson(nL,1,nL,lambda,qaux,resaux)
+        QpStar(iY) = resaux
+        CALL Simpson(nL,1,nL,lambda,qaux2,resaux)
+        QpTd(iG,iY) = resaux
+     END DO
+  end do
+  ! ----------
+  ! find parameter Psi (see Ivezic & Elitzur, 1996)
+  ! generate auxiliary function for integration:
+  ! loop over iL (wavelength)
+  print*,'!!!!!!PSI still single grain L2989'
+  DO iL = 1, nL
+     qaux(iL) = SigmaA(nG+1,iL) * Utot(iL,1) / lambda (iL)
+  END DO
+  CALL Simpson(nL,1,nL,lambda,qaux,resaux)
+  QUtot1 = resaux
+  Psi = QUtot1 / QpTd(1,1)
+  !!**  added Psi0 from eq.(41) of IE'01 [MN]
+  Psi0 = QpStar(1) / QpTd(1,1)
+  ! for slab Psi is defined by the flux at normal ill.
 !!$  IF (SLB) Psi = dabs(mu1)*QUtot1 / QpTd(1,1)
 !!$  ! -------------
 !!$  IF(sph) THEN
@@ -3547,10 +3558,17 @@ end subroutine Init_Temp
 !!$      Prdw = sqrt(2*PIrdw/I2/QV/Qstar)
 !!$      winf = ugas_out / QV / Qstar
 !!$  END IF
-!!$  return
-!!$!-----------------------------------------------------------------------
-!!$end subroutine Analysis
-!!$!***********************************************************************
+  deallocate(qpTd)
+  deallocate(qpstar)
+  deallocate(spectrum)
+  deallocate(qaux)
+  deallocate(qaux2)
+  deallocate(K1)
+  deallocate(K2)
+  return
+  !--------------------------------------------------------------------
+end subroutine Analysis
+!***********************************************************************
 !!$
 !!$! ***********************************************************************
 !!$SUBROUTINE Visibili

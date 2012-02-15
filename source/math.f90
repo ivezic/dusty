@@ -74,8 +74,13 @@ subroutine Simpson(n,n1,n2,x,y,integral)
 ! y(i)*wgth, i=N1,N2.                                  [Z.I., Mar. 1996]
 ! =======================================================================
   implicit none
-  integer i, n, n1, n2
-  double precision x(n), y(n), wgth, integral, dyn2
+  !---parameter
+  integer n, n1, n2
+  double precision integral
+  double precision,allocatable ::  x(:), y(:)
+  !---locale
+  integer i
+  double precision wgth, dyn2
   ! ---------------------------------------------------------------------
   dyn2 = 0.0d0
   ! set integral to 0 and accumulate result in the loop
@@ -342,6 +347,7 @@ SUBROUTINE SPLINE2(x,fun,N,coef)
 ! with i=1..N.                                         [Z.I., Feb. 1995]
 ! =======================================================================
   use common
+  use interfaces
   IMPLICIT none
   INTEGER N, i
   DOUBLE PRECISION x(npY), coef(npY,4), secnder(npY), y2at1, y2atN, &
@@ -533,6 +539,7 @@ SUBROUTINE ANALINT(nY,Nanal,xaux,yaux,m,aux)
 ! of Nanal grid points. [MN]
 ! =======================================================================
   use common
+  use interfaces
   IMPLICIT none
   !---parameter
   integer nY, Nanal
@@ -542,12 +549,6 @@ SUBROUTINE ANALINT(nY,Nanal,xaux,yaux,m,aux)
   INTEGER i, j
   DOUBLE PRECISION b
   double precision,allocatable :: A(:,:),xaux_tmp(:),yaux_tmp(:),coeff(:)
-  INTERFACE
-     SUBROUTINE LINSYS(Nreal,A,B,X)
-       integer Nreal
-       DOUBLE PRECISION,allocatable :: A(:,:), B(:), X(:)
-     END SUBROUTINE LINSYS
-  END INTERFACE
   ! ---------------------------------------------------------------------
   allocate(A(Nanal,Nanal))
   allocate(xaux_tmp(Nanal))
@@ -647,6 +648,7 @@ SUBROUTINE LINSYS(Nreal,A,B,X)
 !                                                      [Z.I., Nov. 1995]
 ! =======================================================================
   use common
+  use interfaces
   IMPLICIT none
   !--- parameter
   integer nY,Nreal
@@ -657,24 +659,6 @@ SUBROUTINE LINSYS(Nreal,A,B,X)
   DOUBLE PRECISION d
   double precision,allocatable :: A1c(:,:), B1(:), A2c(:,:), B2(:)
   ! ---------------------------------------------------------------------
-  INTERFACE
-     SUBROUTINE LUBKSB(A,N,NP,INDX,B)
-       integer N,NP
-       integer, allocatable :: indx(:)
-       double precision,allocatable :: A(:,:),B(:)
-     END SUBROUTINE LUBKSB
-     SUBROUTINE LUDCMP(A,N,NP,INDX,D)
-       integer N,NP
-       double precision :: D
-       integer, allocatable :: indx(:)
-       double precision,allocatable :: A(:,:),B(:)
-     END SUBROUTINE LUDCMP
-     SUBROUTINE MPROVE(A,ALUD,N,NP,INDX,B,X)
-       integer :: n,np
-       integer,allocatable :: INDX(:)
-       double precision,allocatable :: A(:,:),ALUD(:,:),B(:),X(:)
-     END SUBROUTINE MPROVE
-  END INTERFACE
   allocate(indx(Nreal))
   allocate(A1c(Nreal,Nreal))
   allocate(B1(Nreal))
@@ -840,6 +824,7 @@ END SUBROUTINE LUDCMP
 
 !***********************************************************************
 SUBROUTINE MPROVE(A,ALUD,N,NP,INDX,B,X)
+  use interfaces
   IMPLICIT none
   !---parameter
   integer :: n,np
@@ -849,15 +834,8 @@ SUBROUTINE MPROVE(A,ALUD,N,NP,INDX,B,X)
   integer i,j
   DOUBLE PRECISION SDP
   double precision,allocatable :: R(:)
-  INTERFACE
-     SUBROUTINE LUBKSB(A,N,NP,INDX,B)
-       integer N,NP
-       integer, allocatable :: indx(:)
-       double precision,allocatable :: A(:,:),B(:)
-     END SUBROUTINE LUBKSB
-  END INTERFACE
   ! ---------------------------------------------------------------------
-  allocate(R(NP))
+  allocate(R(N))
   DO i = 1, N
      SDP = -B(i)
      DO j = 1, N
@@ -899,7 +877,7 @@ SUBROUTINE Maple3(w,z,p,MpInt)
   RETURN
 END SUBROUTINE Maple3
 !***********************************************************************
-!!$
+
 !**********************************************************************
 subroutine add(np1,nr1,np2,nr2,q1,q2,q3,qout) !only needed in matrix method
 !======================================================================
@@ -908,21 +886,20 @@ subroutine add(np1,nr1,np2,nr2,q1,q2,q3,qout) !only needed in matrix method
 ! physical size (np2,np1) and real size (nr2,nr1).     [Z.I., Nov. 1995]
 ! ======================================================================
   implicit none
-  integer npY, npP, npX, npL, npG, npR
-  include '../userpar.inc'
-
-  integer  np1, nr1, np2, nr2, i2, i1
-  double precision  q1(np2,np1), q2(np2,np1), q3(np2,np1),qout(np2,np1)
-! ----------------------------------------------------------------------
-
-! loop over index 2
+  !---parameter
+  integer np1, nr1, np2, nr2
+  double precision, allocatable :: q1(:,:), q2(:,:), q3(:,:),qout(:,:)
+  !---local
+  integer  i2, i1
+  !--------------------------------------------------------------------
+  ! loop over index 2
   do i2 = 1, nr2
-! loop over index 1
-   do i1 = 1, nr1
-    qout(i2,i1) = q1(i2,i1) +  q2(i2,i1) + q3(i2,i1)
-   end do
+     ! loop over index 1
+     do i1 = 1, nr1
+        qout(i2,i1) = q1(i2,i1) +  q2(i2,i1) + q3(i2,i1)
+     end do
   end do
-! ----------------------------------------------------------------------
+  !--------------------------------------------------------------------
   return
 end subroutine add
 !**********************************************************************

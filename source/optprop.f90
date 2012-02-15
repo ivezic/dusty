@@ -20,7 +20,7 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
   double precision aa,bb,cc,lambdain(Nmax),Qain(Nmax),Qsin(Nmax), &
        amax, nsd(npA), a(npA), faux1(npA), faux2(npA), f(npA), int,&
        ala(Nmax),  sizedist, aQa(Nmax), aQs(Nmax),  Cnorm, a3ave, a2ave,&
-       qsd,a1,a2,aveA,aveV,xC(10),xCuser(10)
+       qsd,a1,a2,aveA,xC(10),xCuser(10)
   character stdf(7)*235
 ! -------------------------------------------------------------------
   ! this should never change

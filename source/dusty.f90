@@ -1,5 +1,6 @@
 PROGRAM DUSTY
   USE COMMON
+  USE INTERFACES
   IMPLICIT NONE
   INTEGER :: clock_rate, clock_start, clock_end, io_status, lpath
   INTEGER :: empty, GridType
@@ -111,6 +112,7 @@ subroutine ReadLambda()
 !                                      [ZI,Feb'96; MN,Apr'99; FH,Jan'12]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   integer  iL
   double precision RDINP
@@ -231,6 +233,8 @@ implicit none
   allocate(tauZout(npP+2))
   allocate(fbol(npY))
   allocate(ubol(npY))
+  allocate(qF(npY))
+  allocate(rg(npG,npY))
 end subroutine alloc_mem
 
 subroutine dealloc_mem()
@@ -275,4 +279,6 @@ implicit none
   deallocate(tauZout)
   deallocate(fbol)
   deallocate(ubol)
+  deallocate(qF)
+  deallocate(rg)
 end subroutine dealloc_mem

@@ -31,6 +31,7 @@ Module common
   integer :: Ntr,nYetaF,nPcav
   double precision Pow
   double precision Yout
+  double precision aveV
   double precision,allocatable :: ptr(:)
   double precision,allocatable :: Ytr(:)
   double precision,allocatable :: yetaf(:)
@@ -62,6 +63,8 @@ Module common
   double precision,allocatable :: tauZout(:)
   double precision,allocatable :: fbol(:)
   double precision,allocatable :: ubol(:)
+  double precision,allocatable :: qF(:)
+  double precision,allocatable :: rg(:,:)
   double precision :: SmC(30,99)
   double precision :: fmed
 

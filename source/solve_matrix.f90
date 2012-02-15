@@ -5,6 +5,7 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
 ! spherically symmetric envelope.                      [Z.I., Nov. 1995]
 ! =======================================================================
   use common
+  use interfaces
   IMPLICIT none
   !--- parameter 
   integer :: model,iterfbol,fbolOK, itereta, nY, nP, nYprev, nCav, nIns
@@ -12,18 +13,9 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
   logical initial
   !--- local variables
   integer iPstar, EtaOK, iY
-  double precision pstar,TAUlim
+  double precision pstar,TAUlim, delta
   double precision, allocatable :: fs(:,:),us(:,:),T4_ext(:)
   double precision, allocatable :: emiss(:,:,:)
-  INTERFACE
-     SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,FbolOK,initial,deviat,&
-          iterFbol,iterEta,model,us,fs,T4_ext,emiss)
-       integer iPstar, FbolOK,iterFbol,iterEta,model,nY,nYprev,nP,nCav,nIns
-       double precision :: pstar,TAUlim,deviat
-       double precision,allocatable :: us(:,:), fs(:,:),T4_ext(:),emiss(:,:,:)
-       logical initial
-     END SUBROUTINE RADTRANSF_matrix
-  END INTERFACE
 
 !!$
 !!$  integer model, error, nG, iterfbol, fbolOK,grid,iY,iL,nY_old,y_incr,imu, &
@@ -175,8 +167,8 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
              END IF
            ! end of loop over flux conservation
         END DO
-!!$          ! for winds check if ETA has converged...
-!!$          IF ((RDW).AND.FbolOK.NE.2) THEN
+          ! for winds check if ETA has converged...
+          IF ((denstyp.eq.3).AND.FbolOK.NE.2) THEN !3(RDW)
 !!$             ! ptr(2) is specified in INPUT and controls converg. crit.
 !!$             IF (ptr(2).LT.1.0D-6.AND.iterETA.GT.2)THEN
 !!$                EtaOK = 1
@@ -194,9 +186,9 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
 !!$                END IF
 !!$             END IF
 !!$             ! ...or otherwise finish right away
-!!$          ELSE
-!!$             EtaOK = 1
-!!$          END IF
+          ELSE
+             EtaOK = 1
+          END IF
         ! end of loop over ETA
      END DO
   ELSE
@@ -212,8 +204,9 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
 !!$       STOP
   END IF
 !!$    ! analyze the solution and calculate some auxiliary quantities
-!!$    CALL analysis_matrix(model,error)
-!!$    IF (iVerb.EQ.2) write(*,*) 'Done with Analysis'
+
+  CALL analysis(nY,model,us,T4_ext,delta)
+  IF (iVerb.EQ.2) write(*,*) 'Done with Analysis'
   IF (iX.NE.0) THEN
      write(18,*)' ==== SOLVE successfully completed ====='
      write(18,*)' ======================================='
@@ -236,6 +229,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
 ! spherically symmetric envelope.                      [Z.I., Nov. 1995]
 !=======================================================================
   use common
+  use interfaces
   IMPLICIT none
   !---parameter
   integer iPstar, FbolOK,iterFbol,iterEta,model,nY,nYprev,nP,nCav,nIns
@@ -247,41 +241,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   double precision,allocatable :: T_old(:,:),u_old(:,:),mat0(:,:,:), mat1(:,:,:),&
        mifront(:,:,:), miback(:,:,:), UbolChck(:), Uchck(:,:), fbolold(:)
   double precision ::  BolConv, dmaxF, dmaxU, maxFerr
-  INTERFACE
-     subroutine CHKFlux(nY,nYprev,flux,tolern,consfl,iterEta)
-       DOUBLE PRECISION,allocatable :: flux(:)
-       DOUBLE PRECISION :: tolern
-       INTEGER consfl,nY,nYprev,iterEta
-     end subroutine CHKFlux
-     subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
-       integer nY, nP
-       double precision :: pstar
-       double precision, allocatable :: T4_ext(:)
-       double precision, allocatable :: fs(:,:),us(:,:)
-     end subroutine Find_Tran
-     subroutine init_temp(nY,T4_ext,us)
-       integer nY
-       double precision,allocatable :: us(:,:),T4_ext(:)
-     end subroutine init_temp
-     subroutine invert(nY,mat,Us,Em,Uold)
-       use common
-       integer nY
-       double precision,allocatable :: Us(:,:), Uold(:,:), Em(:,:,:)
-       double precision :: mat(npL,npY,npY)
-     end subroutine invert
-     subroutine find_temp(nY,T4_ext)
-       integer :: nY
-       double precision, allocatable :: T4_ext(:)
-     end subroutine find_temp
-     subroutine matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
-       ! --- parameter
-       integer nP,nY,nPok,nYok,iPstar
-       double precision :: pstar 
-       double precision,allocatable :: m0(:,:,:), m1(:,:,:), mifront(:,:,:), &
-            miback(:,:,:)
-     end subroutine matrix
-  END INTERFACE
-  
+ 
 !!$  integer iPstar, nG, FbolOK, error, iterFbol, model, &
 !!$       BolConv, Conv, iaux, Fconv, iter,itnum, iY, itlim, uconv
 !!$  double precision pstar,taulim,deviat, &
@@ -349,6 +309,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   if (allocated(UbolChck)) deallocate(UbolChck)
   if (allocated(Uchck)) deallocate(Uchck)
   if (allocated(fbolold)) deallocate(fbolold)
+  if (allocated(emiss)) deallocate(emiss)
   allocate(mat0(nL,nY,nY))
   allocate(mat1(nL,nY,nY))
   allocate(mifront(nL,npP,nY))
@@ -360,6 +321,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   allocate(UbolChck(nY))
   allocate(Uchck(nL,nY))
   allocate(fbolold(nY))
+  allocate(emiss(nG,nL,nY))
   ! generate spline coefficients for ETA
   CALL setupETA(nY,nYprev,itereta)
   ! evaluate ETAzp
@@ -422,19 +384,19 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
      END IF
      ! first find 'old' flux (i.e. in the previous iteration)
      IF (MOD(iter+1,itnum).EQ.0) THEN
-        CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
-        CALL Multiply(0,npY,nY,npL,nL,mat1,Emiss,omega,0,fs,fde,dynrange)
-        CALL Add(npY,nY,npL,nL,fs,fds,fde,ftot)
+        CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
+        CALL Multiply(0,nY,nY,nL,nL,mat1,Emiss,omega,0,fs,fde,dynrange)
+        CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
         ! find bolometric flux
-        CALL Bolom(ftot,fbolold)
+        CALL Bolom(ftot,fbolold,nY)
      END IF
      IF (MOD(iter,itnum).EQ.0) THEN
         ! first calculate total flux
-        CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
-        CALL Multiply(0,npY,nY,npL,nL,mat1,Emiss,omega,0,fs,fde,dynrange)
-        CALL Add(npY,nY,npL,nL,fs,fds,fde,ftot)
+        CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
+        CALL Multiply(0,nY,nY,nL,nL,mat1,Emiss,omega,0,fs,fde,dynrange)
+        CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
         ! find bolometric flux
-        CALL Bolom(ftot,fbol)
+        CALL Bolom(ftot,fbol,nY)
         ! check convergence of bolometric flux
         CALL Converg1(nY,fbolold,fbol,Fconv,dmaxF)
         ! check convergence of energy density
@@ -471,10 +433,10 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   call Emission(nY,T4_ext,emiss)
 !!$  CALL Emission_matrix(1,0,nG,Us,Em)
   ! calculate flux
-  CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
-  CALL Multiply(0,npY,nY,npL,nL,mat1,Emiss,omega,0,fs,fde,dynrange)
-  CALL Add(npY,nY,npL,nL,fs,fds,fde,ftot)
-  CALL Bolom(ftot,fbol)
+  CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omega,0,fs,fds,dynrange)
+  CALL Multiply(0,nY,nY,nL,nL,mat1,Emiss,omega,0,fs,fde,dynrange)
+  CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
+  CALL Bolom(ftot,fbol,nY)
   ! check whether, and how well, is bolometric flux conserved
   CALL ChkBolom(nY,fbol,accFlux,deviat,FbolOK)
   CALL FindErr(nY,fbol,maxFerr)
@@ -483,11 +445,11 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   !***********************************
   ! calculate additional output quantities
   ! 1) energy densities
-  CALL Multiply(1,npY,nY,npL,nL,mat0,Utot,omega,0,Us,Uds,dynrange)
-  CALL Multiply(0,npY,nY,npL,nL,mat0,Emiss,omega,0,Us,Ude,dynrange)
-  CALL Add(npY,nY,npL,nL,Us,Uds,Ude,Uchck)
-  CALL Bolom(Utot,Ubol)
-  CALL Bolom(Uchck,UbolChck)
+  CALL Multiply(1,nY,nY,nL,nL,mat0,Utot,omega,0,Us,Uds,dynrange)
+  CALL Multiply(0,nY,nY,nL,nL,mat0,Emiss,omega,0,Us,Ude,dynrange)
+  CALL Add(nY,nY,nL,nL,Us,Uds,Ude,Uchck)
+  CALL Bolom(Utot,Ubol,nY)
+  CALL Bolom(Uchck,UbolChck,nY)
   ! 2) scaled radial optical depth, tr
 !!$  DO iY = 1, nY
 !!$     tr(iY) = ETAzp(1,iY) / ETAzp(1,nY)
@@ -512,14 +474,14 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
 !!$  !============ if the inner flag iInn=1:  =========
 !!$  IF(iX.GE.1 .AND. iInn.EQ.1) THEN
 !!$     ! if additional output needed in message files when iInn = 1
-!!$     CALL Bolom(fs,fsbol)
-!!$     CALL Bolom(fs,fsbol)
+!!$     CALL Bolom(fs,fsbol,nY)
+!!$     CALL Bolom(fs,fsbol,nY)
 !!$     CALL ADD2(fds,fde,fdbol,nY)
 !!$     write(18,'(a11,1p,E11.3)')'   TAUfid =',TAUfid
 !!$     write(18,'(a11,1p,E11.3)')'  MaxFerr =',maxFerr
 !!$     write(18,*) '     tr      fbol       fsbol      fdbol       Ubol  '
 !!$     !    &'     tr      fbol       fsbol      fdbol     Usbol      Udbol'
-!!$     CALL Bolom(Us,Usbol)
+!!$     CALL Bolom(Us,Usbol,nY)
 !!$     DO iY = 1, nY
 !!$        write(18,'(1p,6E11.3)') tr(iY), fbol(iY), fsbol(iY), fdbol(iY), Ubol(iY)
 !!$     END DO
@@ -550,22 +512,16 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold)
 !       [Z.I., Nov. 1995]
 !=======================================================================
   use common
+  use interfaces
   IMPLICIT none
   !--- parameter
   integer nY
-  double precision,allocatable :: Us(:,:), Uold(:,:), Em(:,:,:)
-  double precision :: mat(npL,npY,npY)
+  double precision,allocatable :: Us(:,:), Uold(:,:), Em(:,:,:),mat(:,:,:)
   !--- local
   DOUBLE PRECISION  delTAUsc, facc, EtaRat, accFbol
   INTEGER iG,iL,iY, iYaux, Kronecker
   DOUBLE PRECISION,allocatable ::  A(:,:), B(:), X(:)
   !--------------------------------------------------------------------
-  INTERFACE
-     SUBROUTINE LINSYS(Nreal,A,B,X)
-       integer Nreal
-       DOUBLE PRECISION,allocatable :: A(:,:), B(:), X(:)
-     END SUBROUTINE LINSYS
-  END INTERFACE
   allocate(B(nY))
   allocate(A(nY,nY))
   allocate(X(nY))
@@ -666,10 +622,12 @@ SUBROUTINE Converg1(nY,Aold,Anew,Aconv,dmax)
 !Aconv is assigned 1, otherwise 0.              [Z.I.Jul 96;M.N.Apr.97]
 !=======================================================================
   use common
+  use interfaces
   IMPLICIT none
   !---parameter
   integer nY,Aconv
-  double precision Aold(npY), Anew(npY), dmax
+  double precision :: dmax
+  double precision,allocatable ::  Aold(:), Anew(:)
   !---local
   INTEGER iY
   DOUBLE PRECISION delta
@@ -701,10 +659,12 @@ SUBROUTINE Converg2(nY,Aold,Anew,Aconv,dmax)
 !Aconv is assigned 1, otherwise 0.             [Z.I.Jul 96; M.N.Apr.97]
 !=======================================================================
   use common
+  use interfaces
   IMPLICIT none
   !---parameter
   integer nY,Aconv
-  double precision Aold(npL,npY), Anew(npL,npY), dmax
+  double precision :: dmax
+  double precision,allocatable :: Aold(:,:), Anew(:,:)
   !---local
   INTEGER iY, iL
   DOUBLE PRECISION delta
@@ -738,11 +698,15 @@ SUBROUTINE ChkBolom(nY,qbol,accur,dev,FbolOK)
 !otherwise FbolOK = 1. dev is maximal deviation from fmed. [ZI,'96;MN'00]
 !=======================================================================
   use common
+  use interfaces
   IMPLICIT none
-  ! --- parameter
-  integer nY
-  INTEGER iY,FbolOK
-  DOUBLE PRECISION qBol(npY), accur,dev,fmax,AveDev,RMS
+  !---parameter
+  integer nY,FbolOK
+  double precision :: accur,dev
+  DOUBLE PRECISION,allocatable ::  qBol(:) 
+  !---local
+  INTEGER iY
+  DOUBLE PRECISION fmax,AveDev,RMS
   !-----------------------------------------------------------------------
   FbolOK = 1
   dev = 0.0D+00
@@ -770,6 +734,7 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
 !along the line of sight and mat is radiative transfer matrix.
 !=======================================================================
   use common
+  use interfaces
   IMPLICIT none
   ! --- parameter
   integer nP,nY,nPok,nYok,iPstar
@@ -790,18 +755,6 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
        Tminus(:,:,:),xN(:),yN(:),TAUr(:),wm(:),wmT(:),wp(:),&
        alpha(:,:),beta(:,:),gamma2(:,:),delta(:,:),wgmatp(:,:), &
        wgmatm(:,:), Yok(:), Pok(:)
-  INTERFACE
-     SUBROUTINE MYSPLINE(x,N,alpha,beta,gamma2,delta)
-       integer :: N
-       double precision,allocatable :: x(:),alpha(:,:),beta(:,:),gamma2(:,:),delta(:,:)
-     end SUBROUTINE MYSPLINE
-     SUBROUTINE WEIGHTS(TAUaux,iP,iL,nZ,alpha,beta,gamma2,delta,wgp,wgm,nY)
-       integer iP,iL,nZ,nY
-       double precision,allocatable :: TAUaux(:,:,:),alpha(:,:), beta(:,:),&
-            gamma2(:,:),delta(:,:),wgp(:,:), wgm(:,:)
-     end SUBROUTINE WEIGHTS
-  END INTERFACE
-
   !---------------------------------------------------------------------
   allocate(nZ(nP))
   allocate(haux(nP))
@@ -1044,6 +997,7 @@ SUBROUTINE MYSPLINE(x,N,alpha,beta,gamma2,delta)
 !and b,c,d analogously.    [Z.I., Dec. 1995]
 !=======================================================================
   use common
+  use interfaces
   IMPLICIT none
   !--- parameter
   integer :: N,nY
@@ -1130,6 +1084,7 @@ SUBROUTINE WEIGHTS(TAUaux,iP,iL,nZ,alpha,beta,gamma2,delta,wgp,wgm,nY)
 !delta (see MYSPLINE).                         [ZI,Dec'95;MN,Sep'97]
 !=======================================================================
   use common
+  use interfaces
   IMPLICIT none
   !---parameter
   integer iP,iL,nZ,nY
@@ -1140,13 +1095,6 @@ SUBROUTINE WEIGHTS(TAUaux,iP,iL,nZ,alpha,beta,gamma2,delta,wgp,wgm,nY)
   DOUBLE PRECISION  waux
   double precision,allocatable :: K1p(:),K2p(:), K3p(:),K4p(:),&
        K1m(:),K2m(:),K3m(:),K4m(:)
-  INTERFACE
-     SUBROUTINE Kint4(TAUaux,iP,iL,nZ,K1p,K2p,K3p,K4p,K1m,K2m,K3m,K4m)
-       INTEGER iP, iL, nZ
-       DOUBLE PRECISION,allocatable :: TAUaux(:,:,:), K1p(:),K2p(:),K3p(:),&
-            K4p(:), K1m(:), K2m(:), K3m(:), K4m(:)
-     end SUBROUTINE Kint4
-  END INTERFACE
   allocate(K1p(nY))
   allocate(K2p(nY))
   allocate(K3p(nY))
@@ -1209,6 +1157,7 @@ SUBROUTINE Kint4(TAUaux,iP,iL,nZ,K1p,K2p,K3p,K4p,K1m,K2m,K3m,K4m)
 !Recipes).          [ZI,Feb'96;MN,Sep'97]
 !=======================================================================
   use common
+  use interfaces
   IMPLICIT none
   !---parameter
   INTEGER iP, iL, nZ
@@ -1292,6 +1241,7 @@ SUBROUTINE ROMBERG2(a,b,ss8,w1,wl,iW1,iLaux,delTAUzp,paux)
 !                        [MN & ZI,Aug'96]
 !=======================================================================
   use common
+  use interfaces
   IMPLICIT NONE
   INTEGER fconv(8),JMAX,JMAXP,K,KM, J, idone, kaux, iW1,iLaux
   PARAMETER (JMAX=50, JMAXP=JMAX+1, K=5, KM=K-1)
@@ -1423,6 +1373,7 @@ SUBROUTINE TWOFUN(z,ff,gp,gm,w1,wl,iW1,iLaux,delTAUzp,paux)
 !=======================================================================
 !-----------------------------------------------------------------------
   use common
+  use interfaces
   implicit none
   DOUBLE PRECISION w,w1,wl,paux,z,auxw,delTAUzp,etaloc,ff,gm,gm1,gp,gp1,pp,&
        IntETA_matrix
@@ -1463,6 +1414,7 @@ DOUBLE PRECISION FUNCTION IntETA_matrix(p2,iW1,w1,w)
 !soubroutine Maple3).                         [ZI,Feb'96,MN,Aug'97]
 !=======================================================================
   use common
+  use interfaces
   IMPLICIT none
   INTEGER iW1
   DOUBLE PRECISION  p2, w1, w, aux(4), z, z1, aux1(4)
@@ -1936,16 +1888,21 @@ SUBROUTINE ChkFlux(nY,nYprev,flux,tolern,consfl,iterEta)
 !tolern to its maximum value.                         [MN & ZI,July'96]
 !=======================================================================
   use common
+  use interfaces
   IMPLICIT none
   !---parameter
   DOUBLE PRECISION,allocatable :: flux(:)
   DOUBLE PRECISION :: tolern
   INTEGER consfl, nY,nYprev,iterEta
   !---local
-  integer iY,iYins(npY),k,kins,flag,istop,iDm
-  DOUBLE PRECISION EtaTemp(npY),Yins(npY),delTAUMax,&
-       devfac,devmax,ee,ff,ffold,fmax,Yloc,ETA
-!-----------------------------------------------------------------------
+  integer iY,k,kins,flag,istop,iDm
+  integer,allocatable :: iYins(:)
+  DOUBLE PRECISION delTAUMax,devfac,devmax,ee,ff,ffold,fmax,Yloc,ETA
+  double precision,allocatable :: EtaTemp(:),Yins(:)
+  !--------------------------------------------------------------------
+  allocate(iYins(nY))
+  allocate(EtaTemp(nY))
+  allocate(Yins(nY))
   ! save old grid and values of Eta (important for denstyp = 5 or 6)
   IF (denstyp.eq.3) THEN !3(RDW)
      DO iY = 1, nY
@@ -2043,7 +2000,10 @@ SUBROUTINE ChkFlux(nY,nYprev,flux,tolern,consfl,iterEta)
      END IF
   END DO
   !-----------------------------------------------------------------------
-777 RETURN
+777 deallocate(iYins)
+  deallocate(EtaTemp)
+  deallocate(Yins)
+  RETURN
 END SUBROUTINE ChkFlux
 !***********************************************************************
 
@@ -2132,10 +2092,12 @@ SUBROUTINE FindErr(nY,flux,maxFerr)
 !spherical and slab case as (fmax-fmin)/(fmax+fmin)   [MN,Aug'99]
 !=========================================================================
   use common
+  use interfaces
   IMPLICIT none
   !--- parameter
   integer nY
-  DOUBLE PRECISION flux(npY), maxFerr
+  DOUBLE PRECISION maxFerr
+  double precision,allocatable :: flux(:)
   !--- local
   INTEGER iY
   DOUBLE PRECISION fmin, fmax, aux, accFbol, tune_acc
