@@ -18,10 +18,10 @@ Module common
   integer nOutput                       ! number of output columns
   PARAMETER (nOutput=20)
   integer npY,npP,npL,npG,npR
-  PARAMETER (npY = 130)
+  PARAMETER (npY = 1000)
   PARAMETER (npP = 20*npY+20)
   PARAMETER (npL = 125)
-  PARAMETER (npG = 10)
+  PARAMETER (npG = 1)
   PARAMETER (npR = 90)
 
   double precision,allocatable :: ETAdiscr(:)
@@ -49,9 +49,11 @@ Module common
   double precision,allocatable :: fde(:,:)
   double precision,allocatable :: ftot(:,:)
   double precision,allocatable :: Utot(:,:)
+  double precision,allocatable :: Utot_old(:,:)
   double precision,allocatable :: Ude(:,:)
   double precision,allocatable :: Uds(:,:)
   double precision,allocatable :: Td(:,:)
+  double precision,allocatable :: Td_old(:,:)
   double precision,allocatable :: tauF(:)
   double precision,allocatable :: RPr(:)
   double precision,allocatable :: Eps(:)

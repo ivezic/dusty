@@ -38,7 +38,7 @@ subroutine Kernel(path,lpath,tau,Nmodel)
      ! solve radiative transfer for this particular optical depth
      call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! old dustys way
-     ! CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     !CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
 
      ! if flux is conserved, the solution is obtained. So write out the values
      ! to output files for specified models
@@ -130,10 +130,10 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
   double precision :: delta, taumax
   logical initial
   !--- local variables
-  integer etaOK, nY_old, iPstar, y_incr
-  double precision taulim,pstar
-  double precision, allocatable :: fs(:,:),us(:,:),T4_ext(:)
-  double precision, allocatable :: emiss(:,:,:)
+  integer etaOK, nY_old, iPstar, y_incr, iY
+  double precision taulim,pstar, maxFerr, maxrat
+  double precision, allocatable :: fs(:,:),us(:,:),T4_ext(:), &
+       emiss(:,:,:),calc_fdiff(:),comp_fdiff_bol(:),fDebol(:),fDsbol(:)
 
 !!$  integer model, iterfbol, fbolOK,grid,iY,iL,nY_old,y_incr,imu, &
 !!$       iPstar,EtaOK , iP, iZ, nZ, iOut
@@ -173,14 +173,8 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
   EtaOK = 0
   y_incr = 0
   call SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol+1,itereta)
-  allocate(fs(nL,nY))
-  allocate(us(nL,nY))
-  allocate(T4_ext(nY))
-  allocate(emiss(nG,nL,nY))
   !------------ loop over bol.flux conservation ------------
   do while(fbolOK.eq.0)
-     fbolOK = 1  !<--- remove this line only temporay !!!!! FH
-     print*,'FbolOK = 1 ! <--- remove this line only temporay !!!!! FH'
      iterfbol = iterfbol + 1
      if (iX.ge.1) then
         write(18,*)'  ',iterfbol,' iteration over fbol'
@@ -190,6 +184,22 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
      end if
      ! set grids for the initial optical depth
      call SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol,itereta)
+     if (allocated(fs)) deallocate(fs)
+     if (allocated(us)) deallocate(us)
+     if (allocated(T4_ext)) deallocate(T4_ext)
+     if (allocated(emiss)) deallocate(emiss)
+     if (allocated(calc_fdiff)) deallocate(calc_fdiff)
+     if (allocated(comp_fdiff_bol)) deallocate(comp_fdiff_bol)
+     if (allocated(fDebol)) deallocate(fDebol)
+     if (allocated(fDsbol)) deallocate(fDsbol)
+     allocate(fs(nL,nY))
+     allocate(us(nL,nY))
+     allocate(T4_ext(nY))
+     allocate(emiss(nG,nL,nY))
+     allocate(calc_fdiff(nY))
+     allocate(comp_fdiff_bol(nY))
+     allocate(fDebol(nY))
+     allocate(fDsbol(nY))
      ! assign number of grid points to nY_old
      nY_old = nY
      if (iVerb.eq.2) write(*,'(a19,i3,a12)') '  Calculating with ', nY,' grid points.'
@@ -210,15 +220,15 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
      if (iVerb.eq.2) write(*,*)' Done with radiative transfer. '
      ! calculate diffuse flux
      ! for slab
-!!$     if(slb) then
+     if(slb) then
 !!$        ! find the diffuse scattered flux(fl=1 for scatt. and fl=0 is for emission)
 !!$        call SLBdiff(nG,1,omega,TAUslb,T4_ext,em,fdsp,fdsm)
 !!$        ! find the diffuse emitted flux
 !!$        call SLBdiff(nG,0,omega,TAUslb,T4_ext,em,fdep,fdem)
 !!$        ! find bolometric diffuse flux
-!!$        call add2(fds,fde,comp_fdiff_bol,nY)
-!!$        call add2(fdsp,fdep,fpbol,nY)
-!!$        call add2(fdsm,fdem,fmbol,nY)
+!!$        call add2(nY,fds,fde,comp_fdiff_bol)
+!!$        call add2(nY,fdsp,fdep,fpbol)
+!!$        call add2(nY,fdsm,fdem,fmbol)
 !!$        ! find calculated bolometric diffuse flux
 !!$        do iY = 1, nY
 !!$           calc_fdiff(iY) = (fsLbol(1)-fsRbol(1)) - (fsLbol(iY)-fsRbol(iY))
@@ -226,23 +236,23 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
 !!$        end do
 !!$        comp_fdiff_bol = comp_fdiff_bol1
 !!$        !  for sphere
-!!$     elseif(sph) then
-!!$        !!** added here, instead of before Analysis [Sep.1'10]
-!!$        call add(npY,nY,npL,nL,fs,fds,fde,ftot)
-!!$        call add2(fds,fde,comp_fdiff_bol,nY)
-!!$        do iY = 1, nY
-!!$           calc_fdiff(iY) = abs(fsbol(1) - fsbol(iY))
-!!$        end do
-!!$     end if
-!!$     ! Find accfbol as in old Dusty versions.
-!!$     call BOLOM(fs,fsbol)
-!!$     call BOLOM(fde,fDebol)
-!!$     call BOLOM(fds,fDsbol)
-!!$     DO iY = 1, nY
-!!$        fbol(iY) = fDebol(iY)+fDsbol(iY)+fsbol(iY)
-!!$     END DO
-!!$     call Finderr(fbol,maxFerr)
-!!$     if(iVerb.eq.2) write(*,'(A,F10.3,A)') '  Achieved error in bolometric Flux:',maxFerr*100,'%'
+     elseif(sph) then
+        !!** added here, instead of before Analysis [Sep.1'10]
+        call add(nY,nY,nL,nL,fs,fds,fde,ftot)
+        call add2(nY,fds,fde,comp_fdiff_bol)
+        do iY = 1, nY
+           calc_fdiff(iY) = abs(fsbol(1) - fsbol(iY))
+        end do
+     end if
+     ! Find accfbol as in old Dusty versions.
+     call BOLOM(fs,fsbol,nY)
+     call BOLOM(fde,fDebol,nY)
+     call BOLOM(fds,fDsbol,nY)
+     DO iY = 1, nY
+        fbol(iY) = fDebol(iY)+fDsbol(iY)+fsbol(iY)
+     END DO
+     call Finderr(nY,fbol,maxFerr)
+     if(iVerb.eq.2) write(*,'(A,F10.3,A)') '  Achieved error in bolometric Flux:',maxFerr*100,'%'
 !!$     IF(iInn.eq.1) THEN
 !!$        write(18,'(a20,1p,e12.3)') 'from Solve: maxFerr=',maxFerr
 !!$        IF(SLB) THEN
@@ -259,17 +269,11 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
 !!$     END IF
 !!$     ! check for flux conservation, and if there is no conservation
 !!$     ! increase number of grid points
-!!$     call BOLOM(fs,fsbol)
-!!$     call BOLOM(fde,fDebol)
-!!$     call BOLOM(fds,fDsbol)
-!!$     DO iY = 1, nY
-!!$        fbol(iY) = fDebol(iY)+fDsbol(iY)+fsbol(iY)
-!!$     END DO
-!!$     call Flux_Consv(fbol,fbol,fbolOK,error)
-!!$     if (iVerb.eq.2) write(*,'(a20,i3)') ' After Flux_Cons nY=', nY
-!!$     ! initialize flag, y_incr, which records whether there is an increase in
-!!$     ! y-grid points
-!!$     y_incr = 0
+     call Flux_Consv(nY,nYprev,Ncav,itereta,fbol,fbol,fbolOK,maxrat)
+     if (iVerb.eq.2) write(*,'(a20,i3)') ' After Flux_Cons nY=', nY
+     ! initialize flag, y_incr, which records whether there is an increase in
+     ! y-grid points
+     y_incr = 0
 !!$     ! if new number of grid points is greater than the old, then taux = 1
 !!$     if (nY.gt.nY_old) y_incr = 1
 !!$     ! if the grid size limit is reached error=2
@@ -1069,7 +1073,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   integer :: nY,nP,nYprev,itereta
   double precision pstar
   double precision,allocatable :: us(:,:), fs(:,:)
-  double precision,allocatable :: T_old(:,:),u_old(:,:),T4_ext(:)
+  double precision,allocatable :: T4_ext(:)
   double precision,allocatable :: emiss(:,:,:)
   !---- local variable
   integer :: itlim,conv,iter,iG,iL,iY,iY1, moment
@@ -1084,8 +1088,6 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
 !!$  double precision, dimension(:), allocatable:: xg, wg
   external eta
 
-  allocate(T_old(nG,nY))
-  allocate(u_old(nL,nY))
   !------------------------------------------------------------------------
   error = 0
   if(sph) then
@@ -1130,29 +1132,6 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   !=== iterations over dust temperature =========
   do while (conv.eq.0.and.iter.le.itlim)
      iter = iter + 1
-     T_old = Td
-     u_old = utot
-     ! if y-grid points are increased, linearly interpolate previous
-     ! dust temperature for the new y-grid
-     if (y_incr.eq.1.and.iter.eq.1) then
-        do iY = 1, nY, 2
-           iY1 = int((iY + 1)/2)
-           do iG = 1, nG
-              Td(iG,iY) = T_old(iG,iY1)
-           end do
-           do iL = 1, nL
-              utot(iL,iY) = u_old(iL,iY1)
-           end do
-        end do
-        do  iY = 2, nY-1, 2
-           do iG = 1, nG
-              Td(iG,iY) = abs(Td(iG,iY+1) + Td(iG,iY-1))/2.0d0
-           end do
-           do iL = 1, nL
-              utot(iL,iY) =  abs(utot(iL,iY+1) + utot(iL,iY-1))/2.0d0
-           end do
-        end do
-     end if
      ! find T_external for the new y-grid if T(1) given in input
      if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
         call find_Text(nY,T4_ext)
@@ -1164,8 +1143,12 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
      ! moment = 1 is for finding total energy density only
      moment = 1
      call Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
-     ! assign previus Td to T_old
-     T_old = Td
+     ! assign previus Td to Td_old
+     do iG = 1,nG
+        do iY = 1,nY
+           Td_old(iG,iY) = Td(iG,iY)
+        end do
+     end do
      ! find Td
      call Find_Temp(nY,T4_ext)
      ! check convergence for dust temperature
@@ -1173,14 +1156,14 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
      aux1 = 0.0d0
      do iG = 1,nG
         do iY = 1,nY
-           aux1 = dabs(T_old(iG,iY) - Td(iG,iY))/Td(iG,iY)
+           aux1 = dabs(Td_old(iG,iY) - Td(iG,iY))/Td(iG,iY)
            if (aux1.gt.maxerrT) maxerrT = aux1
         enddo
      end do
      if (maxerrT.le.accTemp) conv = 1
 !!$     IF(iInn.eq.1) THEN
 !!$        CALL Bolom(utot,Ubol)
-!!$        CALL Bolom(u_old,Ubol_old)
+!!$        CALL Bolom(utot_old,Ubol_old)
 !!$        maxerrU = 0.0d0  !just for info, iterations are over Td [MN]
 !!$        do iY = 1,nY
 !!$           aux1 = dabs(Ubol_old(iY) - Ubol(iY)) / Ubol(iY)
@@ -1249,8 +1232,6 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
 !!$        END DO
 !!$      END DO
 !!$   END IF
-  deallocate(T_old)
-  deallocate(u_old)
   deallocate(T4_ext)
 999 return
 end subroutine Rad_Transf
@@ -2002,35 +1983,30 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
   double precision, allocatable :: T4_ext(:),emiss(:,:,:),us(:,:),vec2(:,:)
   logical initial
   ! --- local variables 
-  integer iP,iL,iZ,iZz,nZ,iY,iYy, iNloc,flagN,iG,thread_id,iaux
-  double precision,allocatable ::  Iplus1(:,:),Iplus2(:,:), Iminus(:,:), &
-       aux2(:,:),diff(:,:), S_fun(:,:), func(:,:), faux3(:,:), xN(:,:), yN(:,:), &
-       aux(:),daux(:)
-  double precision result1, result2, res1, frac, S_loc, p_loc,expow1
+  integer iP,iL,iZ,iZz,nZ,iY,iYy, iNloc,flagN,iG,thread_id,iaux,iiaux
+  double precision,allocatable ::  Iplus1(:,:),Iplus2(:,:), Iminus(:,:),&
+       S_fun(:,:), xN(:), yN(:),diff(:,:)
+  double precision result1, result2, res1, frac, S_loc, p_loc, expow1, wgth, &
+       daux1,daux2,int1,int2,int3
   !-----------------------------------------------------------------------
   allocate(Iplus1(nP,nL))
   allocate(Iplus2(nP,nL))
   allocate(Iminus(nP,nL))       
-  allocate(aux2(nY,max_threads))
-  allocate(diff(nY,max_threads))
   allocate(S_fun(nY,max_threads)) 
-  allocate(func(nY,max_threads))
-  allocate(faux3(nY,max_threads))
-  allocate(xN(nP,max_threads))
-  allocate(yN(nP,max_threads))
-  allocate(aux(nY))
-  allocate(daux(nY))
+  allocate(diff(nY,max_threads)) 
+  allocate(xN(nP))
+  allocate(yN(nP))
   Iplus1 = 0.0d0
   Iplus2 = 0.0d0
   Iminus = 0.0d0
-  print*,'! extreme inefficient parallelization need to be changed !!!!!!'
   !!** for each radial grid point calculate the integrals from Sec.4.1 in Blueprint:
   do iY = 1, nY
      do iP = 1, Plast(iY)
         iZz  = iY + 1 - iYfirst(iP)  !this is for z in eq.(4.1.5)
         ! upper limit for the counter of z position
         nZ  = nY + 1 - iYfirst(iP)   !nZ is index for zmax=sqrt(Y**2-p**2) [MN]
-        !$OMP PARALLEL DO FIRSTPRIVATE(thread_id,frac,iYy,p_loc,S_loc,iNloc,expow1,res1) PRIVATE(aux,iaux,daux)
+        !$OMP PARALLEL DO FIRSTPRIVATE(thread_id,frac,iYy,p_loc,S_loc,iNloc,expow1,res1,iZz,nZ) &
+        !$OMP PRIVATE(int1,int2,int3,wgth,daux1,daux2,iaux,iiaux,iZ,iL)
         do iL = 1, nL
            thread_id = omp_get_thread_num()+1
            do iYy = 1, nY
@@ -2062,10 +2038,30 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
                  iYy = iYfirst(iP) + iZ - 1
                  if(iZ.eq.1.and.P(iP).gt.Y(iYy).and.P(iP).lt.Y(iYy+1)) then
                     p_loc = P(iP)
-                    do iaux=1,nY
-                       aux(iaux) = S_fun(iaux,thread_id)
-                    end do
-                    call LININTER(nY,nY,Y,aux,p_loc,iNloc,S_loc)
+                    ! call LININTER(nY,nY,Y,aux,p_loc,iNloc,S_loc)
+                    ! LININTER(nn,n,x,y,xloc,iNloc,Yloc)
+                    if (nY.gt.1) then
+                       if ((Y(1)-p_loc)*(Y(nY)-p_loc).le.0.0d0) then
+                          iaux = 0
+                          iiaux = 1
+                          do while (iaux.ne.1)
+                             iiaux = iiaux + 1
+                             if (iiaux.gt.nY) stop 'lininter ???'
+                             if (Y(iiaux).ge.p_loc) then
+                                iaux = 1
+                                iNloc = iiaux
+                                S_loc = S_fun(iiaux-1,thread_id)+(S_fun(iiaux,thread_id)-&
+                                     S_fun(iiaux-1,thread_id))/(Y(iiaux)-Y(iiaux-1))*(p_loc-Y(iiaux-1))
+                             end if
+                          end do
+                       else
+                          if (p_loc.le.Y(1)) S_loc = S_fun(1,thread_id)
+                          if (p_loc.ge.Y(nY)) S_loc = S_fun(nY,thread_id)
+                       end if
+                    else
+                       S_loc = S_fun(1,thread_id)
+                    end if
+                    ! END lininter
                     diff(iZ,thread_id) = abs(S_loc)
                  else
                     diff(iZ,thread_id) = S_fun(iYy,thread_id)
@@ -2073,48 +2069,85 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
               end do
               diff(nZ,thread_id) = S_fun(nY,thread_id)
            end if
-           do iZ = 1, nZ
-              aux2(iZ,thread_id) = tautot(iL)*ETAzp(iP,iZ)
-              ! 1st term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
-              !     from z0-midpoint to the outer edge of the shell (on the left side)  [MN]
-              faux3(iZ,thread_id) = exp(-aux2(iZ,thread_id))
-!              func(iZ,thread_id) =  diff(iZ,thread_id)
-           end do
-           ! extreme inefficient need to be changed !!!!!!
-           do iaux=1,nY
-              aux(iaux) = faux3(iaux,thread_id)
-              daux(iaux) = diff(iaux,thread_id)
-           end do
-           CALL Simpson(nY,1,nZ,aux,daux,res1)
-           Iplus1(iP,iL) = abs(res1)*exp(-aux2(iZz,thread_id))
+           int1 = 0.
+           int2 = 0.
+           int3 = 0.
+           if (nZ.gt.1) then 
+              ! BEGIN SIMPSON(n,n1,n2,x,y,integral)
+              do iZ = 1, nZ
+                 if ((iZ.ne.1).and.(iZ.ne.nZ)) then
+                    daux1 = exp(-tautot(iL)*ETAzp(iP,iZ-1))
+                    daux2 = exp(-tautot(iL)*ETAzp(iP,iZ+1))
+                    wgth = 0.5d0*(daux2-daux1)
+                 else
+                    if (iZ.eq.1) then 
+                       daux1 = exp(-tautot(iL)*ETAzp(iP,1))
+                       daux2 = exp(-tautot(iL)*ETAzp(iP,1+1))
+                       wgth = 0.5d0*(daux2-daux1)
+                    end if
+                    if (iZ.eq.nZ) then 
+                       daux1 = exp(-tautot(iL)*ETAzp(iP,nZ-1))
+                       daux2 = exp(-tautot(iL)*ETAzp(iP,nZ))
+                       wgth = 0.5d0*(daux2-daux1)
+                    end if
+                 end if
+                 ! add contribution to the integral
+                 int1 = int1 + diff(iZ,thread_id)*wgth
+                 if ((iZ.lt.iZz).and.(iZz.gt.1)) then 
+                    if (iZ.ne.1.and.iZ.ne.iZz) then
+                       daux1 = exp(-tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,iZ-1)))
+                       daux2 = exp(-tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,iZ+1)))
+                       wgth = 0.5d0*(daux2-daux1)
+                    else
+                       if (iZ.eq.1) then 
+                          daux1 = exp(-tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,1)))
+                          daux2 = exp(-tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,1+1)))
+                          wgth = 0.5d0*(daux2-daux1)
+                       end if
+                       if (iZ.eq.iZz) then 
+                          daux1 = exp(-tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,iZz-1)))
+                          daux2 = exp(-tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,iZz)))
+                          wgth = 0.5d0*(daux2-daux1)
+                       end if
+                    end if
+                    ! add contribution to the integral
+                    int2 = int2 + diff(iZ,thread_id)*wgth
+                 end if
+                 if ((iZ.gt.iZz).and.(iZz.lt.nZ)) then 
+                    if (iZ.ne.iZz.and.iZ.ne.nZ) then
+                       daux1 = exp(-tautot(iL)*abs(ETAzp(iP,iZ-1) - ETAzp(iP,iZz)))
+                       daux2 = exp(-tautot(iL)*abs(ETAzp(iP,iZ+1) - ETAzp(iP,iZz)))
+                       wgth = 0.5d0*(daux2-daux1)
+                    else
+                       if (iZ.eq.iZz) then 
+                          daux1 = exp(-tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,iZz)))
+                          daux2 = exp(-tautot(iL)*abs(ETAzp(iP,iZz+1) - ETAzp(iP,iZz)))
+                          wgth = 0.5d0*(daux2-daux1)
+                       end if
+                       if (iZ.eq.nZ) then 
+                          daux1 = exp(-tautot(iL)*abs(ETAzp(iP,nZ-1) - ETAzp(iP,iZz)))
+                          daux2 = exp(-tautot(iL)*abs(ETAzp(iP,nZ) - ETAzp(iP,iZz)))
+                          wgth = 0.5d0*(daux2-daux1)
+                       end if
+                    end if
+                    ! add contribution to the integral
+                    int3 = int3 + diff(iZ,thread_id)*wgth
+                 end if
+                 ! END SIMPSON
+              end do
+           end if
+           ! 1st term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
+           !     from z0-midpoint to the outer edge of the shell (on the left side)  [MN]
+           Iplus1(iP,iL) = abs(int1)*exp(-tautot(iL)*ETAzp(iP,iZz))
            ! 2nd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
            !     from z0-midpoint to the running z-point
-           DO iZ = 1, iZz
-              expow1 = tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,iZ)) !this is tau(z',z;p)
-              faux3(iZ,thread_id) = exp(-expow1)
-!              func(iZ,thread_id) =  diff(iZ,thread_id)
-           END DO
-           do iaux=1,nY
-              aux(iaux) = faux3(iaux,thread_id)
-              daux(iaux) = diff(iaux,thread_id)
-           end do
-           CALL Simpson(nY,1,iZz,aux,daux,res1)
-           Iplus2(iP,iL) = abs(res1)
+           Iplus2(iP,iL) = abs(int2)
            ! 3rd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
            !     from the running z-point to the outer edge of the shell [MN]
-           DO iZ = iZz, nZ
-              expow1 = tautot(iL)*abs(ETAzp(iP,iZ) - ETAzp(iP,iZz)) !this is tau(z,z';p)
-              faux3(iZ,thread_id) = exp(-expow1)
-!              func(iZ,thread_id) =  diff(iZ,thread_id)
-           END DO
-           do iaux=1,nY
-              aux(iaux) = faux3(iaux,thread_id)
-              daux(iaux) = diff(iaux,thread_id)
-           end do
-           CALL Simpson(nY,iZz,nZ,aux,daux,res1)
-           Iminus(iP,iL) = abs(res1)
+           Iminus(iP,iL) = abs(int3)
         end do ! end loop over wavelengths
         !$OMP END PARALLEL DO
+!        print*,iplus1(ip,:10)
      end do ! end loop over impact parameters P=1..Plast(iY)
      !  Find diffuse energy density (U)
      if (moment_loc.eq.1) then
@@ -2122,15 +2155,16 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
         !!**   U ~ Int[yN*dmu], while flux ~ Int[yN*mu*dmu]. Sub Nordlund takes care of this difference.
         !!**   When calling NORDLUND(flagN,xN,yN,N1,N2,m,intfdx,error)
         !!**   flagN=1 is for analytic integration; m=0 for U and m=1 for flux [MN]
-        !$OMP PARALLEL DO FIRSTPRIVATE(FlagN,error,result1,result2,iP,iY,thread_id)
+!!$        !$OMP PARALLEL DO FIRSTPRIVATE(FlagN,error,result1,result2,iP,iY,thread_id) &
+!!$        !$OMP PRIVATE(xN,yN)
         do iL = 1, nL
            thread_id = omp_get_thread_num()+1
            DO iP = 1, Plast(iY)
-              xN(iP,thread_id) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
+              xN(iP) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
               ! generate intensity array for NORDLUND
-              yN(iP,thread_id) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) + Iminus(iP,iL))
+              yN(iP) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) + Iminus(iP,iL))
            END DO
-           CALL NORDLUND(nY,0,xN(:,thread_id),yN(:,thread_id),1,nPcav+1,0,result1)
+           CALL NORDLUND(nY,nP,0,xN,yN,1,nPcav+1,0,result1)
            ! flag for analytic integration outside cavity
            !! IF (iY.GT.6) THEN ! this was in the old Dusty
            IF (iY.GT.4) THEN  ! take it as 4 in case the grid has a few pts. only.
@@ -2140,7 +2174,7 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
            ENDIF
            ! angular integration outside cavity
            IF (iY.GT.1) THEN
-              CALL NORDLUND(nY,flagN,xN(:,thread_id),yN(:,thread_id),nPcav+1,Plast(iY),0,result2)
+              CALL NORDLUND(nY,nP,flagN,xN,yN,nPcav+1,Plast(iY),0,result2)
               IF (error.NE.0) STOP
            ELSE
               result2 = 0.0
@@ -2148,19 +2182,20 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
            !!**result1 is for inside, result2 is for outside the cavity [MN]
            vec2(iL,iY)= 0.5*(result1 + result2)/T4_ext(iY)
         end do  !end do over lambda
-        !$OMP END PARALLEL DO
+!!$        !$OMP END PARALLEL DO
         !  Find diffuse flux
      elseif(moment_loc.eq.2) then
-        !$OMP PARALLEL DO FIRSTPRIVATE(FlagN,error,result1,result2,iP,iY,thread_id)
+!!$        !$OMP PARALLEL DO FIRSTPRIVATE(FlagN,error,result1,result2,iP,iY,thread_id) &
+!!$        !$OMP PRIVATE(xN,yN)
         do iL = 1, nL
            thread_id = omp_get_thread_num()+1
            DO iP = 1, Plast(iY)
-              xN(iP,thread_id) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
+              xN(iP) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
               ! generate intensity array for NORDLUND
-              yN(iP,thread_id) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) - Iminus(iP,iL))
+              yN(iP) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) - Iminus(iP,iL))
            END DO
            ! integration inside the cavity
-           CALL NORDLUND(nY,0,xN(:,thread_id),yN(:,thread_id),1,nPcav+1,1,result1)
+           CALL NORDLUND(nY,nP,0,xN,yN,1,nPcav+1,1,result1)
            ! flag for analytic integration outside cavity
            !!IF (iY.GT.6) THEN ! this was in the old Dusty
            IF (iY.GT.4) THEN
@@ -2170,7 +2205,7 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
            ENDIF
            ! angular integration outside cavity
            IF (iY.GT.1) THEN
-              CALL NORDLUND(nY,flagN,xN(:,thread_id),yN(:,thread_id),nPcav+1,Plast(iY),1,result2)
+              CALL NORDLUND(nY,nP,flagN,xN,yN,nPcav+1,Plast(iY),1,result2)
               IF (error.NE.0) STOP
            ELSE
               result2 = 0.0
@@ -2178,20 +2213,15 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
            !!** result1 is for inside, result2 is for outside the cavity [MN]
            vec2(iL,iY) = 2.0d0*pi*abs(result1+result2)/T4_ext(iY)
         end do  !end do over lambda
-        !$OMP END PARALLEL DO
+!!$        !$OMP END PARALLEL DO
      end if !end if for diffuse flux
   end do !end do over radial grid Y(iY)  [MN]
   !----------------------------------------------------------------------
-  deallocate(aux)
-  deallocate(daux)
   deallocate(Iplus1)
   deallocate(Iplus2)
   deallocate(Iminus)
-  deallocate(aux2)
-  deallocate(diff)
   deallocate(S_fun) 
-  deallocate(func)
-  deallocate(faux3)
+  deallocate(diff) 
   deallocate(xN)
   deallocate(yN)
 999 return
@@ -2367,7 +2397,7 @@ end subroutine SPH_diff
 !!$!***********************************************************************
 !!$
 !***********************************************************************
-SUBROUTINE NORDLUND(nY,flag,x,f,N1,N2,m,intfdx)
+SUBROUTINE NORDLUND(nY,nP,flag,x,f,N1,N2,m,intfdx)
 !=======================================================================
 ! This subroutine calculates integral I(x**m*y(x)*dx). Both y and x are
 ! 1D arrays, y(i), x(i) with i=1,npP (npP comes from 'paramet.inc'). Lower
@@ -2388,11 +2418,17 @@ SUBROUTINE NORDLUND(nY,flag,x,f,N1,N2,m,intfdx)
   use common
   use interfaces
   IMPLICIT none
-  
-  INTEGER i, flag, N1, N2, N2n, Nanal, m, first, nY
-  DOUBLE PRECISION x(npP), f(npP), wSimp(npP), wCorr(npP), wC1, wC2,  &
-       am, intfdx, xaux(4), faux(4), aux
+  !---parameter
+  integer :: nY, nP, flag, N1, N2, m
+  double precision :: intfdx
+  double precision, allocatable :: x(:),f(:)
+  !---local
+  INTEGER i, N2n, Nanal, first
+  DOUBLE PRECISION  wC1, wC2, am, xaux(4), faux(4), aux
+  double precision, allocatable :: wSimp(:), wCorr(:)
   ! ------------------------------------------------------------------
+  allocate(wSimp(nP))
+  allocate(wCorr(nP))
   error = 0
   ! parameter 'first' selects choice for derivatives at boundary points.
   ! For first.EQ.0 derivatives are 0 and first*(f2-f1)/(x2-x1) otherwise.
@@ -2461,6 +2497,8 @@ SUBROUTINE NORDLUND(nY,flag,x,f,N1,N2,m,intfdx)
      intfdx = intfdx + aux
   END IF
   ! ----------------------------------------------------------------
+  deallocate(wSimp)
+  deallocate(wCorr)
   RETURN
 END SUBROUTINE NORDLUND
 !**********************************************************************
@@ -2723,136 +2761,174 @@ subroutine Init_Temp(nY,T4_ext,us)
 end subroutine Init_Temp
 !***********************************************************************
 !!$
-!!$!***********************************************************************
-!!$subroutine Flux_Consv(flux1,flux2,fbolOK,error)
-!!$!=======================================================================
-!!$! Replaces the former SUBROUTINE ChkFlux(flux,tolern,consfl,error,ETAzp)
-!!$!
-!!$! This subroutine checks the bolometric diffuse flux conservation at any
-!!$! point of the grid. In case of nonconservation inserts a number of points
-!!$!  at certain places.                            [Deka'08, MN'99; ZI'96]
-!!$!=======================================================================
-!!$  use common
-!!$  implicit none
+!***********************************************************************
+subroutine Flux_Consv(nY,nYprev,Ncav,itereta, flux1,flux2,fbolOK,maxrat)
+!=======================================================================
+! Replaces the former SUBROUTINE ChkFlux(flux,tolern,consfl,error,ETAzp)
+!
+! This subroutine checks the bolometric diffuse flux conservation at any
+! point of the grid. In case of nonconservation inserts a number of points
+!  at certain places.                            [Deka'08, MN'99; ZI'96]
+!=======================================================================
+  use common
+  use interfaces
+  implicit none
+  !---parameter
+  integer nY,nYprev,Ncav,fbolOK,itereta
+  double precision :: maxrat
+  double precision, allocatable :: flux1(:),flux2(:)
+  !---local
+  integer :: iY,flag, kins, istop,i_ins,n_ins,iG,iL,idm,k,j
+  integer,allocatable :: iYins(:)
+  double precision :: eta,deltaumax,temp_mean,ee,Yloc
+  double precision, allocatable :: ratio(:),tauaux(:),etatemp(:),Yins(:),tmp(:)
+  external eta
 !!$  integer iYins(npY), k, kins, i, iY, idm, nn, flag, error, istop, fbolOK, i_ins,n_ins,iG,iL
 !!$  double precision  tauaux(npY),Yins(npY), flux1(npY), flux2(npY), &
 !!$       deltaumax, ratio(npY), etatemp(npY),ee,result1,Yloc, eta,x1, x2, tmp, temp_mean
 !!$  double precision, dimension(:), allocatable:: xg,  wg
 !!$  external eta
 !!$  !-----------------------------------------------------------------------
-!!$  flag= 0
-!!$  error = 0.0d0
-!!$  kins = 0
-!!$  istop = 0
-!!$  ratio = 0
-!!$  maxrat = 0.0d0
-!!$  if(sph) then
-!!$     ! save old grid and values of Eta (important for denstyp = 5 or 6)
-!!$     ! for spherical case
-!!$     if (rdw) then
-!!$        Yprev = y
-!!$        etatemp = etadiscr
-!!$        nYprev = nY
-!!$     end if
-!!$     do iY = 1, nY
-!!$        tauaux(iY) = TAUtot(1)*ETAzp(1,iY)
-!!$     end do
-!!$     !!** I am not sure if deltaumax has to be found as below: [MN]
-!!$     !  maximal deltau is no more than 2 times the average value
-!!$     deltaumax = 2.0d0*tauaux(nY)/nY
-!!$  elseif(slb) then
-!!$     deltaumax = 2.0d0*tautot(1)/nY
-!!$  end if
-!!$  call FindErr(flux1,maxrat)
-!!$  IF (maxval(flux1).lt.dynrange**2) maxrat = dynrange
-!!$  if (maxrat.gt.accuracy) then 
-!!$     do iY = 2, nY
-!!$       if  ((dabs(Td(1,iY-1)/Td(1,iY)).gt.(1.+accuracy)**(0.25))) then
-!!$!       if  ((1.-dabs(Td(1,iY-1)/Td(1,iY)))/(1.-(1.+accuracy)**(0.25)).gt.2) then
-!!$!           n_ins = (1.-dabs(Td(1,iY-1)/Td(1,iY)))/(1.-(1.+accuracy)**(0.25))
-!!$!           if (n_ins.lt.1) n_ins=1
-!!$!           if (n_ins.gt.5) then 
-!!$!              n_ins = 2
-!!$!           else
-!!$!              n_ins = 1
-!!$!           endif
-!!$           n_ins = 1
-!!$!           print*,iY,(tauaux(iY)-tauaux(iY-1)),flux1(iY),dabs(Td(1,iY-1)/Td(1,iY)),n_ins
-!!$           kins = kins + n_ins
-!!$           do i_ins = 1,n_ins
-!!$              Yins(kins-n_ins+i_ins) = Y(iY-1)+1.*i_ins/(1.*(n_ins+1))*(Y(iY)-Y(iY-1))
-!!$              iYins(kins-n_ins+i_ins) = iY-1
-!!$           end do
-!!$        endif
-!!$     enddo
-!!$  else
-!!$     kins = 0
-!!$  endif
-!!$  IF (kins.eq.0) THEN
-!!$     fbolOK = 1
-!!$  ELSE
-!!$     ! add all new points to Y(nY). this gives the new Y(nY+kins).
-!!$     ! however, check if npY is large enough to insert all points:
-!!$     if ((nY+kins).gt.npY) then
-!!$        fbolOK = 1
-!!$        if (iX.ge.1) then
-!!$           write(18,*)' ****************     WARNING   ******************'
-!!$           write(18,*)'  The new Y-grid can not accomodate more points!'
-!!$           write(18,'(a,i5)')'   The specified accuracy would require',nY+kins
-!!$           write(18,'(a,i5,a)')'   points, while npY =',npY,'.'
-!!$           write(18,*)'  For the required accuracy npY must be increased,'
-!!$           write(18,*)'  (see the manual s3.5 numerical accuracy).'
-!!$           write(18,'(a37,F5.1,a2)')'   The currently achieved accuracy is ', maxrat*100.0, ' %'
-!!$           write(18,*)' *************************************************'
-!!$        end if
-!!$        !! kins = npY - nY     !!this is in the old code, but doesn't work here.
-!!$        iWARNING = iWARNING + 1
-!!$        !! error = 2           !!this is in the old code, but doesn't work here.
-!!$        go to 777
-!!$     else
-!!$        do k = 1, kins
-!!$           call shiftIns(Y,npY,nY+k-1,Yins(k),iYins(k)+k-1)
-!!$           do iG=1,1
-!!$!              temp_mean = 0.5*(Td(iG,iYins(k)+k-1) + Td(iG,iYins(k)+k))
-!!$!              temp_mean = 10**(0.5*(log10(Td(iG,iYins(k)+k-1)) + log10(Td(iG,iYins(k)+k))))
-!!$!              temp_mean = (0.5*(Td(iG,iYins(k)+k-1)**4. + Td(iG,iYins(k)+k)**4.))**(1./4.)
-!!$              if (Td(iG,iYins(k)+k-1).gt.Td(iG,iYins(k)+k)) then
-!!$                 i_ins = iYins(k)+k-1
-!!$                 temp_mean = Td(iG,iYins(k)+k-1)
-!!$              else
-!!$                 i_ins = iYins(k)+k
-!!$                 temp_mean = Td(iG,iYins(k)+k)
-!!$              end if
-!!$              call shiftIns(Td(iG,:),npY,nY+k-1,temp_mean,iYins(k)+k-1)
-!!$           end do
-!!$           do iL=1,nL
-!!$!              temp_mean = 0.5*(utot(iL,iYins(k)+k-1)+utot(iL,iYins(k)+k))
-!!$              temp_mean = max(utot(iL,iYins(k)+k-1),utot(iL,iYins(k)+k))
-!!$!              temp_mean = utot(iL,i_ins)
-!!$              call shiftIns(utot(iL,:),npY,nY+k-1,temp_mean,iYins(k)+k-1)
-!!$           end do
-!!$        end do
-!!$     end if
-!!$  END IF
-!!$  ! new size of the y grid
-!!$  nY = nY + kins
-!!$  Ncav = (nY*2)/3.
-!!$  ! intepolate etadiscr to new y grid for denstyp = 5 or 6
-!!$  if(sph) then
-!!$     do iY = 1, nY
-!!$        Yloc = Y(iY)
-!!$        if (itereta.gt.1) then
-!!$           call lininter(npY,nYprev,Yprev,etatemp,Yloc,idm,ee)
-!!$           etadiscr(iY) = ee
-!!$        else
-!!$           etadiscr(iY) = eta(Yloc)
-!!$        end if
-!!$     end do
-!!$  end if
-!!$!--------------------------------------------------------------------------
-!!$777 return
-!!$end subroutine Flux_Consv
-!!$!*********************************************************************
+  allocate(ratio(nY))
+  allocate(tauaux(nY))
+  allocate(etatemp(nY))
+  allocate(Yins(nY))
+  allocate(iYins(nY))
+  flag= 0
+  error = 0.0d0
+  kins = 0
+  istop = 0
+  maxrat = 0.0d0
+  if(sph) then
+     ! save old grid and values of Eta (important for denstyp = 5 or 6)
+     ! for spherical case
+     if (denstyp.eq.3) then !3(RDW)
+        Yprev = y
+        etatemp = etadiscr
+        nYprev = nY
+     end if
+     do iY = 1, nY
+        tauaux(iY) = TAUtot(1)*ETAzp(1,iY)
+     end do
+     !!** I am not sure if deltaumax has to be found as below: [MN]
+     !  maximal deltau is no more than 2 times the average value
+     deltaumax = 2.0d0*tauaux(nY)/nY
+  elseif(slb) then
+     deltaumax = 2.0d0*tautot(1)/nY
+  end if
+  call FindErr(nY,flux1,maxrat)
+!  IF (maxval(flux1).lt.dynrange**2) maxrat = dynrange
+  if (maxrat.gt.accFlux) then 
+     do iY = 2, nY
+        if  ((dabs(Td(1,iY-1)/Td(1,iY)).gt.(1.+accFlux)**(0.25))) then
+!       if  ((1.-dabs(Td(1,iY-1)/Td(1,iY)))/(1.-(1.+accuracy)**(0.25)).gt.2) then
+!           n_ins = (1.-dabs(Td(1,iY-1)/Td(1,iY)))/(1.-(1.+accuracy)**(0.25))
+!           if (n_ins.lt.1) n_ins=1
+!           if (n_ins.gt.5) then 
+!              n_ins = 2
+!           else
+!              n_ins = 1
+!           endif
+           n_ins = 1
+!           print*,iY,(tauaux(iY)-tauaux(iY-1)),flux1(iY),dabs(Td(1,iY-1)/Td(1,iY)),n_ins
+           kins = kins + n_ins
+           do i_ins = 1,n_ins
+              Yins(kins-n_ins+i_ins) = Y(iY-1)+1.*i_ins/(1.*(n_ins+1))*(Y(iY)-Y(iY-1))
+              iYins(kins-n_ins+i_ins) = iY-1
+           end do
+        endif
+     enddo
+  else
+     kins = 0
+  endif
+  do iY=1,nY
+     Yprev(iY) = Y(iY)
+     do iG=1,nG
+        Td_old(iG,iY) = Td(iG,iY)
+     end do
+     do iL=1,nL
+        utot_old(iL,iY) = utot(iL,iY)
+     end do
+  end do
+  IF (kins.eq.0) THEN
+     fbolOK = 1
+  ELSE
+     ! add all new points to Y(nY). this gives the new Y(nY+kins).
+     ! however, check if npY is large enough to insert all points:
+     if ((nY+kins).gt.npY) then
+        fbolOK = 1
+        if (iX.ge.1) then
+           write(18,*)' ****************     WARNING   ******************'
+           write(18,*)'  The new Y-grid can not accomodate more points!'
+           write(18,'(a,i5)')'   The specified accuracy would require',nY+kins
+           write(18,'(a,i5,a)')'   points, while npY =',npY,'.'
+           write(18,*)'  For the required accuracy npY must be increased,'
+           write(18,*)'  (see the manual s3.5 numerical accuracy).'
+           write(18,'(a37,F5.1,a2)')'   The currently achieved accuracy is ', maxrat*100.0, ' %'
+           write(18,*)' *************************************************'
+        end if
+        !! kins = npY - nY     !!this is in the old code, but doesn't work here.
+        !! error = 2           !!this is in the old code, but doesn't work here.
+        go to 777
+     else
+        do k = 1, kins
+           do j = nY+k-1+1, iYins(k)+k-1+2, -1
+              Y(j) = Y(j-1)
+           end do
+           Y(iYins(k)+k-1+1) = Yins(k)
+           do iG=1,nG
+              ! temp_mean = 0.5*(Td(iG,iYins(k)+k-1) + Td(iG,iYins(k)+k))
+              ! temp_mean = 10**(0.5*(log10(Td(iG,iYins(k)+k-1)) + log10(Td(iG,iYins(k)+k))))
+              ! temp_mean = (0.5*(Td(iG,iYins(k)+k-1)**4. + Td(iG,iYins(k)+k)**4.))**(1./4.)
+              if (Td(iG,iYins(k)+k-1).gt.Td(iG,iYins(k)+k)) then
+                 i_ins = iYins(k)+k-1
+                 temp_mean = Td(iG,iYins(k)+k-1)
+              else
+                 i_ins = iYins(k)+k
+                 temp_mean = Td(iG,iYins(k)+k)
+              end if
+              !shiftIns(x,Nmax,n,xins,i)
+              do j = nY+k-1+1, iYins(k)+k-1+2, -1
+                 Td(iG,j) = Td(iG,j-1)
+              end do
+              Td(iG,iYins(k)+k-1+1) = temp_mean
+              ! call shiftIns(Td(iG,:),npY,nY+k-1,temp_mean,iYins(k)+k-1)
+           end do
+           do iL=1,nL
+!              temp_mean = 0.5*(utot(iL,iYins(k)+k-1)+utot(iL,iYins(k)+k))
+              temp_mean = max(utot(iL,iYins(k)+k-1),utot(iL,iYins(k)+k))
+!              temp_mean = utot(iL,i_ins)
+              !shiftIns(x,Nmax,n,xins,i)
+              do j = nY+k-1+1, iYins(k)+k-1+2, -1
+                 utot(iL,j) = utot(iL,j-1)
+              end do
+              utot(iL,iYins(k)+k-1+1) = temp_mean
+              ! call shiftIns(utot(iL,:),npY,nY+k-1,temp_mean,iYins(k)+k-1)
+           end do
+        end do
+     end if
+  END IF
+  ! new size of the y grid
+  nY = nY + kins
+  Ncav = (nY*2)/3.
+  ! intepolate etadiscr to new y grid for denstyp = 5 or 6
+  if (allocated(etadiscr)) deallocate(etadiscr)
+  allocate(etadiscr(nY))
+  if(sph) then
+     do iY = 1, nY
+        Yloc = Y(iY)
+        if (itereta.gt.1) then
+           call lininter(nY,nYprev,Yprev,etatemp,Yloc,idm,ee)
+           etadiscr(iY) = ee
+        else
+           etadiscr(iY) = eta(Yloc,nY,nYprev,itereta)
+        end if
+     end do
+  end if
+!--------------------------------------------------------------------------
+777 return
+end subroutine Flux_Consv
+!*********************************************************************
 !!$
 !!$!*********************************************************************
 !!$subroutine SLBdiff(nG,flag,omega,grid,T4_ext,em,fp,fm)
@@ -2916,29 +2992,35 @@ end subroutine Init_Temp
 !!$end subroutine SLBdiff
 !!$!*********************************************************************
 !!$
-!!$!**********************************************************************
-!!$subroutine add2(flxs,flxe,fbsum,nY)
-!!$!======================================================================
-!!$! This subroutine is auxiliary for finding the bolometric
-!!$! diffuse flux.   [MN, May'99]
-!!$!======================================================================
-!!$  implicit none
-!!$  integer npY, npP, npX, npL, npG, npR
-!!$  include '../userpar.inc'
-!!$
-!!$  integer nY, iY
-!!$  double precision flxs(npL,npY), flxe(npL,npY), flxsb(npY),flxeb(npY), fbsum(npY)
-!!$!----------------------------------------------------------------------
-!!$
-!!$  call bolom(flxs,flxsb)
-!!$  call bolom(flxe,flxeb)
-!!$  do iY = 1, nY
-!!$   fbsum(iY) = flxsb(iY) + flxeb(iY)
-!!$  end do
-!!$!----------------------------------------------------------------------
-!!$  return
-!!$end subroutine add2
-!!$!**********************************************************************
+!**********************************************************************
+subroutine add2(nY,flxs,flxe,fbsum)
+!======================================================================
+! This subroutine is auxiliary for finding the bolometric
+! diffuse flux.   [MN, May'99]
+!======================================================================
+  use common
+  use interfaces
+  implicit none
+  !---parameter
+  integer :: nY
+  double precision, allocatable :: flxs(:,:),flxe(:,:),fbsum(:)
+  !---local
+  integer iY
+  double precision, allocatable :: flxsb(:),flxeb(:)
+  !-------------------------------------------------------------------
+  allocate(flxsb(nY))
+  allocate(flxeb(nY))
+  call bolom(flxs,flxsb,nY)
+  call bolom(flxe,flxeb,nY)
+  do iY = 1, nY
+     fbsum(iY) = flxsb(iY) + flxeb(iY)
+  end do
+  !-------------------------------------------------------------------
+  deallocate(flxsb)
+  deallocate(flxeb)
+  return
+end subroutine add2
+!**********************************************************************
 !!$
 !!$!***********************************************************************
 !!$SUBROUTINE SPH_Int(nG,omega,fs)
@@ -3370,7 +3452,7 @@ end subroutine Init_Temp
         DO iL = 1, nL
            qaux(iL)=TAUtot(iL)*ETAzp(1,iY)*dabs(ftot(iL,iY))/lambda(iL)
         END DO
-        CALL Simpson(npL,1,nL,lambda,qaux,resaux)
+        CALL Simpson(nL,1,nL,lambda,qaux,resaux)
         ! tauF(iY) = <tau(iL,iY)*ftot(iL,iY)>
         tauF(iY) = resaux
      END DO
@@ -3380,11 +3462,11 @@ end subroutine Init_Temp
         DO iY = 1, nY
            K1(iY) = vrat(1,iY)/ugas(iY)/Y(iY)/Y(iY)
         END DO
-        CALL SIMPSON(npY,1,nY,Y,K1,resaux)
+        CALL SIMPSON(nY,1,nY,Y,K1,resaux)
         ! find tauF
         DO iY = 1, nY
            K2(iY) = qF(iY)*K1(iY)/resaux
-           CALL SIMPSON(npY,1,iY,Y,K2,aux)
+           CALL SIMPSON(nY,1,iY,Y,K2,aux)
            tauF(iY) = TAUfid*aux
         END DO
      END IF

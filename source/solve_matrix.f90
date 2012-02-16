@@ -896,13 +896,13 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
               END DO
               ! angular integration inside cavity
               IF (pstar.GT.0.0D+00) THEN
-                 CALL NORDLUND(nY,0,xN,yN,1,iPstar,m,resaux)
+                 CALL NORDLUND(nY,nP,0,xN,yN,1,iPstar,m,resaux)
                  IF (error.NE.0) GOTO 999
-                 IF (nPcav.GT.iPstar) CALL NORDLUND(nY,0,xN,yN,iPstar+1,nPcav+1,m,result1)
+                 IF (nPcav.GT.iPstar) CALL NORDLUND(nY,nP,0,xN,yN,iPstar+1,nPcav+1,m,result1)
                  IF (error.NE.0) GOTO 999
                  result1 = result1 + resaux
               ELSE
-                 CALL NORDLUND(nY,0,xN,yN,1,nPcav+1,m,result1)
+                 CALL NORDLUND(nY,nP,0,xN,yN,1,nPcav+1,m,result1)
                  IF (error.NE.0) GOTO 999
               END IF
               ! flag for analytic integration outside cavity
@@ -913,7 +913,7 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
               ENDIF
               ! angular integration outside cavity
               IF (iY.GT.1) THEN
-                 CALL NORDLUND(nY,flag,xN,yN,nPcav+1,Plast(iY),m,result2)
+                 CALL NORDLUND(nY,nP,flag,xN,yN,nPcav+1,Plast(iY),m,result2)
                  IF (error.NE.0) GOTO 999
               ELSE
                  result2 = 0.0D+00
