@@ -84,9 +84,6 @@ PROGRAM DUSTY
               CALL GetTau(tau1,tau2,GridType,Nmodel,tau)
               IF (iVerb.ge.2) print*,'Done with GetTau'
               CALL Kernel(path,lpath,tau,Nmodel)
-!                 CALL Kernel_matrix(nG,path,lpath,tau,Nrec,Nmodel,GridType,error)
-!              ELSE
-!              END IF
            END IF
         ELSE
            PRINT*,

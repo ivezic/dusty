@@ -62,28 +62,19 @@
 %(available options: common_grain\common_and_addl_grain\tabulated)
 
            optical properties index = tabulated
-           examples/ivezic97/ivezic97.dat
-
-%           Abundances for supported grain types:
-%             Sil-Ow  Sil-Oc  Sil-DL  grf-DL  amC-Hn  SiC-Pg 
-%           x =  1.00    0.00    0.00    0.0    0.00    0.00
-
-
- %      2.2 Grain size distribution
-
-%(available options: mrn\modified_mrn\kmh)
-
- %      - size distribution = mrn  % standard MRN                         
-                                                                        
+           
+	   examples/ivezic97/ivezic97.dat
+	   
+	   Tsub = 15000.
 
      3) Density Distribution
 
 %(available options: powd\expd\rdw\rdwa\usr_suppld)
 
-        - density type = powd
+        - density type = POWD
         - number of powers = 1                
-        - shell's relative thickness = 1000.0 
-        - power = 0
+        - shell's relative thickness = 1000 
+        - power = 0.
         
         
         
@@ -94,15 +85,12 @@
         - grid type = logarithmic                    % log grid
         - lambda0 = 1.0 micron            % optical depth specified 
         - tau(min) = 1.0; tau(max) = 1000.0   % for the visual wavelength   
-        - number of models = 1
+        - number of models = 4
   ----------------------------------------------------------------------
                                                                         
   III. NUMERICS                                                           
       
      - accuracy for flux conservation = 0.05
-     - accuracy for Temperature fluctuation  = 1e-3
-     - starting optical depth = 1.
-     - increment in optical depth = 10.0
  
   ----------------------------------------------------------------------
                                                                         
@@ -126,13 +114,11 @@
        - detailed spectra for each model;           fname.s### = 2
        - images at specified wavelengths;           fname.i### = 0
        - en.density at specified radii;             fname.j### = 0
-%               number of radii = 4                        
-%                              y = 1.0, 10.0, 100.0, 1000.0 
-       - radial profiles for each model;            fname.r### = 0
-       - detailed run-time messages;                fname.m### = 0
+       - radial profiles for each model;            fname.r### = 2
+       - detailed run-time messages;                fname.m### = 2
        ------------------------------------------------------------- 
  
 
-  The end of the input parameters listing.                                                                       
+  The end of the input parameters listing
   **********************************************************************
  

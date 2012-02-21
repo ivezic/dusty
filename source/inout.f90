@@ -19,7 +19,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
        ang_type, imu, ioverflw
   double precision :: a,b,tau1,tau2,Lum,dist,RDINP,spec_scale, &
        dilutn,Tstar(2),th1,th2,xC(10),xCuser(10),sum,qsd,a1,a2,&
-       x1, ceta, Fi, Fo, psf1
+       x1, ceta, Fi, Fo, psf1,Tinner_fidG
   double precision, allocatable ::aa(:),bb(:),xx(:),e(:) 
  
 !!$  integer i, iG, nG, Nmodel, EtaOK,GridType, istop, nLs, Nrec, &
@@ -89,9 +89,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
      if (left.gt.0) then
         write(12,*) ' Central source spectrum described by'
         allocate(shpL(nL))
-  print*,'blubb'
         call inp_rad(shpL,spec_scale,startyp(1))
-  print*,'blubb'
         !typentry give the scale of input radiation
         call rdinps2(Equal,1,str,L,UCASE)
         if (str(1:L).eq.'FLUX') TypEntry(1) = 1
@@ -130,7 +128,13 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         endif
         if (typentry(1).eq.5) then
            !enter dust temperature on inner boundary, T1[K]
-           Tinner = RDINP(Equal,1)
+           Tinner_fidG = RDINP(Equal,1)
+           if (right.eq.1) then 
+              print*,' !!!!!Error!!!!!'
+              print*,' Input of Temperature at the inner boundery not possible for two side illumination:'
+              print*,' !!!!!Error!!!!!'
+              stop
+           end if
            write(12,*) ' Dust temperature on the inner boundary:', Tinner,' K'
         end if
      else
@@ -364,6 +368,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   end if
   ! 2.1 Temperatures
   allocate(Tsub(nG))
+  allocate(Tinner(nG))
   Tsub(1) = RDINP(Equal,1)
   print'(A,I3,A,F12.3)',' Grain:',1,' Sublimation Temperature:',Tsub(1)
   if (nG.gt.1) then
@@ -372,6 +377,10 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         if (Tsub(iG).gt.Tsub(ifidG)) ifidG = iG
         print*,'Grain:',iG,'Sublimation Temperature:',Tsub(iG)
      end do
+  end if
+  if (typentry(1).eq.5) then 
+     Tinner(ifidG) = Tinner_fidG
+     print'(a,i3,a,f8.2)','Inner Boundary Temperature of fiducial Grain(',ifidG,')=',Tinner(ifidG)
   end if
   ! 2.2 Grain size distribution
   if (top.ne.3) then
@@ -678,7 +687,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   ! accuracy for convergence (typical 0.0001)
   ! accuracy for flux conservation
   accFlux = RDINP(Equal,1)
-  accTemp = ((1.+accFlux)**(1./4.)-1.)*0.1
+  accTemp = ((1.+accFlux)**(1./4.)-1.)*1e-2
   if ((accFlux.le.0.0d0).or.(accFlux.gt.0.75)) then 
      print*,' Problem with specified Flux accuracy !!!'
      stop
@@ -2360,8 +2369,8 @@ subroutine fileMSG(fname,strg)
   write(12,'(a2,a)')'  ',fname
   write(12,*)' is missing ?!'
   write(12,*)' ****************************************************'
-!  close(12)
-!-----------------------------------------------------------------------
+  close(12)
+  !--------------------------------------------------------------------
   stop
 end subroutine fileMSG
 !***********************************************************************

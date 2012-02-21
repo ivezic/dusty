@@ -12,7 +12,7 @@ Module common
   integer NREC
   PARAMETER (NREC = 1000)
   double precision :: dynrange          ! dynamical range (1d-20 .. 1d20)
-  PARAMETER (dynrange = 1.d20)
+  PARAMETER (dynrange = 1.d-20)
   double precision :: accRomb
   PARAMETER (accRomb = 1e-4)
   integer nOutput                       ! number of output columns
@@ -77,6 +77,7 @@ Module common
   double precision, allocatable :: shpL(:)    ! shape left side ilumination
   double precision, allocatable :: shpR(:)    ! shape right side ilumination
   double precision,allocatable  :: Tsub(:)    ! sublimation temperature for each grain
+  double precision,allocatable  :: Tinner(:)  ! Temperature at the inner boundary for fiducial grain
   double precision,allocatable  :: Y(:)       ! Y - grid
   double precision,allocatable  :: Yprev(:)   ! previous Y - grid
   double precision,allocatable  :: P(:)       ! P - grid
@@ -89,7 +90,7 @@ Module common
   integer :: denstyp            ! density type  1(POWD) 2(EXPD) 3(RDW) 4(RDWA) 5(USER_SUPPLIED) 6(RDWPR)
   double precision ksi          ! the ratio of the right/left bol. fluxes (<1) for slab
   double precision Ji,Jo        ! input mean energy density - scaling in dusty
-  double precision Tinner       ! Temperature at the inner boundary for fiducial grain
+  
   double precision mu1,mu2      ! cosine of ilumination anlge slab case
   integer :: iFidG              ! id number of fiducial grain
   double precision :: lamfid    ! fiducial wavelength [micron]

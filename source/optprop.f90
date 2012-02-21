@@ -7,10 +7,16 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
 !                                                 [ZI Mar96; MN Aug97]
 !=====================================================================
   use common
+  use interfaces
   implicit none
-  character*235 nameQ(:), nameNK(10), fname, dummy*132
-  integer iG, io1, iL, nLin, iiLaux,Nprop,nA, iiA, iiC,iCuser,er, Nmax, npA,&
-       top,szds,nFiles
+  !---parameter
+  integer er,top,szds,nFiles
+  character*235,allocatable,nameQ(:)
+  character*235 nameNK(10),stdf(7)
+  double precision :: qsd,a1,a2,xC(10),xCuser(10)
+  !---local
+  character*235 fname, dummy
+  integer iG, io1, iL, nLin, iiLaux,Nprop,nA, iiA, iiC,iCuser, Nmax, npA
   ! Nmax is the number of records in user supplied file with opt.prop.
   ! and npA is the dimension of the array of grain sizes
   parameter (Nmax=10000, npA=100)
@@ -20,9 +26,8 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
   double precision aa,bb,cc,lambdain(Nmax),Qain(Nmax),Qsin(Nmax), &
        amax, nsd(npA), a(npA), faux1(npA), faux2(npA), f(npA), int,&
        ala(Nmax),  sizedist, aQa(Nmax), aQs(Nmax),  Cnorm, a3ave, a2ave,&
-       qsd,a1,a2,aveA,xC(10),xCuser(10)
-  character stdf(7)*235
-! -------------------------------------------------------------------
+       aveA
+  !-----------------------------------------------------------------
   ! this should never change
   Nprop = 7
   !----------------------------------------------------------------
@@ -163,14 +168,14 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
         sigmaS(nG+1,iL) = 0.0d0
      end do
      do iG = 1, nG
-        open(1,err=998,file=nameQ(iG),status='old')
-        read(1,'(a)',err=998)dummy
-        read(1,'(a)',err=998)dummy
-        read(1,'(a)',err=998)dummy
+        open(123,err=998,file=nameQ(iG),status='old')
+        read(123,'(a)',err=998)dummy
+        read(123,'(a)',err=998)dummy
+        read(123,'(a)',err=998)dummy
         iL = 0
         io1 = 0
         do while (io1.ge.0)
-           read(1,*,end=900,err=998,iostat=io1) aa, bb, cc
+           read(123,*,end=900,err=998,iostat=io1) aa, bb, cc
            if (io1.ge.0) then
               iL = iL + 1
               lambdain(iL) = aa
@@ -178,7 +183,7 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
               Qsin(iL) = cc
            end if
         end do
-900     close(1)
+900     close(123)
         if (iL.lt.2) goto 998
         nLin = iL
         ! if input wavelengths in descending order turn them around

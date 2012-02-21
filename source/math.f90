@@ -87,7 +87,7 @@ subroutine Simpson(n,n1,n2,x,y,integral)
   integral = 0.0d0
   ! calculate weight, wgth, and integrate in the same loop
   if ((n2-n1).gt.100) then
-!!$     !$OMP PARALLEL DO reduction(+:integral) private(i,wgth)
+     !$OMP PARALLEL DO reduction(+:integral) private(i,wgth)
      do i = n1, n2
         ! weigths
         if (i.ne.n1.and.i.ne.n2) then
@@ -99,7 +99,7 @@ subroutine Simpson(n,n1,n2,x,y,integral)
         ! add contribution to the integral
         integral = integral + y(i)*wgth
      end do
-!!$     !$OMP END PARALLEL DO
+     !$OMP END PARALLEL DO
   else  if (n2.gt.n1) then
      do i = n1, n2
         ! weigths
