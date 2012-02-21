@@ -131,7 +131,8 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
   integer etaOK, nY_old, iPstar, y_incr, iY
   double precision taulim,pstar, maxFerr, maxrat
   double precision, allocatable :: fs(:,:),us(:,:),T4_ext(:), &
-       emiss(:,:,:),calc_fdiff(:),comp_fdiff_bol(:),fDebol(:),fDsbol(:)
+       emiss(:,:,:),calc_fdiff(:),comp_fdiff_bol(:),fDebol(:),fDsbol(:), &
+       fdsm(:,:),fdsp(:,:),fdem(:,:),fdep(:,:)
 
 !!$  integer model, iterfbol, fbolOK,grid,iY,iL,nY_old,y_incr,imu, &
 !!$       iPstar,EtaOK , iP, iZ, nZ, iOut
@@ -151,6 +152,11 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
   allocate(comp_fdiff_bol(npY))
   allocate(fDebol(npY))
   allocate(fDsbol(npY))
+  allocate(fdsm(nL,npY))
+  allocate(fdsp(nL,npY))
+  allocate(fdem(nL,npY))
+  allocate(fdep(nL,npY))
+
   if (iX.ne.0) then
      call line(0,2,18)
      write(18,'(a7,i3,a20)') ' model ',model,'  RUN-TIME MESSAGES '
@@ -212,21 +218,21 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
      ! calculate diffuse flux
      ! for slab
      if(slb) then
-!!$        ! find the diffuse scattered flux(fl=1 for scatt. and fl=0 is for emission)
-!!$        call SLBdiff(nG,1,omega,TAUslb,T4_ext,em,fdsp,fdsm)
-!!$        ! find the diffuse emitted flux
-!!$        call SLBdiff(nG,0,omega,TAUslb,T4_ext,em,fdep,fdem)
-!!$        ! find bolometric diffuse flux
-!!$        call add2(nY,fds,fde,comp_fdiff_bol)
-!!$        call add2(nY,fdsp,fdep,fpbol)
-!!$        call add2(nY,fdsm,fdem,fmbol)
-!!$        ! find calculated bolometric diffuse flux
-!!$        do iY = 1, nY
-!!$           calc_fdiff(iY) = (fsLbol(1)-fsRbol(1)) - (fsLbol(iY)-fsRbol(iY))
-!!$           comp_fdiff_bol1(iY) = comp_fdiff_bol(iY) - comp_fdiff_bol(1)
-!!$        end do
-!!$        comp_fdiff_bol = comp_fdiff_bol1
-!!$        !  for sphere
+        ! find the diffuse scattered flux(fl=1 for scatt. and fl=0 is for emission)
+        call SLBdiff(nY,1,TAUslb,T4_ext,emiss,fdsp,fdsm)
+        ! find the diffuse emitted flux
+        call SLBdiff(nY,1,TAUslb,T4_ext,emiss,fdsp,fdsm)
+        ! find bolometric diffuse flux
+        call add2(nY,fds,fde,comp_fdiff_bol)
+        call add2(nY,fdsp,fdep,fpbol)
+        call add2(nY,fdsm,fdem,fmbol)
+        ! find calculated bolometric diffuse flux
+        do iY = 1, nY
+           calc_fdiff(iY) = (fsLbol(1)-fsRbol(1)) - (fsLbol(iY)-fsRbol(iY))
+           ! comp_fdiff_bol1(iY) = comp_fdiff_bol(iY) - comp_fdiff_bol(1)
+        end do
+        ! comp_fdiff_bol = comp_fdiff_bol1
+        !  for sphere
      elseif(sph) then
         !!** added here, instead of before Analysis [Sep.1'10]
         call add(nY,nY,nL,nL,fs,fds,fde,ftot)
@@ -355,12 +361,12 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
   call bolom(utot,ubol,nY)
   if (sph) then
      !     calculate intensity (at the outer edge) if required
-!!$     if (iC.ne.0) then
-!!$        if (iX.ne.0) write(18,*) 'Calculating intensities.'
-!!$        call sph_int(nG,omega,fs)
-!!$        if (iVerb.eq.2) write(*,*) ' Done with finding intensity '
-!!$     end if
-!!$     ! if needed convolve intensity with the psf
+     if (iC.ne.0) then
+        if (iX.ne.0) write(18,*) 'Calculating intensities.'
+        call sph_int(nY,nP,fs)
+        if (iVerb.eq.2) write(*,*) ' Done with finding intensity '
+     end if
+     ! if needed convolve intensity with the psf
 !!$     if (iPsf.ne.0) then
 !!$        call convolve
 !!$        if (iVerb.eq.2) write(*,*) ' Done with Convolve. '
@@ -403,6 +409,10 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
   deallocate(comp_fdiff_bol)
   deallocate(fDebol)
   deallocate(fDsbol)
+  deallocate(fdsm)
+  deallocate(fdsp)
+  deallocate(fdem)
+  deallocate(fdep)
  return
 end subroutine solve
 !***********************************************************************
@@ -434,6 +444,7 @@ subroutine SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol,
      end if
   elseif (slb) then
      if (initial.and.iterfbol.eq.1) then
+        nY = 15
         DO iY = 1, nY
            IF(iY.LE.5) THEN
               Y(iY) = 0.5*(exp(0.5*iY)-exp(0.5))
@@ -1106,7 +1117,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   ! us is the intial approximation for utot(iL,iY) for the first iteration over Td
   ! Find initial approximation of Td for the case of first (lowest) optical depth.
   if (initial.and.iterfbol.eq.1) then
-     call Init_Temp(nY,T4_ext)
+     call Init_Temp(nY,T4_ext,us)
      if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
   end if
   itlim = 50000
@@ -1774,40 +1785,40 @@ subroutine Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
   ! loop over wavelengths
   !------------for slab ----------------
   if(slb) then 
-!!$     do iL = 1, nL
-!!$        do iY = 1,nY
-!!$           tau(iY) = TAUslb(iL,iY)
-!!$           Sfn_em(iY) = 0
-!!$           Sfn_sc(iY) = 0
-!!$           do iG=1,nG
-!!$              frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
-!!$              Sfn_em(iY) = Sfn_em(iY) + frac*(1.0d0-omega(iG,iL))*em(iG,iL,iY)/2.0d0
-!!$              if (initial.and.iter.eq.1.and.iterfbol.eq.1) then
-!!$                 Sfn_sc(iY) = Sfn_sc(iY) + frac*omega(iG,iL)*us(iL,iY)/2.0d0
-!!$              else
-!!$                 Sfn_sc(iY) = Sfn_sc(iY) + frac*omega(iG,iL)*utot(iL,iY)/2.0d0
-!!$              end if
-!!$           end do
-!!$        end do
-!!$        ! integrate to get diffuse emission and scattering
-!!$        do iY = 1, nY
-!!$           sum1 = 0.0d0
-!!$           sum2 = 0.0d0
-!!$           do j = 1, nY-1
-!!$              sum1 = sum1 + 0.5d0*(Sfn_em(j)+Sfn_em(j+1))* &
-!!$                   dabs(eint2(tau(iY)-tau(j))-eint2(tau(iY)-tau(j+1)))
-!!$              sum2 = sum2 + 0.5d0*(Sfn_sc(j)+Sfn_sc(j+1))* &
-!!$                   dabs(eint2(tau(iY)-tau(j))-eint2(tau(iY)-tau(j+1)))
-!!$           end do
-!!$           !!** find Ude,Uds
-!!$           Ude(iL,iY) = sum1
-!!$           Uds(iL,iY) = sum2
-!!$        end do
-!!$        do iY = 1, nY
-!!$           utot(iL,iY) = us(iL,iY) + Ude(iL,iY) + Uds(iL,iY)
-!!$        end do
-!!$     end do  !end do over lambda
-!!$  !-----------for sphere ----------------
+     do iL = 1, nL
+        do iY = 1,nY
+           tau(iY) = TAUslb(iL,iY)
+           Sfn_em(iY) = 0
+           Sfn_sc(iY) = 0
+           do iG=1,nG
+              frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
+              Sfn_em(iY) = Sfn_em(iY) + frac*(1.0d0-omega(iG,iL))*emiss(iG,iL,iY)/2.0d0
+              if (initial.and.iter.eq.1.and.iterfbol.eq.1) then
+                 Sfn_sc(iY) = Sfn_sc(iY) + frac*omega(iG,iL)*us(iL,iY)/2.0d0
+              else
+                 Sfn_sc(iY) = Sfn_sc(iY) + frac*omega(iG,iL)*utot(iL,iY)/2.0d0
+              end if
+           end do
+        end do
+        ! integrate to get diffuse emission and scattering
+        do iY = 1, nY
+           sum1 = 0.0d0
+           sum2 = 0.0d0
+           do j = 1, nY-1
+              sum1 = sum1 + 0.5d0*(Sfn_em(j)+Sfn_em(j+1))* &
+                   dabs(eint2(tau(iY)-tau(j))-eint2(tau(iY)-tau(j+1)))
+              sum2 = sum2 + 0.5d0*(Sfn_sc(j)+Sfn_sc(j+1))* &
+                   dabs(eint2(tau(iY)-tau(j))-eint2(tau(iY)-tau(j+1)))
+           end do
+           !!** find Ude,Uds
+           Ude(iL,iY) = sum1
+           Uds(iL,iY) = sum2
+        end do
+        do iY = 1, nY
+           utot(iL,iY) = us(iL,iY) + Ude(iL,iY) + Uds(iL,iY)
+        end do
+     end do  !end do over lambda
+  !-----------for sphere ----------------
   elseif(sph) then 
      do moment_loc = 1, moment
         if (moment_loc.eq.1) then
@@ -2893,7 +2904,7 @@ END FUNCTION IntETA
 !***********************************************************************
 
 !***********************************************************************
-subroutine Init_Temp(nY,T4_ext)
+subroutine Init_Temp(nY,T4_ext,us)
 !=======================================================================
 ! This subroutine calculates the initial approximation for the temperature.
 ! Temperature is obtained by solving:
@@ -2922,15 +2933,15 @@ subroutine Init_Temp(nY,T4_ext)
   
   !--------------------------------------------------------------------------
   if(typentry(1).eq.5) then
-     ! this is if Tsub(ifidG) given in input
+     ! this is if Tinner(ifidG) given in input
      if(sph) then
         do iY = 1, nY
-           T4_ext(iY) = Tsub(ifidG)**4.0d0/Y(iY)**2.0d0   !eq.(4.1.22)
+           T4_ext(iY) = Tinner(ifidG)**4.0d0/Y(iY)**2.0d0   !eq.(4.1.22)
         end do
      else if (slb) then
         ! for slab
         do iY = 1, nY
-           T4_ext(iY) = Tsub(ifidG)**4.0d0
+           T4_ext(iY) = Tinner(ifidG)**4.0d0
         end do
      end if
      ! first approximation for temperature
@@ -3122,68 +3133,79 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta, flux1,flux2,fbolOK,maxrat)
 end subroutine Flux_Consv
 !*********************************************************************
 !!$
-!!$!*********************************************************************
-!!$subroutine SLBdiff(nG,flag,omega,grid,T4_ext,em,fp,fm)
-!!$!=========================================================================
-!!$! Integration of U(lam,t)*E2|Tau-t| to get the diffuse flux.
-!!$! flag=1 is for scattered and flag=0 for emitted flux. [MN, Apr'98]
-!!$!=========================================================================
-!!$  use common
-!!$  implicit none
-!!$  integer iL, iY, j, flag, iG, nG
-!!$  double precision em(npG,npL,npY), grid(npL,npY), &
-!!$       omega(npG+1,npL), fp(npL,npY), fm(npL,npY), tau(npY), &
-!!$       faux(npY), efact, fave, sum, eint3,T4_ext(npY),frac
-!!$!--------------------------------------------------------------------
-!!$  do iL = 1, nL
-!!$     !$OMP PARALLEL DO private(iY,iG,frac) firstprivate(iL)
-!!$     do iY = 1, nY
-!!$        tau(iY) = grid(iL,iY)
-!!$        faux(iY) = 0
-!!$        do iG=1,nG
-!!$           frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
-!!$           if (flag.eq.1) then
-!!$              faux(iY) = faux(iY) + frac*omega(iG,iL)*utot(iL,iY)
-!!$           else
-!!$              faux(iY) = faux(iY) + frac*(1.0d0-omega(iG,iL))*em(iG,iL,iY)
-!!$           end if
-!!$        end do
-!!$     end do
-!!$     !$OMP END PARALLEL DO
-!!$     ! find f(+) (in arg tau>t)
-!!$     !$OMP PARALLEL DO private(iY,j,efact,fave,sum) firstprivate(iL)
-!!$     do iY = 1, nY
-!!$        sum = 0.0d0
-!!$        do j = 1, iY-1
-!!$           efact = abs(eint3(tau(iY)-tau(j))-eint3(tau(iY)-tau(j+1)))
-!!$           fave = 0.5d0*(faux(j)+faux(j+1))
-!!$           sum = sum + fave*efact
-!!$        end do
-!!$        fp(iL,iY) = 2.0d0*pi*sum
-!!$        ! and f(-) (in arg tau<t)
-!!$        sum = 0.0d0
-!!$        do j = iY, nY-1
-!!$           efact = abs(eint3(tau(iY)-tau(j))-eint3(tau(iY)-tau(j+1)))
-!!$           fave = 0.5d0*(faux(j)+faux(j+1))
-!!$           sum = sum + fave*efact
-!!$        end do
-!!$        fm(iL,iY) = 2.0d0*pi*sum
-!!$     end do
-!!$     !$OMP END PARALLEL DO
-!!$     do iY = 1, nY
-!!$        if (flag.eq.1) then
-!!$           fds(iL,iY) = (fp(iL,iY) - fm(iL,iY))
-!!$        else 
-!!$           fde(iL,iY) = (fp(iL,iY) - fm(iL,iY))
-!!$        end if
-!!$     end do
-!!$     ! end of loop over iL
-!!$  end do
-!!$  return
-!!$  !--------------------------------------------------------------------
-!!$end subroutine SLBdiff
-!!$!*********************************************************************
-!!$
+!*********************************************************************
+subroutine SLBdiff(nY,flag,grid,T4_ext,em,fp,fm)
+!=========================================================================
+! Integration of U(lam,t)*E2|Tau-t| to get the diffuse flux.
+! flag=1 is for scattered and flag=0 for emitted flux. [MN, Apr'98]
+!=========================================================================
+  use common
+  use interfaces
+  implicit none
+  !---parameter
+  integer :: nY,flag
+  double precision,allocatable :: grid(:,:),T4_ext(:),em(:,:,:),&
+       fp(:,:),fm(:,:)
+  !---local
+  integer iL, iY, j, iG
+  double precision frac, efact, fave, sum, eint3
+  double precision, allocatable ::  tau(:),faux(:)
+  external eint3
+
+  allocate(tau(nY))
+  allocate(faux(nY))
+!--------------------------------------------------------------------
+  do iL = 1, nL
+     !$OMP PARALLEL DO private(iY,iG,frac) firstprivate(iL)
+     do iY = 1, nY
+        tau(iY) = grid(iL,iY)
+        faux(iY) = 0
+        do iG=1,nG
+           frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
+           if (flag.eq.1) then
+              faux(iY) = faux(iY) + frac*omega(iG,iL)*utot(iL,iY)
+           else
+              faux(iY) = faux(iY) + frac*(1.0d0-omega(iG,iL))*em(iG,iL,iY)
+           end if
+        end do
+     end do
+     !$OMP END PARALLEL DO
+     ! find f(+) (in arg tau>t)
+     !$OMP PARALLEL DO private(iY,j,efact,fave,sum) firstprivate(iL)
+     do iY = 1, nY
+        sum = 0.0d0
+        do j = 1, iY-1
+           efact = abs(eint3(tau(iY)-tau(j))-eint3(tau(iY)-tau(j+1)))
+           fave = 0.5d0*(faux(j)+faux(j+1))
+           sum = sum + fave*efact
+        end do
+        fp(iL,iY) = 2.0d0*pi*sum
+        ! and f(-) (in arg tau<t)
+        sum = 0.0d0
+        do j = iY, nY-1
+           efact = abs(eint3(tau(iY)-tau(j))-eint3(tau(iY)-tau(j+1)))
+           fave = 0.5d0*(faux(j)+faux(j+1))
+           sum = sum + fave*efact
+        end do
+        fm(iL,iY) = 2.0d0*pi*sum
+     end do
+     !$OMP END PARALLEL DO
+     do iY = 1, nY
+        if (flag.eq.1) then
+           fds(iL,iY) = (fp(iL,iY) - fm(iL,iY))
+        else 
+           fde(iL,iY) = (fp(iL,iY) - fm(iL,iY))
+        end if
+     end do
+     ! end of loop over iL
+  end do
+  deallocate(tau)
+  deallocate(faux)
+  return
+  !--------------------------------------------------------------------
+end subroutine SLBdiff
+!*********************************************************************
+
 !**********************************************************************
 subroutine add2(nY,flxs,flxe,fbsum)
 !======================================================================
@@ -3213,10 +3235,10 @@ subroutine add2(nY,flxs,flxe,fbsum)
   return
 end subroutine add2
 !**********************************************************************
-!!$
-!!$!***********************************************************************
-!!$SUBROUTINE SPH_Int(nG,omega,fs)
-!!$!***********************************************************************
+
+!***********************************************************************
+SUBROUTINE SPH_Int(nY,nP,fs)
+!***********************************************************************
 !!$! This is the former  SUBROUTINE FindInt(nG,ETAzp) [MN].
 !!$! This subroutine finds the intensity distribution at outer edge and for
 !!$! user specified wavelengths lamOut. It also evaluates the angular size
@@ -3239,8 +3261,24 @@ end subroutine add2
 !!$! parameter, and f_lambda is the spectral shape F_lambda/Fbol.
 !!$!                                                      [Z.I., Aug. 1996]
 !!$! =======================================================================
-!!$  use common
-!!$  implicit none
+  use common
+  use interfaces
+  implicit none
+  !---parameter
+  integer nY,nP
+  double precision,allocatable :: fs(:,:)
+  !---local
+  integer :: i,iL,iP,iY,iZ, iW,k, nZ, Nzpt,izloc,iLout,iLstop
+  double precision :: xP,Planck, resaux, QUtot1, QpTsub,res,denum, &
+       pst, numcorr, stelfact,w1, w2, ep1, z1, z2, delz, delTau, &
+       lw12, pT, palb, UtotL, UtotR, pUtot, palf, tauzp1, zloc, &
+       wloc,Tz, IntETA, alb, Utotloc, factaux, alfa, tauInf, &
+       exterm, resint, ETAzpStar, Idboth, Idfront, xx, IntL, IntR
+  double precision,allocatable :: qaux(:),qaux2(:),alpha(:,:),&
+       fnum(:),fdenum(:),Istell(:),tauOut(:), Ids(:,:), Ide(:,:), &
+       Istsc(:,:),Istem(:,:),tzp(:),Semis(:),Sscat(:),Sstem(:),&
+       Sstsc(:)
+  external Planck,IntETA
 !!$  INTEGER iL,nG,iY,k,i,iLout,iLstop, iP, iW, nZ, Nzpt, iZ, izloc
 !!$  DOUBLE PRECISION qaux(npL), alpha(1,npY), resaux, QUtot1,   &
 !!$       QpTsub, xP, pst, stelfact, Istell(npL), Planck, z1, z2,    &
@@ -3253,282 +3291,313 @@ end subroutine add2
 !!$       tauzp1, tauInf, fnum(npL), fdenum(npL), res, denum
 !!$  EXTERNAL IntETA
 !!$! -----------------------------------------------------------------------
-!!$  ! temporary
-!!$  IF (nG.GT.1.AND.iX.GE.1) THEN
-!!$     print*, ' FindInt should be fixed, nG>1 ! LINE 3386'
-!!$     stop
-!!$  END IF
-!!$  ! find impact parameter tangential to the stellar disk
-!!$  ! first find the Planck averaged absorption efficiencies at Y=1
-!!$  ! print*,'still single grain line 3529'
-!!$  ! stop
-!!$  DO iL = 1, nL
-!!$     qaux(iL) = SigmaA(1,iL) * Utot(iL,1) / lambda (iL)
-!!$     xP = 14400.0 / Td(1,1) / lambda(iL)
-!!$     qaux2(iL) = SigmaA(1,iL) * Planck(xP) / lambda (iL)
-!!$  END DO
-!!$  CALL Simpson(npL,1,nL,lambda,qaux,resaux)
-!!$  QUtot1 = resaux
-!!$  CALL Simpson(npL,1,nL,lambda,qaux2,resaux)
-!!$  QpTsub = resaux
-!!$  ! parameter Psi (see Ivezic & Elitzur, 1996, eq. C4)
-!!$  Psi = QUtot1 / QpTsub
-!!$  alpha(1,1) = Psi
-!!$  ! ***alpha is a local array, to match the changes with Zeljko's old expressions
-!!$  DO iY = 2, nY
-!!$     ! calculate f1 and f2
-!!$     DO iL = 1, nL
-!!$        fnum(iL) = SigmaA(1,iL) * Utot(iL,iY) / lambda(iL)
-!!$     END DO
-!!$     CALL Simpson(npL,1,nL,lambda,fnum,res)
-!!$     ! calculate alpha
-!!$     DO iL = 1, nL
-!!$        xP = 14400.0 / lambda(iL) / Td(1,iY)
-!!$        fdenum(iL) = SigmaA(1,iL) * Planck(xP) / lambda(iL)
-!!$     END DO
-!!$     CALL Simpson(npL,1,nL,lambda,fdenum,denum)
-!!$     alpha(1,iY) = res /  denum
-!!$  END DO
+  ! temporary
+  allocate(qaux(nL))
+  allocate(qaux2(nL))
+  allocate(alpha(1,nY))
+  allocate(fnum(nL))
+  allocate(fdenum(nL))
+  allocate(Istell(nL))
+  allocate(tauOut(nL))
+  allocate(Ids(nL,nP))
+  allocate(Ide(nL,nP))
+  allocate(Istsc(nL,nP))
+  allocate(Istem(nL,nP))
+  allocate(tzp(nP))
+  allocate(Semis(nP))
+  allocate(Sscat(nP))
+  allocate(Sstem(nP))
+  allocate(Sstsc(nP))
+  IF (nG.GT.1.AND.iX.GE.1) THEN
+     print*, ' FindInt should be fixed, nG>1 ! LINE 3386'
+     stop
+  END IF
+  ! find impact parameter tangential to the stellar disk
+  ! first find the Planck averaged absorption efficiencies at Y=1
+  ! print*,'still single grain line 3529'
+  ! stop
+  DO iL = 1, nL
+     qaux(iL) = SigmaA(1,iL) * Utot(iL,1) / lambda (iL)
+     xP = 14400.0 / Td(1,1) / lambda(iL)
+     qaux2(iL) = SigmaA(1,iL) * Planck(xP) / lambda (iL)
+  END DO
+  CALL Simpson(nL,1,nL,lambda,qaux,resaux)
+  QUtot1 = resaux
+  CALL Simpson(npL,1,nL,lambda,qaux2,resaux)
+  QpTsub = resaux
+  ! parameter Psi (see Ivezic & Elitzur, 1996, eq. C4)
+  Psi = QUtot1 / QpTsub
+  alpha(1,1) = Psi
+  ! ***alpha is a local array, to match the changes with Zeljko's old expressions
+  DO iY = 2, nY
+     ! calculate f1 and f2
+     DO iL = 1, nL
+        fnum(iL) = SigmaA(1,iL) * Utot(iL,iY) / lambda(iL)
+     END DO
+     CALL Simpson(nL,1,nL,lambda,fnum,res)
+     ! calculate alpha
+     DO iL = 1, nL
+        xP = 14400.0 / lambda(iL) / Td(1,iY)
+        fdenum(iL) = SigmaA(1,iL) * Planck(xP) / lambda(iL)
+     END DO
+     CALL Simpson(npL,1,nL,lambda,fdenum,denum)
+     alpha(1,iY) = res /  denum
+  END DO
 !!$  ! *********
-!!$  ! ratio pst = rstar/rsub (see Ivezic & Elitzur, 1996, eq. 27)
-!!$  ! Added Apr.07 [MN] to take care of the case of no central source
-!!$  IF (Left.eq.0) THEN
-!!$     pst = 1.
-!!$  ELSE
-!!$     pst = 2.0 / dsqrt(Psi) * (Td(1,1) / Tstar(1))**2.0
-!!$  END IF
-!!$  ! this is if only central source is present
-!!$  IF (pst.GE.0.5.AND.Right.eq.0) THEN
-!!$     IF (iX.GE.1) THEN
-!!$        write(18,*)' FindInt: specified dust temperature at the '
-!!$        write(18,*)' inner radius results in r*/r1 >= 0.5: '
-!!$        write(18,*)'    r*/r1 =', pst
-!!$        write(18,*)' This violates some of Dusty`s assumptions'
-!!$        write(18,*)'  ------  Please consult the manual ------'
-!!$        write(18,*)'  ####  r*/r1 changed by hand to 0.5  ####'
-!!$     END IF
-!!$     pst = 0.5
-!!$  END IF
-!!$  stelfact = 1.0 / pst / pst / Pi
-!!$  ! generate bOut, i.e. insert two points such that
-!!$  ! bOut(k)=0.999*pst and bOut(k+1)=1.001*pst
-!!$  CALL GetbOut(npP,nP,P,pst,bOut,k)
-!!$  ! correction for numerical errors in tau
-!!$  numcorr = 1. / TAUtot(1)
-!!$  ! loop over wavelengths
-!!$  DO iL = 1, nL
-!!$     ! stellar intensity, Istell (extinction already included)
-!!$     Istell(iL) = fs(iL,nY) * stelfact
-!!$     ! total optical depth along a line of sight
-!!$     tauOut(iL) = numcorr*TAUtot(iL)
-!!$  END DO
-!!$  ! generate diffuse intensities, Ide (emission) and Ids (scat)
-!!$  ! loop over wavelengths
-!!$  DO iL = 1, nL
-!!$     DO iP = 1, nP
-!!$        ! maximal number of points along tangential position, z
-!!$        nZ = nY + 1 - iYfirst(iP)
-!!$        ! starting value for local radius
-!!$        IF (P(iP).GE.1.0) THEN
-!!$           w2 = P(iP)
-!!$        ELSE
-!!$           w2 = 1.0
-!!$        END IF
-!!$        ! initialize intensities
-!!$        Ide(iL,iP) = 0.0
-!!$        Ids(iL,iP) = 0.0
-!!$        IF (iP.LE.k+1) THEN
-!!$           Istem(iL,iP) = 0.0
-!!$           Istsc(iL,iP) = 0.0
-!!$        END IF
-!!$        ! total optical depth along this impact parameter
-!!$        ep1 = ETAzp(iP,nZ)*TAUtot(iL)
-!!$        ! loop over z, i.e. steps over points crossing the y grid
-!!$        DO iZ = 2, nZ
-!!$           ! index for the ending local radius
-!!$           iW = iYfirst(iP) + iZ - 1
-!!$           ! local boundary radii
-!!$           w1 = w2
-!!$           w2 = Y(iW)
-!!$           ! corresponding displacements along a line of sight
-!!$           z1 = sqrt(abs(w1**2.-P(iP)**2.))
-!!$           z2 = sqrt(abs(w2**2.-P(iP)**2.))
-!!$           ! # of pts. for z integration, should increase with deltaTau
-!!$           ! it is messy because INT function which would do the job is
-!!$           ! not in F77 standard set
-!!$           Nzpt = 5
-!!$           delTau = (ETAzp(iP,iW)-ETAzp(iP,iW-1))*TAUtot(iL)
-!!$           IF (delTau.GT.1) Nzpt = 10
-!!$           IF (delTau.GT.5) Nzpt = 20
-!!$           IF (delTau.GT.10) Nzpt = 30
-!!$           IF (delTau.GT.20) Nzpt = 40
-!!$           IF (delTau.GT.50) Nzpt = 50
-!!$           delz = (z2-z1) / (Nzpt-1)
-!!$           ! powers for power-law interpolations between 2 y pts.
-!!$           lw12 = dlog(Y(iW-1)/Y(iW))
-!!$           ! for T
-!!$           pT = dlog(Td(1,iW)/Td(1,iW-1)) / lw12
-!!$           ! for albedo
-!!$           print*,'omega is (iG,iL) not iL,iW'
-!!$           ! stop
-!!$           IF (omega(iL,iW-1).GT.0.0.AND.omega(iL,iW).GT.0.0) THEN
-!!$              palb = dlog(omega(iL,iW)/omega(iL,iW-1)) / lw12
-!!$           ELSE
-!!$              palb = 0.0
-!!$           END IF
-!!$           ! for Utot
-!!$           UtotL = Utot(iL,iW-1)
-!!$           UtotR = Utot(iL,iW)
-!!$           CALL ChkRange(dynrange,UtotL)
-!!$           CALL ChkRange(dynrange,UtotR)
-!!$           IF (UtotL.GT.0.0.AND.UtotR.GT.0) THEN
-!!$              pUtot = dlog(UtotR/UtotL) / lw12
-!!$           ELSE
-!!$              pUtot = 0.0
-!!$           END IF
-!!$           ! for alpha
-!!$           palf = dlog(alpha(1,iW)/alpha(1,iW-1)) / lw12
-!!$           ! tauzp between z=0 and z=z1
-!!$           tauzp1 = ETAzp(iP,iZ-1)*TAUtot(iL)
-!!$           ! integrate between adjacent grid points
-!!$           DO izloc = 1, Nzpt
-!!$              zloc = z1 + (izloc-1)*delz
-!!$              wloc = sqrt(zloc**2 + P(iP)**2)
-!!$              ! find local TAUzp(w(z))-TAUzp(w1=w(z1))
-!!$              tzp(izloc) = IntETA(P(iP),iW-1,w1,wloc)*TAUtot(iL)
-!!$              ! find Tz = T(zloc) = T(wloc), this works for single
-!!$              ! size grains only; for multigrain case one needs to
-!!$              ! get Semis by summation over all Td
-!!$              Tz = Td(1,iW-1) * (Y(iW-1)/wloc)**pT
-!!$              xP = 14400/lambda(iL)/Tz
-!!$              ! power-law interpolation for albedo
-!!$              print*,'omega is (iG,iL) not iL,iW'
-!!$              stop
-!!$              alb = omega(iL,iW-1) * (Y(iW-1)/wloc)**palb
-!!$              ! power-law interpolation for Utot
-!!$              IF (UtotL.GT.0) THEN
-!!$                 UtotLoc = UtotL * (Y(iW-1)/wloc)**pUtot
-!!$              ELSE
-!!$                 UtotLoc = 0.0
-!!$              END IF
-!!$              CALL ChkRange(dynrange,UtotLoc)
-!!$              ! power-law interpolation for alpha
-!!$              alfa = alpha(1,iW-1) * (Y(iW-1)/wloc)**palf
-!!$              ! source functions (wloc**2 because D uses scaled quant.)
-!!$              factaux = 1 / wloc**2 / (4. * Pi)
-!!$              Semis(izloc) = (1-alb) * alfa * Planck(xP) * factaux
-!!$              Sscat(izloc) = alb * UtotLoc * factaux
-!!$              ! check for the dynamic range
-!!$              CALL ChkRange(dynrange,Semis(izloc))
-!!$              CALL ChkRange(dynrange,Sscat(izloc))
-!!$              ! optical depth from infinity along the line of sight
-!!$              tauInf = ep1 - tauzp1 - tzp(izloc)
-!!$              ! for a line of sight terminating on the star find
-!!$              ! contribution only from the front part of the envelope
-!!$              IF (iP.LE.k+1) THEN
-!!$                 IF (tauInf.LT.50) THEN
-!!$                    exterm = dexp(-tauInf)
-!!$                 ELSE
-!!$                    exterm = 0.0
-!!$                 END IF
-!!$                 Sstem(izloc) = Semis(izloc) * exterm
-!!$                 Sstsc(izloc) = Sscat(izloc) * exterm
-!!$              END IF
-!!$              ! otherwise take both the front and back contributions
-!!$              IF (tauInf.LT.50) THEN
-!!$                 exterm = dexp(-tauInf)+dexp(-tauInf-ep1)
-!!$              ELSE
-!!$                 exterm = 0.0
-!!$              END IF
-!!$              Semis(izloc) = Semis(izloc) * exterm
-!!$              Sscat(izloc) = Sscat(izloc) * exterm
-!!$              ! end of local loop over z
-!!$           END DO
-!!$           ! integrate and add contribution from this step
-!!$           CALL SIMPSON(100,1,Nzpt,tzp,Semis,resint)
-!!$           CALL ChkRange(dynrange,resint)
-!!$           Ide(iL,iP) = Ide(iL,iP) + resint
-!!$           CALL SIMPSON(100,1,Nzpt,tzp,Sscat,resint)
-!!$           CALL ChkRange(dynrange,resint)
-!!$           Ids(iL,iP) = Ids(iL,iP) + resint
-!!$           IF (iP.LE.k+1) THEN
-!!$              CALL SIMPSON(100,1,Nzpt,tzp,Sstem,resint)
-!!$              CALL ChkRange(dynrange,resint)
-!!$              Istem(iL,iP) = Istem(iL,iP) + resint
-!!$              CALL SIMPSON(100,1,Nzpt,tzp,Sstsc,resint)
-!!$              CALL ChkRange(dynrange,resint)
-!!$              Istsc(iL,iP) = Istsc(iL,iP) + resint
-!!$           END IF
-!!$           ! end of loop over z
-!!$        END DO
-!!$        ! end of loop over impact parameter, iP
-!!$     END DO
-!!$     ! end of loop over wavelengths, iL
-!!$  END DO
-!!$  ! add all intensities, Istell, Ide, Ids
-!!$  DO iL = 1, nL
-!!$     ! interpolate optical depth  at pstar
-!!$     IF (iL.EQ.iLfid) THEN
-!!$        ETAzpStar = (ETAzp(k,nY) - ETAzp(k-1,nY))
-!!$        ETAzpStar = ETAzpStar * (pst-P(k-1)) / (P(k)-P(k-1))
-!!$        ETAzpStar = ETAzp(k-1,nY) + ETAzpStar
-!!$     END IF
-!!$     ! find diffuse contribution at pstar (by linear interpolation)
-!!$     Idfront = Istsc(iL,k)+Istem(iL,k)-Istsc(iL,k-1)-Istem(iL,k-1)
-!!$     Idfront = Idfront * (pst-P(k-1)) / (P(k) - P(k-1))
-!!$     Idfront = Idfront + Istsc(iL,k-1) + Istem(iL,k-1)
-!!$     Idboth = Ids(iL,k) + Ide(iL,k) - Ids(iL,k-1) - Ide(iL,k-1)
-!!$     Idboth = Idboth * (pst-P(k-1)) / (P(k) - P(k-1))
-!!$     Idboth = Idboth + Ids(iL,k-1) + Ide(iL,k-1)
-!!$     ! first for p<pstar, all three contributions
-!!$     DO i = 1, k-1
-!!$        Intens(iL,i) = Istell(iL) + Istsc(iL,i) + Istem(iL,i)
-!!$        IF (iL.EQ.iLfid) tauZout(i) = ETAzp(i,nY)/ETAzp(1,nY)
-!!$     END DO
-!!$     ! barely on the stellar disk
-!!$     Intens(iL,k) = Istell(iL) + Idfront
-!!$     tauZout(k) = ETAzpStar/ETAzp(1,nY)
-!!$     ! barely off the stellar disk
-!!$     Intens(iL,k+1) = Idboth
-!!$     tauZout(k+1) = 2. * tauZout(k)
-!!$     ! all other p>pstar
-!!$     DO i = k, nP
-!!$        Intens(iL,i+2) = Ids(iL,i)+Ide(iL,i)
-!!$        IF (iL.EQ.iLfid) THEN
-!!$           nZ = nY + 1 - iYfirst(i)
-!!$           tauZout(i+2) = 2. * ETAzp(i,nZ)/ETAzp(1,nY)
-!!$        END IF
-!!$     END DO
-!!$  END DO
-!!$  ! check dynamic range
-!!$  DO iL = 1, nL
-!!$     DO i = 1, nP+2
-!!$        CALL ChkRange(dynrange,Intens(iL,i))
-!!$     END DO
-!!$  END DO
-!!$  ! now interpolate Intens(lambda) to lamOut
-!!$  DO iLout = 1, NlambdaOut
-!!$     ! bracket the needed wavelength
-!!$     iLstop = 0
-!!$     iL = 0
-!!$     DO WHILE (iLstop.EQ.0)
-!!$        iL = iL + 1
-!!$        IF (lambda(iL).GT.LambdaOut(iLout)) iLstop = 1
-!!$        IF (iL.EQ.nL) iLstop = 1
-!!$     END DO
-!!$     ! interpolate intensity
-!!$     xx = (LambdaOut(iLout)-lambda(iL-1))/(lambda(iL)-lambda(iL-1))
-!!$     DO i = 1, nP+2
-!!$        IntL = Intens(iL-1,i)
-!!$        IntR = Intens(iL,i)
-!!$        IntOut(iLout,i) = IntL + xx*(IntR - IntL)
-!!$        CALL ChkRange(dynrange,IntOut(iLout,i))
-!!$     END DO
-!!$  END DO
-!!$! -----------------------------------------------------------------------
-!!$999   RETURN
-!!$end subroutine SPH_Int
-!!$! ***********************************************************************
+  ! ratio pst = rstar/rsub (see Ivezic & Elitzur, 1996, eq. 27)
+  ! Added Apr.07 [MN] to take care of the case of no central source
+  IF (Left.eq.0) THEN
+     pst = 1.
+  ELSE
+     pst = 2.0 / dsqrt(Psi) * (Td(1,1) / Tstar(1))**2.0
+  END IF
+  ! this is if only central source is present
+  IF (pst.GE.0.5.AND.Right.eq.0) THEN
+     IF (iX.GE.1) THEN
+        write(18,*)' FindInt: specified dust temperature at the '
+        write(18,*)' inner radius results in r*/r1 >= 0.5: '
+        write(18,*)'    r*/r1 =', pst
+        write(18,*)' This violates some of Dusty`s assumptions'
+        write(18,*)'  ------  Please consult the manual ------'
+        write(18,*)'  ####  r*/r1 changed by hand to 0.5  ####'
+     END IF
+     pst = 0.5
+  END IF
+!  print*,'!!!!!!!!!!! --Intensities not done yet-- !!!!!!'
+!  stop
+  stelfact = 1.0 / pst / pst / Pi
+  ! generate bOut, i.e. insert two points such that
+  ! bOut(k)=0.999*pst and bOut(k+1)=1.001*pst
+  CALL GetbOut(nP,pst,k)
+  ! correction for numerical errors in tau
+  numcorr = 1. / TAUtot(1)
+  ! loop over wavelengths
+  DO iL = 1, nL
+     ! stellar intensity, Istell (extinction already included)
+     Istell(iL) = fs(iL,nY) * stelfact
+     ! total optical depth along a line of sight
+     tauOut(iL) = numcorr*TAUtot(iL)
+  END DO
+  ! generate diffuse intensities, Ide (emission) and Ids (scat)
+  ! loop over wavelengths
+  DO iL = 1, nL
+     DO iP = 1, nP
+        ! maximal number of points along tangential position, z
+        nZ = nY + 1 - iYfirst(iP)
+        ! starting value for local radius
+        IF (P(iP).GE.1.0) THEN
+           w2 = P(iP)
+        ELSE
+           w2 = 1.0
+        END IF
+        ! initialize intensities
+        Ide(iL,iP) = 0.0
+        Ids(iL,iP) = 0.0
+        IF (iP.LE.k+1) THEN
+           Istem(iL,iP) = 0.0
+           Istsc(iL,iP) = 0.0
+        END IF
+        ! total optical depth along this impact parameter
+        ep1 = ETAzp(iP,nZ)*TAUtot(iL)
+        ! loop over z, i.e. steps over points crossing the y grid
+        DO iZ = 2, nZ
+           ! index for the ending local radius
+           iW = iYfirst(iP) + iZ - 1
+           ! local boundary radii
+           w1 = w2
+           w2 = Y(iW)
+           ! corresponding displacements along a line of sight
+           z1 = sqrt(abs(w1**2.-P(iP)**2.))
+           z2 = sqrt(abs(w2**2.-P(iP)**2.))
+           ! # of pts. for z integration, should increase with deltaTau
+           ! it is messy because INT function which would do the job is
+           ! not in F77 standard set
+           Nzpt = 5
+           delTau = (ETAzp(iP,iW)-ETAzp(iP,iW-1))*TAUtot(iL)
+           IF (delTau.GT.1) Nzpt = 10
+           IF (delTau.GT.5) Nzpt = 20
+           IF (delTau.GT.10) Nzpt = 30
+           IF (delTau.GT.20) Nzpt = 40
+           IF (delTau.GT.50) Nzpt = 50
+           delz = (z2-z1) / (Nzpt-1)
+           ! powers for power-law interpolations between 2 y pts.
+           lw12 = dlog(Y(iW-1)/Y(iW))
+           ! for T
+           pT = dlog(Td(1,iW)/Td(1,iW-1)) / lw12
+           ! for albedo
+           ! stop
+           IF (omega(nG+1,iL).GT.0.0.AND.omega(nG+1,iL).GT.0.0) THEN
+              palb = dlog(omega(nG+1,iL)/omega(nG+1,iL)) / lw12
+           ELSE
+              palb = 0.0
+           END IF
+           ! for Utot
+           UtotL = Utot(iL,iW-1)
+           UtotR = Utot(iL,iW)
+           CALL ChkRange(dynrange,UtotL)
+           CALL ChkRange(dynrange,UtotR)
+           IF (UtotL.GT.0.0.AND.UtotR.GT.0) THEN
+              pUtot = dlog(UtotR/UtotL) / lw12
+           ELSE
+              pUtot = 0.0
+           END IF
+           ! for alpha
+           palf = dlog(alpha(1,iW)/alpha(1,iW-1)) / lw12
+           ! tauzp between z=0 and z=z1
+           tauzp1 = ETAzp(iP,iZ-1)*TAUtot(iL)
+           ! integrate between adjacent grid points
+           DO izloc = 1, Nzpt
+              zloc = z1 + (izloc-1)*delz
+              wloc = sqrt(zloc**2 + P(iP)**2)
+              ! find local TAUzp(w(z))-TAUzp(w1=w(z1))
+              tzp(izloc) = IntETA(P(iP),iW-1,w1,wloc)*TAUtot(iL)
+              ! find Tz = T(zloc) = T(wloc), this works for single
+              ! size grains only; for multigrain case one needs to
+              ! get Semis by summation over all Td
+              Tz = Td(1,iW-1) * (Y(iW-1)/wloc)**pT
+              xP = 14400/lambda(iL)/Tz
+              ! power-law interpolation for albedo
+              alb = omega(nG+1,iL) * (Y(iW-1)/wloc)**palb
+              ! power-law interpolation for Utot
+              IF (UtotL.GT.0) THEN
+                 UtotLoc = UtotL * (Y(iW-1)/wloc)**pUtot
+              ELSE
+                 UtotLoc = 0.0
+              END IF
+              CALL ChkRange(dynrange,UtotLoc)
+              ! power-law interpolation for alpha
+              alfa = alpha(1,iW-1) * (Y(iW-1)/wloc)**palf
+              ! source functions (wloc**2 because D uses scaled quant.)
+              factaux = 1 / wloc**2 / (4. * Pi)
+              Semis(izloc) = (1-alb) * alfa * Planck(xP) * factaux
+              Sscat(izloc) = alb * UtotLoc * factaux
+              ! check for the dynamic range
+              CALL ChkRange(dynrange,Semis(izloc))
+              CALL ChkRange(dynrange,Sscat(izloc))
+              ! optical depth from infinity along the line of sight
+              tauInf = ep1 - tauzp1 - tzp(izloc)
+              ! for a line of sight terminating on the star find
+              ! contribution only from the front part of the envelope
+              IF (iP.LE.k+1) THEN
+                 IF (tauInf.LT.50) THEN
+                    exterm = dexp(-tauInf)
+                 ELSE
+                    exterm = 0.0
+                 END IF
+                 Sstem(izloc) = Semis(izloc) * exterm
+                 Sstsc(izloc) = Sscat(izloc) * exterm
+              END IF
+              ! otherwise take both the front and back contributions
+              IF (tauInf.LT.50) THEN
+                 exterm = dexp(-tauInf)+dexp(-tauInf-ep1)
+              ELSE
+                 exterm = 0.0
+              END IF
+              Semis(izloc) = Semis(izloc) * exterm
+              Sscat(izloc) = Sscat(izloc) * exterm
+              ! end of local loop over z
+           END DO
+           ! integrate and add contribution from this step
+           CALL SIMPSON(100,1,Nzpt,tzp,Semis,resint)
+           CALL ChkRange(dynrange,resint)
+           Ide(iL,iP) = Ide(iL,iP) + resint
+           CALL SIMPSON(100,1,Nzpt,tzp,Sscat,resint)
+           CALL ChkRange(dynrange,resint)
+           Ids(iL,iP) = Ids(iL,iP) + resint
+           IF (iP.LE.k+1) THEN
+              CALL SIMPSON(100,1,Nzpt,tzp,Sstem,resint)
+              CALL ChkRange(dynrange,resint)
+              Istem(iL,iP) = Istem(iL,iP) + resint
+              CALL SIMPSON(100,1,Nzpt,tzp,Sstsc,resint)
+              CALL ChkRange(dynrange,resint)
+              Istsc(iL,iP) = Istsc(iL,iP) + resint
+           END IF
+           ! end of loop over z
+        END DO
+        ! end of loop over impact parameter, iP
+     END DO
+     ! end of loop over wavelengths, iL
+  END DO
+  ! add all intensities, Istell, Ide, Ids
+  DO iL = 1, nL
+     ! interpolate optical depth  at pstar
+     IF (iL.EQ.iLfid) THEN
+        ETAzpStar = (ETAzp(k,nY) - ETAzp(k-1,nY))
+        ETAzpStar = ETAzpStar * (pst-P(k-1)) / (P(k)-P(k-1))
+        ETAzpStar = ETAzp(k-1,nY) + ETAzpStar
+     END IF
+     ! find diffuse contribution at pstar (by linear interpolation)
+     Idfront = Istsc(iL,k)+Istem(iL,k)-Istsc(iL,k-1)-Istem(iL,k-1)
+     Idfront = Idfront * (pst-P(k-1)) / (P(k) - P(k-1))
+     Idfront = Idfront + Istsc(iL,k-1) + Istem(iL,k-1)
+     Idboth = Ids(iL,k) + Ide(iL,k) - Ids(iL,k-1) - Ide(iL,k-1)
+     Idboth = Idboth * (pst-P(k-1)) / (P(k) - P(k-1))
+     Idboth = Idboth + Ids(iL,k-1) + Ide(iL,k-1)
+     ! first for p<pstar, all three contributions
+     DO i = 1, k-1
+        Intens(iL,i) = Istell(iL) + Istsc(iL,i) + Istem(iL,i)
+        IF (iL.EQ.iLfid) tauZout(i) = ETAzp(i,nY)/ETAzp(1,nY)
+     END DO
+     ! barely on the stellar disk
+     Intens(iL,k) = Istell(iL) + Idfront
+     tauZout(k) = ETAzpStar/ETAzp(1,nY)
+     ! barely off the stellar disk
+     Intens(iL,k+1) = Idboth
+     tauZout(k+1) = 2. * tauZout(k)
+     ! all other p>pstar
+     DO i = k, nP
+        Intens(iL,i+2) = Ids(iL,i)+Ide(iL,i)
+        IF (iL.EQ.iLfid) THEN
+           nZ = nY + 1 - iYfirst(i)
+           tauZout(i+2) = 2. * ETAzp(i,nZ)/ETAzp(1,nY)
+        END IF
+     END DO
+  END DO
+  ! check dynamic range
+  DO iL = 1, nL
+     DO i = 1, nP+2
+        CALL ChkRange(dynrange,Intens(iL,i))
+     END DO
+  END DO
+  ! now interpolate Intens(lambda) to lamOut
+  DO iLout = 1, NlambdaOut
+     ! bracket the needed wavelength
+     iLstop = 0
+     iL = 0
+     DO WHILE (iLstop.EQ.0)
+        iL = iL + 1
+        IF (lambda(iL).GT.LambdaOut(iLout)) iLstop = 1
+        IF (iL.EQ.nL) iLstop = 1
+     END DO
+     ! interpolate intensity
+     xx = (LambdaOut(iLout)-lambda(iL-1))/(lambda(iL)-lambda(iL-1))
+     DO i = 1, nP+2
+        IntL = Intens(iL-1,i)
+        IntR = Intens(iL,i)
+        IntOut(iLout,i) = IntL + xx*(IntR - IntL)
+        CALL ChkRange(dynrange,IntOut(iLout,i))
+     END DO
+  END DO
+  ! -------------------------------------------------------------------
+999 deallocate(qaux)
+  deallocate(qaux2)
+  deallocate(alpha)
+  deallocate(fnum)
+  deallocate(fdenum)
+  deallocate(Istell)
+  deallocate(tauOut)
+  deallocate(Ids)
+  deallocate(Ide)
+  deallocate(Istsc)
+  deallocate(Istem)
+  deallocate(tzp)
+  deallocate(Semis)
+  deallocate(Sscat)
+  deallocate(Sstem)
+  deallocate(Sstsc)
+  RETURN
+end subroutine SPH_Int
+! ***********************************************************************
 !!$
 !!$! ***********************************************************************
 !!$  subroutine SLBintensity(nG,omega,em)
@@ -3662,16 +3731,16 @@ end subroutine add2
         END DO
      END IF
   elseif(slb) then
-!!$     ! for slab
-!!$     tauF(1) = 0.0d0
-!!$     do iY = 1, nY
-!!$        ! generate auxiliary function for integration:
-!!$        do iL = 1, nL
-!!$           qaux(iL) = TAUslb(iL,iY)*dabs(ftot(iL,iY))/(fsLbol(1)*lambda(iL))
-!!$           call Simpson(npL,1,nL,lambda,qaux,resaux)
-!!$           tauF(iY) = resaux
-!!$        end do
-!!$     end do
+     ! for slab
+     tauF(1) = 0.0d0
+     do iY = 1, nY
+        ! generate auxiliary function for integration:
+        do iL = 1, nL
+           qaux(iL) = TAUslb(iL,iY)*dabs(ftot(iL,iY))/(fsLbol(1)*lambda(iL))
+           call Simpson(npL,1,nL,lambda,qaux,resaux)
+           tauF(iY) = resaux
+        end do
+     end do
   end if
   ! ------------
   ! ratio of gravitational to radiation pressure force (isotropic scattering) per unit volume
@@ -4207,38 +4276,43 @@ end subroutine Analysis
 !!$END FUNCTION PSFN
 !!$! ***********************************************************************
 !!$
-!!$!***********************************************************************
-!!$SUBROUTINE GetbOut(npP,nP,P,pstar,bOut,k)
-!!$!=======================================================================
-!!$! This subroutine inserts two impact parameters corresponding to pstar,
-!!$! producing bOut(nP+2) from P(nP). The inserted elements are bOut(k) and
-!!$! bOut(k+1)                                            [Z.I., Aug. 1996]
-!!$! =======================================================================
-!!$  IMPLICIT none
-!!$  INTEGER npP, nP, k, kstop, i
-!!$  DOUBLE PRECISION P(npP), bOut(npP+2), pstar
-!!$! -----------------------------------------------------------------------
-!!$  k = 0
-!!$  kstop = 0
-!!$  DO WHILE (kstop.NE.1)
-!!$     k = k + 1
-!!$     bOut(k) = P(k)
-!!$     IF (1.001D+00*pstar.LE.P(k).OR.k.EQ.nP) kstop = 1
-!!$  END DO
-!!$  IF (0.999D+00*pstar.GT.P(k-1)) THEN
-!!$     bOut(k) = 0.999D+00*pstar
-!!$  ELSE
-!!$     bOut(k) = 0.5D+00*(P(k-1)+1.001D+00*pstar)
-!!$  END IF
-!!$  IF (1.001D+00*pstar.LT.P(k)) THEN
-!!$     bOut(k+1) = 1.001D+00*pstar
-!!$  ELSE
-!!$     bOut(k+1) = 0.5D+00*(P(k)+0.999D+00*pstar)
-!!$  END IF
-!!$  DO i = k, nP
-!!$     bOut(i+2) = P(i)
-!!$  END DO
-!!$  ! -----------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE GetbOut
-!!$!***********************************************************************
+!***********************************************************************
+SUBROUTINE GetbOut(nP,pstar,k)
+!=======================================================================
+! This subroutine inserts two impact parameters corresponding to pstar,
+! producing bOut(nP+2) from P(nP). The inserted elements are bOut(k) and
+! bOut(k+1)                                            [Z.I., Aug. 1996]
+! =======================================================================
+  use common
+  use interfaces
+  IMPLICIT none
+  !---parameter
+  integer nP
+  double precision :: pstar
+  !---local
+  INTEGER k, kstop, i
+! -----------------------------------------------------------------------
+  k = 0
+  kstop = 0
+  DO WHILE (kstop.NE.1)
+     k = k + 1
+     bOut(k) = P(k)
+     IF (1.001D+00*pstar.LE.P(k).OR.k.EQ.nP) kstop = 1
+  END DO
+  IF (0.999D+00*pstar.GT.P(k-1)) THEN
+     bOut(k) = 0.999D+00*pstar
+  ELSE
+     bOut(k) = 0.5D+00*(P(k-1)+1.001D+00*pstar)
+  END IF
+  IF (1.001D+00*pstar.LT.P(k)) THEN
+     bOut(k+1) = 1.001D+00*pstar
+  ELSE
+     bOut(k+1) = 0.5D+00*(P(k)+0.999D+00*pstar)
+  END IF
+  DO i = k, nP
+     bOut(i+2) = P(i)
+  END DO
+  ! -----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE GetbOut
+!***********************************************************************

@@ -14,9 +14,8 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
   !--- local variables
   integer iPstar, EtaOK, iY
   double precision pstar,TAUlim, delta
-  double precision, allocatable :: fs(:,:),us(:,:),T4_ext(:)
+  double precision, allocatable :: fs(:,:),u_old(:,:),us(:,:),T4_ext(:)
   double precision, allocatable :: emiss(:,:,:)
-
 !!$
 !!$  integer model, error, nG, iterfbol, fbolOK,grid,iY,iL,nY_old,y_incr,imu, &
 !!$       iPstar,EtaOK , iP, iZ, nZ, iOut
@@ -38,6 +37,7 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
   allocate(us(nL,npY))
   allocate(T4_ext(npY))
   allocate(emiss(nG,nL,npY))
+  allocate(u_old(nL,npY))
   IF (iX.NE.0) THEN
      CALL LINE(0,2,18)
      write(18,'(a7,i3,a20)') ' model ',model,'  RUN-TIME MESSAGES '
@@ -82,7 +82,7 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
            IF (iVerb.EQ.2) write(*,*) iterFbol,'. iteration over Fbol'
            ! solve the radiative transfer problem
            Call RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,FbolOK,initial,deviat,&
-                iterFbol,iterEta,model,us,fs,T4_ext,emiss)
+                iterFbol,iterEta,model,us,u_old,fs,T4_ext,emiss)
            IF (iVerb.EQ.2) write(*,*) 'Done with RadTransf'
            ! error.EQ.3 : file with stellar spectrum not available
            IF (error.EQ.3) goto 999
@@ -192,14 +192,14 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
         ! end of loop over ETA
      END DO
   ELSE
-!!$!       ! solve for slab case
-!!$!       CALL SLBsolve(model,nG,error)
-!!$!       ! error=4 means npY not large enough for oblique illumination grid
-!!$!       IF (error.eq.4) THEN
-!!$!          CALL MSG(15)
-!!$!          iWARNING = iWARNING + 1
-!!$!          goto 999
-!!$!       END IF
+       ! solve for slab case
+!!$       CALL SLBsolve(model,nG,error)
+!!$       ! error=4 means npY not large enough for oblique illumination grid
+!!$       IF (error.eq.4) THEN
+!!$          CALL MSG(15)
+!!$          PRINT*,'stop MSG(15)'
+!!$          goto 999
+!!$       END IF
 !!$       PRINT*,'Slab case is not implemented for the matrix method!'
 !!$       STOP
   END IF
@@ -216,13 +216,14 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
   deallocate(us)
   deallocate(T4_ext)
   deallocate(emiss)
+  deallocate(u_old)
   RETURN
 END SUBROUTINE solve_matrix
 !***********************************************************************
 
 !***********************************************************************
 SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
-     FbolOK,initial,deviat,iterFbol,iterEta,model,us,fs,T4_ext,emiss)
+     FbolOK,initial,deviat,iterFbol,iterEta,model,us,u_old,fs,T4_ext,emiss)
 !=======================================================================
 ! This subroutine solves the continuum radiative transfer problem for a
 ! spherically symmetric envelope.                      [Z.I., Nov. 1995]
@@ -233,13 +234,15 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   !---parameter
   integer iPstar, FbolOK,iterFbol,iterEta,model,nY,nYprev,nP,nCav,nIns
   double precision :: pstar,TAUlim,deviat
-  double precision,allocatable :: us(:,:), fs(:,:),T4_ext(:),emiss(:,:,:)
+  double precision,allocatable :: u_old(:,:),us(:,:), fs(:,:),T4_ext(:),emiss(:,:,:)
   logical initial
   !---local
-  integer iaux,nPok,nYok, itlim, iter, conv, itnum, Fconv, Uconv, aconv, iY,itmp1,itmp2
-  double precision,allocatable :: T_old(:,:),u_old(:,:),mat0(:,:,:), mat1(:,:,:),&
+  integer iaux,nPok,nYok, itlim, iter, conv, itnum, Fconv, Uconv, aconv, &
+       iY,iL,itmp1,itmp2
+  double precision,allocatable :: mat0(:,:,:), mat1(:,:,:),&
        mifront(:,:,:), miback(:,:,:), UbolChck(:), Uchck(:,:), fbolold(:),tmp(:,:)
   double precision ::  BolConv, dmaxF, dmaxU, maxFerr
+  double precision, allocatable :: omat(:,:)
  
 !!$  integer iPstar, nG, FbolOK, error, iterFbol, model, &
 !!$       BolConv, Conv, iaux, Fconv, iter,itnum, iY, itlim, uconv
@@ -256,7 +259,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
 !!$
 
 !!$  allocate(T_old(nG,nY))
-  allocate(u_old(nL,npY))
+  allocate(omat(nL,npY))
   allocate(UbolChck(npY))
   allocate(Uchck(nL,npY))
   allocate(fbolold(npY))
@@ -291,7 +294,6 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
            IF (iX.NE.0) write(18,'(a20,i3)')' Nins increased to:',Nins
         END IF
         CALL Pgrid(pstar,iPstar,nY,nP,nCav,nIns)
-        print*,nY,np,nCav,nIns
         ! if P grid is not OK end this model
         IF (error.NE.0) goto 999
         IF (iX.NE.0) THEN
@@ -318,6 +320,11 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   CALL getETAzp(nY,nP)
   ! generate albedo through the envelope
   CALL getOmega(nY)
+  do iY=1,nY
+     do iL=1,nL
+          omat(iL,iY) = SigmaS(nG,iL) / (SigmaA(nG,iL) + SigmaS(nG,iL))        
+     end do
+  end do
   ! generate stellar moments
   ! CALL Star(pstar,ETAzp,error) --**--
   call Find_Tran(pstar,nY,nP,T4_ext,us,fs)
@@ -329,8 +336,11 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   END IF
   ! generate the first approximation for Td
   ! CALL InitTemp(ETAzp,nG)  --**--
-  call Init_Temp(nY,T4_ext)
-  IF (iVerb.EQ.2) write(*,*) 'Done with InitTemp'
+  if (initial.and.iterfbol.eq.1) then
+     call Init_Temp(nY,T4_ext,us)
+     if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
+  end if
+  !IF (iVerb.EQ.2) write(*,*) 'Done with InitTemp'
   ! find radiative transfer matrices
   IF (iX.NE.0) write(18,*)' Calculating weight matrices'
   IF (iVerb.EQ.2) write(*,*) 'Calculating weight matrices'
@@ -358,9 +368,14 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
      ! because there is no alpha now, y^2 appears explicitly in
      ! Emission and we need the flag for geometry (1-for sphere).
      !CALL Emission_matrix(1,0,nG,Us,Em)
+     if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
+        call find_Text(nY,T4_ext)
+     elseif (.not.initial.and.typentry(1).eq.5) then
+        call find_Text(nY,T4_ext)
+     end if
      call Emission(nY,T4_ext,emiss)
      ! solve for Utot
-     CALL Invert(nY,mat0,Us,Emiss,U_old)
+     CALL Invert(nY,mat0,Us,Emiss,U_old,omat)
      IF(error.NE.0) goto 999
      ! find new Td
      ! CALL FindTemp(1,Utot,nG,Td) --**--
@@ -374,13 +389,13 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
      END IF
      ! first find 'old' flux (i.e. in the previous iteration)
      IF (MOD(iter+1,itnum).EQ.0) THEN
-        CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omega,0,fs,fds)
+        CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omat,0,fs,fds)
         do itmp1=1,nL
            do itmp2=1,NY
               tmp(itmp1,itmp2) = Emiss(1,itmp1,itmp2)
            end do
         end do
-        CALL Multiply(0,nY,nY,nL,nL,mat1,tmp,omega,0,fs,fde)
+        CALL Multiply(0,nY,nY,nL,nL,mat1,tmp,omat,0,fs,fde)
         do itmp1=1,nL
            do itmp2=1,NY
               Emiss(1,itmp1,itmp2) = tmp(itmp1,itmp2)
@@ -392,29 +407,32 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
      END IF
      IF (MOD(iter,itnum).EQ.0) THEN
         ! first calculate total flux
-        CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omega,0,fs,fds)
+        do iY = 1, nY
+           Jext(iY) = sigma/pi * T4_ext(iY)
+        end do
+        CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omat,0,fs,fds)
         do itmp1=1,nL
            do itmp2=1,nY
               tmp(itmp1,itmp2) = Emiss(1,itmp1,itmp2)
            end do
         end do
-        CALL Multiply(0,nY,nY,nL,nL,mat1,tmp,omega,0,fs,fde)
+        CALL Multiply(0,nY,nY,nL,nL,mat1,tmp,omat,0,fs,fde)
         do itmp1=1,nL
            do itmp2=1,NY
               Emiss(1,itmp1,itmp2) = tmp(itmp1,itmp2)
+              fds(itmp1,itmp2) = fds(itmp1,itmp2)*4*pi
+              fde(itmp1,itmp2) = fde(itmp1,itmp2)*4*pi
            end do
         end do
         CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
         ! find bolometric flux
         CALL Bolom(ftot,fbol,nY)
         ! check convergence of bolometric flux
+        ! call Flux_Consv(nY,nYprev,Ncav,itereta,fbol,fbol,fbolOK,maxFerr)
         CALL Converg1(nY,fbolold,fbol,Fconv,dmaxF)
         ! check convergence of energy density
         CALL Converg2(nY,U_old,Utot,Uconv,dmaxU)
         ! find maximal fbol error
-        do iY = 1, nY
-           Jext(iY) = sigma/pi * T4_ext(iY)
-        end do
         CALL FindErr(nY,fbol,maxFerr)
         !------  printout of errors and convergence with iter.(inner flag): -------
 !!$        IF(iInn.EQ.1) THEN
@@ -446,16 +464,18 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   call Emission(nY,T4_ext,emiss)
 !!$  CALL Emission_matrix(1,0,nG,Us,Em)
   ! calculate flux
-  CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omega,0,fs,fds)
+  CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omat,0,fs,fds)
   do itmp1=1,nL
      do itmp2=1,NY
         tmp(itmp1,itmp2) = Emiss(1,itmp1,itmp2)
      end do
   end do
-  CALL Multiply(0,nY,nY,nL,nL,mat1,tmp,omega,0,fs,fde)
+  CALL Multiply(0,nY,nY,nL,nL,mat1,tmp,omat,0,fs,fde)
   do itmp1=1,nL
      do itmp2=1,NY
         Emiss(1,itmp1,itmp2) = tmp(itmp1,itmp2)
+        fds(itmp1,itmp2) = fds(itmp1,itmp2)*4*pi
+        fde(itmp1,itmp2) = fde(itmp1,itmp2)*4*pi
      end do
   end do
   CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
@@ -468,16 +488,17 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   !***********************************
   ! calculate additional output quantities
   ! 1) energy densities
-  CALL Multiply(1,nY,nY,nL,nL,mat0,Utot,omega,0,Us,Uds)
+  CALL Multiply(1,nY,nY,nL,nL,mat0,Utot,omat,0,Us,Uds)
   do itmp1=1,nL
      do itmp2=1,NY
         tmp(itmp1,itmp2) = Emiss(1,itmp1,itmp2)
      end do
   end do
-  CALL Multiply(0,nY,nY,nL,nL,mat0,tmp,omega,0,fs,fde)
+  CALL Multiply(0,nY,nY,nL,nL,mat0,tmp,omat,0,fs,fde)
   do itmp1=1,nL
      do itmp2=1,NY
         Emiss(1,itmp1,itmp2) = tmp(itmp1,itmp2)
+        fde(itmp1,itmp2) = fde(itmp1,itmp2)*4*pi
      end do
   end do
   CALL Add(nY,nY,nL,nL,Us,Uds,Ude,Uchck)
@@ -526,8 +547,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
 !!$     IF (iVerb.GE.1) write(*,*) 'No disk option in this version'
 !!$  END IF
 !!$  !---------------------------------------------------------------------
-999 deallocate(u_old)
-  deallocate(tmp)
+999 deallocate(tmp)
   deallocate(mat0)
   deallocate(mat1)
   deallocate(mifront)
@@ -535,12 +555,13 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   deallocate(UbolChck)
   deallocate(Uchck)
   deallocate(fbolold)
+  deallocate(omat)
   RETURN
 END SUBROUTINE RADTRANSF_matrix
 !***********************************************************************
 
 !***********************************************************************
-SUBROUTINE INVERT(nY,mat,Us,Em,Uold)
+SUBROUTINE INVERT(nY,mat,Us,Em,Uold,omat)
 !=======================================================================
 !This subroutine solves the linear system
 ![Utot] = [Us+Em] + [mat0]*[omega*Utot] by calling LINSYS subroutine.
@@ -551,7 +572,8 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold)
   IMPLICIT none
   !--- parameter
   integer nY
-  double precision,allocatable :: Us(:,:), Uold(:,:), Em(:,:,:),mat(:,:,:)
+  double precision,allocatable :: Us(:,:), Uold(:,:), Em(:,:,:),mat(:,:,:),&
+       omat(:,:)
   !--- local
   DOUBLE PRECISION  delTAUsc, facc, EtaRat, accFbol
   INTEGER iG,iL,iY, iYaux, Kronecker
@@ -578,8 +600,8 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold)
            IF (iY.EQ.iYaux) Kronecker = 1
            ! loop over grains
            DO iG = 1, nG
-              B(iY) = B(iY) + (1.0D+00-omega(iG,iL))*Em(iG,iL,iYaux)*mat(iL,iY,iYaux)
-              A(iY,iYaux) = Kronecker - omega(iG,iL) * mat(iL,iY,iYaux)
+              B(iY) = B(iY) + (1.-omat(iL,iYaux))*Em(iG,iL,iYaux)*mat(iL,iY,iYaux)  
+              A(iY,iYaux) = Kronecker - omat(iL,iYaux) * mat(iL,iY,iYaux)        
            END DO
         END DO
      END DO
@@ -593,7 +615,7 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold)
      END IF
      ! store the result
      DO iY = 1, nY
-        IF (X(iY).GE.dynrange*dynrange) THEN
+        IF (X(iY).GE.dynrange) THEN
            Utot(iL,iY) = X(iY)
         ELSE
            Utot(iL,iY) = 0.0D+00
@@ -638,15 +660,15 @@ SUBROUTINE MULTIPLY(type,np1,nr1,np2,nr2,mat,vec1,omat,flag,q1,q2)
         ! loop over dummy index (multiplication)
         DO idum = 1, nr1
            IF (type.EQ.1) THEN
-              aux = omat(1,i2)
-              !aux = omat(i2,idum) original
+              !aux = omat(nG+1,i2)
+              aux = omat(i2,idum) 
            ELSE
-              aux = 1.0D+00 - omat(1,i2) 
-              !aux = 1.0D+00 - omat(i2,idum) original
+              !aux = 1.0D+00 - omat(nG+1,i2) 
+              aux = 1.0D+00 - omat(i2,idum) 
            END IF
            q2(i2,i1) = q2(i2,i1) + mat(i2,i1,idum)*aux*vec1(i2,idum)
         END DO
-        IF (q2(i2,i1).LT.dynrange) q2(i2,i1) = 0.0D+00
+        IF (q2(i2,i1).LT.dynrange*dynrange) q2(i2,i1) = 0.0D+00
      END DO
   END DO
   !---------------------------------------------------------------------
@@ -732,40 +754,40 @@ END SUBROUTINE Converg2
 !***********************************************************************
 
 
-!***********************************************************************
-SUBROUTINE ChkBolom(nY,qbol,accur,dev,FbolOK)
-!=======================================================================
-!This subroutine checks if any element of qbol(i), i=1,nY differs for
-!more than accuracy from the median value fmed. If so FbolOK = 0,
-!otherwise FbolOK = 1. dev is maximal deviation from fmed. [ZI,'96;MN'00]
-!=======================================================================
-  use common
-  use interfaces
-  IMPLICIT none
-  !---parameter
-  integer nY,FbolOK
-  double precision :: accur,dev
-  DOUBLE PRECISION,allocatable ::  qBol(:) 
-  !---local
-  INTEGER iY
-  DOUBLE PRECISION fmax,AveDev,RMS
-  !-----------------------------------------------------------------------
-  FbolOK = 1
-  dev = 0.0D+00
-  ! loop over iY (radial coordinate)
-  if (slb) then
-     !CALL SLBmisc(qBol,fmax,fmed,AveDev,RMS,nY)
-     PRINT*, 'Matrix method not for slab case'
-  END IF
-  print*,'---!CALL SLBmisc(qBol,fmax,fmed,AveDev,RMS,nY)---'
-  DO iY = 1, nY
-     IF (abs(fmed-qBol(iY)).GT.accur) FbolOK = 0
-     IF (abs(fmed-qBol(iY)).GT.dev) dev = abs(fmed-qBol(iY))
-  END DO
-  !-----------------------------------------------------------------------
-  RETURN
-END SUBROUTINE ChkBolom
-!***********************************************************************
+!!$!***********************************************************************
+!!$SUBROUTINE ChkBolom(nY,qbol,accur,dev,FbolOK)
+!!$!=======================================================================
+!!$!This subroutine checks if any element of qbol(i), i=1,nY differs for
+!!$!more than accuracy from the median value fmed. If so FbolOK = 0,
+!!$!otherwise FbolOK = 1. dev is maximal deviation from fmed. [ZI,'96;MN'00]
+!!$!=======================================================================
+!!$  use common
+!!$  use interfaces
+!!$  IMPLICIT none
+!!$  !---parameter
+!!$  integer nY,FbolOK
+!!$  double precision :: accur,dev
+!!$  DOUBLE PRECISION,allocatable ::  qBol(:) 
+!!$  !---local
+!!$  INTEGER iY
+!!$  DOUBLE PRECISION fmax,AveDev,RMS
+!!$  !-----------------------------------------------------------------------
+!!$  FbolOK = 1
+!!$  dev = 0.0D+00
+!!$  ! loop over iY (radial coordinate)
+!!$  if (slb) then
+!!$     !CALL SLBmisc(qBol,fmax,fmed,AveDev,RMS,nY)
+!!$     PRINT*, 'Matrix method not for slab case'
+!!$  END IF
+!!$  print*,'---!CALL SLBmisc(qBol,fmax,fmed,AveDev,RMS,nY)---'
+!!$  DO iY = 1, nY
+!!$     IF (abs(fmed-qBol(iY)).GT.accur) FbolOK = 0
+!!$     IF (abs(fmed-qBol(iY)).GT.dev) dev = abs(fmed-qBol(iY))
+!!$  END DO
+!!$  !-----------------------------------------------------------------------
+!!$  RETURN
+!!$END SUBROUTINE ChkBolom
+!!$!***********************************************************************
 
 !***********************************************************************
 SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
@@ -1477,6 +1499,7 @@ DOUBLE PRECISION FUNCTION IntETA_matrix(p2,iW1,w1,w)
   !-----------------------------------------------------------------------
   RETURN
 END FUNCTION IntETA_matrix
+
 !***********************************************************************
 !!$
 !!$!***********************************************************************
@@ -1874,9 +1897,9 @@ END FUNCTION IntETA_matrix
 !!$  ! find radiative transfer matrices
 !!$  CALL Matrix(pGB,iPGB,mat0,mat1,Dummy1,Dummy2)
 !!$  ! solve for Utot
-!!$  CALL Invert(1,mat0,Us,Em,omega,Utot,error)
+!!$  CALL Invert(1,mat0,Us,Em,omat,Utot,error)
 !!$  ! calculate flux, ftot
-!!$  CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omega,1,fs,ftot)
+!!$  CALL Multiply(1,npY,nY,npL,nL,mat1,Utot,omat,1,fs,ftot)
 !!$  ! store to the output arrays
 !!$  DO iY = 1, nY
 !!$     Ugb(iY) = Utot(1,iY)

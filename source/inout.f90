@@ -18,7 +18,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
        nFiles,szds, EtaOK, startyp(2), &
        ang_type, imu, ioverflw
   double precision :: a,b,tau1,tau2,Lum,dist,RDINP,spec_scale, &
-       dilutn,Tstar(2),th1,th2,xC(10),xCuser(10),sum,qsd,a1,a2,&
+       dilutn,th1,th2,xC(10),xCuser(10),sum,qsd,a1,a2,&
        x1, ceta, Fi, Fo, psf1,Tinner_fidG
   double precision, allocatable ::aa(:),bb(:),xx(:),e(:) 
  
@@ -203,7 +203,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         endif
         if (typentry(1).eq.5) then
            ! enter dust temperature on inner boundary, T1[K]
-           Tinner = RDINP(Equal,1)
+           Tinner_fidG = RDINP(Equal,1)
            write(12,*) ' Dust temperature on the inner boundary:', Tinner,' K'
         end if
         write(12,'(a33)') ' Calculation in planar geometry:'
@@ -850,7 +850,6 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
      iV = 0
      write(12,*)' --------------------------------------------'
   end if
-
   ! ---- added printout of lam*J_lam/J for sphere [MN'10] ------------
   if(SPH) then
      iJ = RDINP(Equal,1)
@@ -1532,7 +1531,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   end do
   call Simpson(nL,1,nL,lambda,faux,FbolIL)
   do iL=1,nL
-     faux(iL) = fsR(iL,1)/lambda(iL)
+     faux(iL) = fsR(iL,nY)/lambda(iL)
   end do
   call Simpson(nL,1,nL,lambda,faux,FbolIR)
   FbolIL=FbolIL*Jext(1)
@@ -1636,12 +1635,12 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
    write(12,*)' --------'
    if (slb) then
 !    slab output
-      s1=' ###   Tau0   Psi/Psi0    FiL     FiR      FbolL   FbolR    r1(cm)   TdL(K)   TdR(K)   RPr(1)  e(%)'
-     su1=' ###     1       2         3       4         5       6        7         8        9      10     11'
+      s1=' ###    Tau0    Psi/Psi0     FiL      FiR       FbolL    FbolR     r1(cm)    TdL(K)    TdR(K)    RPr(1)   e(%)'
+     su1=' ###      1        2          3        4          5        6         7          8         9       10      11'
      write(12,'(a)') s1
      write(12,'(a)') su1
      write(12,'(a)') &
-         ' ==================================================================================================='
+         ' ============================================================================================================='
 !  output for sphere
    elseif(sph) then
       s1= ' ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1   T1(K)    Td(K)    RPr(1)  e(%)'
@@ -1673,7 +1672,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
 !!$! print output tables for ea.model
 !---------------- Output for slab: ---------------------------
   if(slb) then
-     write(12,'(i4,1p,10e9.2,a3)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
+     write(12,'(i4,1p,10e10.2,a3)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
 !---------- for spherical shell ------------------------------
   elseif(sph) then
      if ((denstyp.eq.3).or.(denstyp.eq.4).or.(denstyp.eq.6)) then ! 3(RDW) 4(RDWA) 6(RDWPR)

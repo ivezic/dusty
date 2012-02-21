@@ -64,15 +64,19 @@ Module common
   double precision,allocatable :: bOut(:)
   double precision,allocatable :: tauZout(:)
   double precision,allocatable :: fbol(:)
+  double precision,allocatable :: fpbol(:)
+  double precision,allocatable :: fmbol(:)
   double precision,allocatable :: ubol(:)
   double precision,allocatable :: qF(:)
   double precision,allocatable :: rg(:,:)
+  double precision,allocatable :: Intens(:,:)
   double precision :: SmC(30,99)
   double precision :: fmed
 
   character*4 :: version
   parameter (version='4.00')
   integer :: error,warning,iverb
+  double precision :: Tstar(2) ! needed to calculate intensities ???
   double precision, allocatable :: lambda(:)  ! lambda grid dusty
   double precision, allocatable :: shpL(:)    ! shape left side ilumination
   double precision, allocatable :: shpR(:)    ! shape right side ilumination

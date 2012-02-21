@@ -69,6 +69,7 @@
            optical properties index = tabulated
                     ism-noscatt.dat
 %       		     ISM-OHM.dat
+Tsub = 2000
      3) Optical Depth     
 
 %(available options: linear\logarithmic\user_supplied)
@@ -76,15 +77,13 @@
         - grid type = LOGARITHMIC                % log grid
         - lambda0 = 0.55 micron            % optical depth specified 
         - tau(min) = 1.0; tau(max) = 1000.0   % for the visual wavelength   
-        - number of models = 2
+        - number of models = 4
   ----------------------------------------------------------------------
                                                                         
  III. NUMERICS                                                           
       
      - accuracy for flux conservation = 0.1
-     - accuracy for Temperature fluctuation  = 1e-3
-     - starting optical depth = 1.00
-     - increment in optical depth = 2.0                                                                
+                       
   ----------------------------------------------------------------------
                                                                         
   IV. OUTPUT PARAMETERS                                                 
@@ -104,7 +103,7 @@
        ------------------------------------------------------------     
        - detailed spectra for each model;           fname.s### = 2   
        - images at specified wavelengths;           fname.i### = 0  
-       - radial profiles for each model;            fname.r### = 0   
+       - radial profiles for each model;            fname.r### = 2   
        - detailed run-time messages;                fname.m### = 2
        ------------------------------------------------------------- 
  
