@@ -49,7 +49,7 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
   fbolOK = 0
   itereta = 0
   EtaOK = 0
-  call SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol+1,itereta)
+  !call SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol+1,itereta+1)
   IF(sph) THEN
      ! Solve for spherical envelope:
      ! temporarily the star is approximated by a point source
@@ -81,7 +81,7 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
            END IF
            IF (iVerb.EQ.2) write(*,*) iterFbol,'. iteration over Fbol'
            ! solve the radiative transfer problem
-           Call RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,FbolOK,initial,deviat,&
+           Call RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,FbolOK,initial,deviat,&
                 iterFbol,iterEta,model,us,u_old,fs,T4_ext,emiss)
            IF (iVerb.EQ.2) write(*,*) 'Done with RadTransf'
            ! error.EQ.3 : file with stellar spectrum not available
@@ -222,7 +222,7 @@ END SUBROUTINE solve_matrix
 !***********************************************************************
 
 !***********************************************************************
-SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
+SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
      FbolOK,initial,deviat,iterFbol,iterEta,model,us,u_old,fs,T4_ext,emiss)
 !=======================================================================
 ! This subroutine solves the continuum radiative transfer problem for a
@@ -233,16 +233,16 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   IMPLICIT none
   !---parameter
   integer iPstar, FbolOK,iterFbol,iterEta,model,nY,nYprev,nP,nCav,nIns
-  double precision :: pstar,TAUlim,deviat
+  double precision :: pstar,TAUmax,deviat
   double precision,allocatable :: u_old(:,:),us(:,:), fs(:,:),T4_ext(:),emiss(:,:,:)
   logical initial
   !---local
   integer iaux,nPok,nYok, itlim, iter, conv, itnum, Fconv, Uconv, aconv, &
-       iY,iL,itmp1,itmp2
+       iY,iL
   double precision,allocatable :: mat0(:,:,:), mat1(:,:,:),&
-       mifront(:,:,:), miback(:,:,:), UbolChck(:), Uchck(:,:), fbolold(:),tmp(:,:)
-  double precision ::  BolConv, dmaxF, dmaxU, maxFerr
-  double precision, allocatable :: omat(:,:)
+       mifront(:,:,:), miback(:,:,:), UbolChck(:), Uchck(:,:), fbolold(:)
+  double precision ::  BolConv, dmaxF, dmaxU, maxFerr,wgth
+  double precision, allocatable :: omat(:,:),emiss_total(:,:)
  
 !!$  integer iPstar, nG, FbolOK, error, iterFbol, model, &
 !!$       BolConv, Conv, iaux, Fconv, iter,itnum, iY, itlim, uconv
@@ -260,16 +260,16 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
 
 !!$  allocate(T_old(nG,nY))
   allocate(omat(nL,npY))
+  allocate(emiss_total(nL,npY))
   allocate(UbolChck(npY))
   allocate(Uchck(nL,npY))
   allocate(fbolold(npY))
-  allocate(tmp(nL,npY))
   !------------------------------------------------------------------------
   ! generate, or improve, or do not touch the Y and P grids
   IF (iterETA.EQ.1.OR.iterFbol.GT.1) THEN
      IF (iterFbol.EQ.1) THEN
         ! first time generate grids
-        CALL SetGrids(pstar,iPstar,TAUlim,nY,nYprev,nP,nCav,nIns,initial,iterfbol,itereta)
+        CALL SetGrids(pstar,iPstar,TAUmax,nY,nYprev,nP,nCav,nIns,initial,iterfbol,itereta)
         IF (error.NE.0) then 
            print*,' stopping ... something wrong!!!'
            STOP
@@ -361,6 +361,14 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
  !!$     write(38,'(a8,i5)') '    nY= ',nY
  !!$     write(38,*) '    iter   maxFerr     dmaxU       dmaxF        T1         Fe1'
  !!$  END IF
+  if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
+     call find_Text(nY,T4_ext)
+  elseif (.not.initial.and.typentry(1).eq.5) then
+     call find_Text(nY,T4_ext)
+  end if
+  do iY = 1, nY
+     Jext(iY) = sigma/pi * T4_ext(iY)
+  end do
   ! === Iterations over dust temperature =========
   DO WHILE (Conv.EQ.0.AND.iter.LE.itlim)
      iter = iter + 1
@@ -368,12 +376,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
      ! because there is no alpha now, y^2 appears explicitly in
      ! Emission and we need the flag for geometry (1-for sphere).
      !CALL Emission_matrix(1,0,nG,Us,Em)
-     if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
-        call find_Text(nY,T4_ext)
-     elseif (.not.initial.and.typentry(1).eq.5) then
-        call find_Text(nY,T4_ext)
-     end if
-     call Emission(nY,T4_ext,emiss)
+     call Emission(nY,T4_ext,emiss,emiss_total)
      ! solve for Utot
      CALL Invert(nY,mat0,Us,Emiss,U_old,omat)
      IF(error.NE.0) goto 999
@@ -382,7 +385,9 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
      call Find_Temp(nY,T4_ext)
      ! --------------------------------------
      ! every itnum-th iteration check convergence:
-     IF (iter.GT.80) THEN
+     if (iter.gt.500) then
+        itnum = 30
+     else iF (iter.GT.80) THEN
         itnum = 10
      ELSE
         itnum = 6
@@ -390,43 +395,39 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
      ! first find 'old' flux (i.e. in the previous iteration)
      IF (MOD(iter+1,itnum).EQ.0) THEN
         CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omat,0,fs,fds)
-        do itmp1=1,nL
-           do itmp2=1,NY
-              tmp(itmp1,itmp2) = Emiss(1,itmp1,itmp2)
-           end do
-        end do
-        CALL Multiply(0,nY,nY,nL,nL,mat1,tmp,omat,0,fs,fde)
-        do itmp1=1,nL
-           do itmp2=1,NY
-              Emiss(1,itmp1,itmp2) = tmp(itmp1,itmp2)
-           end do
-        end do
+        CALL Multiply(0,nY,nY,nL,nL,mat1,emiss_total,omat,0,fs,fde)
         CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
         ! find bolometric flux
         CALL Bolom(ftot,fbolold,nY)
      END IF
      IF (MOD(iter,itnum).EQ.0) THEN
         ! first calculate total flux
-        do iY = 1, nY
-           Jext(iY) = sigma/pi * T4_ext(iY)
-        end do
         CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omat,0,fs,fds)
-        do itmp1=1,nL
-           do itmp2=1,nY
-              tmp(itmp1,itmp2) = Emiss(1,itmp1,itmp2)
+        CALL Multiply(0,nY,nY,nL,nL,mat1,emiss_total,omat,0,fs,fde)
+        !$OMP PARALLEL DO PRIVATE (wgth)
+        do iY=1,nY
+           fbol(iY) = 0.
+           do iL=1,nL
+              fds(iL,iY) = fds(iL,iY)*4*pi
+              fde(iL,iY) = fde(iL,iY)*4*pi
+              ftot(iL,iY) = fs(iL,iY)+fds(iL,iY) + fde(iL,iY)
+              ! begin simpson intgral
+              ! weigths
+              if (iL.ne.1.and.iL.ne.nL) then
+                 wgth = 0.5d0*(lambda(iL+1)-lambda(iL-1))
+              else
+                 if (iL.eq.1) wgth = 0.5d0*(lambda(1+1)-lambda(1))
+                 if (iL.eq.nL) wgth = 0.5d0*(lambda(nL)-lambda(nL-1))
+              end if
+              ! add contribution to the integral
+              fbol(iY) = fbol(iY) + ftot(iL,iY)/lambda(iL)*wgth
+              ! end simpson integral
            end do
         end do
-        CALL Multiply(0,nY,nY,nL,nL,mat1,tmp,omat,0,fs,fde)
-        do itmp1=1,nL
-           do itmp2=1,NY
-              Emiss(1,itmp1,itmp2) = tmp(itmp1,itmp2)
-              fds(itmp1,itmp2) = fds(itmp1,itmp2)*4*pi
-              fde(itmp1,itmp2) = fde(itmp1,itmp2)*4*pi
-           end do
-        end do
-        CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
+        !$OMP END PARALLEL DO
+        ! CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
         ! find bolometric flux
-        CALL Bolom(ftot,fbol,nY)
+        ! CALL Bolom(ftot,fbol,nY)
         ! check convergence of bolometric flux
         ! call Flux_Consv(nY,nYprev,Ncav,itereta,fbol,fbol,fbolOK,maxFerr)
         CALL Converg1(nY,fbolold,fbol,Fconv,dmaxF)
@@ -461,25 +462,34 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
      END IF
   END IF
   ! calculate the emission term for the converged Td
-  call Emission(nY,T4_ext,emiss)
+  call Emission(nY,T4_ext,emiss,emiss_total)
 !!$  CALL Emission_matrix(1,0,nG,Us,Em)
   ! calculate flux
   CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omat,0,fs,fds)
-  do itmp1=1,nL
-     do itmp2=1,NY
-        tmp(itmp1,itmp2) = Emiss(1,itmp1,itmp2)
+  CALL Multiply(0,nY,nY,nL,nL,mat1,emiss_total,omat,0,fs,fde)
+  !$OMP PARALLEL DO PRIVATE (wgth)
+  do iY=1,nY
+     fbol(iY) = 0.
+     do iL=1,nL
+        fds(iL,iY) = fds(iL,iY)*4*pi
+        fde(iL,iY) = fde(iL,iY)*4*pi
+        ftot(iL,iY) = fs(iL,iY)+fds(iL,iY) + fde(iL,iY)
+        ! begin simpson intgral
+        ! weigths
+        if (iL.ne.1.and.iL.ne.nL) then
+           wgth = 0.5d0*(lambda(iL+1)-lambda(iL-1))
+        else
+           if (iL.eq.1) wgth = 0.5d0*(lambda(1+1)-lambda(1))
+           if (iL.eq.nL) wgth = 0.5d0*(lambda(nL)-lambda(nL-1))
+        end if
+        ! add contribution to the integral
+        fbol(iY) = fbol(iY) + ftot(iL,iY)/lambda(iL)*wgth
+        ! end simpson integral
      end do
   end do
-  CALL Multiply(0,nY,nY,nL,nL,mat1,tmp,omat,0,fs,fde)
-  do itmp1=1,nL
-     do itmp2=1,NY
-        Emiss(1,itmp1,itmp2) = tmp(itmp1,itmp2)
-        fds(itmp1,itmp2) = fds(itmp1,itmp2)*4*pi
-        fde(itmp1,itmp2) = fde(itmp1,itmp2)*4*pi
-     end do
-  end do
-  CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
-  CALL Bolom(ftot,fbol,nY)
+  !$OMP END PARALLEL DO
+  !CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
+  ! CALL Bolom(ftot,fbol,nY)
   ! check whether, and how well, is bolometric flux conserved
   ! CALL ChkBolom(nY,fbol,accFlux,deviat,FbolOK)
   CALL FindErr(nY,fbol,maxFerr)
@@ -489,18 +499,12 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   ! calculate additional output quantities
   ! 1) energy densities
   CALL Multiply(1,nY,nY,nL,nL,mat0,Utot,omat,0,Us,Uds)
-  do itmp1=1,nL
-     do itmp2=1,NY
-        tmp(itmp1,itmp2) = Emiss(1,itmp1,itmp2)
-     end do
-  end do
-  CALL Multiply(0,nY,nY,nL,nL,mat0,tmp,omat,0,fs,fde)
-  do itmp1=1,nL
-     do itmp2=1,NY
-        Emiss(1,itmp1,itmp2) = tmp(itmp1,itmp2)
-        fde(itmp1,itmp2) = fde(itmp1,itmp2)*4*pi
-     end do
-  end do
+  !CALL Multiply(0,nY,nY,nL,nL,mat0,emiss_total,omat,0,fs,fde)
+  !do iL=1,nL
+  !   do iY=1,nY
+  !      fde(iL,iY) = fde(iL,iY)*4*pi
+  !   end do
+  !end do
   CALL Add(nY,nY,nL,nL,Us,Uds,Ude,Uchck)
   CALL Bolom(Utot,Ubol,nY)
   CALL Bolom(Uchck,UbolChck,nY)
@@ -547,8 +551,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
 !!$     IF (iVerb.GE.1) write(*,*) 'No disk option in this version'
 !!$  END IF
 !!$  !---------------------------------------------------------------------
-999 deallocate(tmp)
-  deallocate(mat0)
+999 deallocate(mat0)
   deallocate(mat1)
   deallocate(mifront)
   deallocate(miback)
@@ -556,6 +559,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUlim,&
   deallocate(Uchck)
   deallocate(fbolold)
   deallocate(omat)
+  deallocate(emiss_total)
   RETURN
 END SUBROUTINE RADTRANSF_matrix
 !***********************************************************************
@@ -584,16 +588,18 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold,omat)
   allocate(X(nY))
   error = 0
   ! first copy Utot to Uold
-  DO iL = 1, nL
-     DO iY = 1, nY
-        Uold(iL,iY) = Utot(iL,iY)
-     END DO
-  END DO
+  !  DO iL = 1, nL
+  !     DO iY = 1, nY
+  !        Uold(iL,iY) = Utot(iL,iY)
+  !     END DO
+  !  END DO
   ! calculate new energy density
   ! loop over wavelengths
+  !$OMP PARALLEL DO PRIVATE(iL,Kronecker,iY,iYaux,iG,B,A,X) 
   DO iL = 1, nL
      ! generate the vector of free coefficients, B, and matrix A
      DO iY = 1, nY
+        Uold(iL,iY) = Utot(iL,iY)
         B(iY) = Us(iL,iY)
         DO iYaux = 1, nY
            Kronecker = 0
@@ -611,7 +617,7 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold,omat)
         CALL MSG(20)
         print*, 'MSG(20)'
         stop
-        RETURN
+        !RETURN
      END IF
      ! store the result
      DO iY = 1, nY
@@ -622,6 +628,7 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold,omat)
         END IF
      END DO
   END DO
+  !$OMP END PARALLEL DO
   !-----------------------------------------------------------------------
   deallocate(B)
   deallocate(A)
@@ -653,6 +660,7 @@ SUBROUTINE MULTIPLY(type,np1,nr1,np2,nr2,mat,vec1,omat,flag,q1,q2)
   DOUBLE PRECISION aux
   !-----------------------------------------------------------------------
   ! loop over index 2
+  !$OMP PARALLEL DO PRIVATE(i1,idum,aux)
   DO i2 = 1, nr2
      ! loop over index 1
      DO i1 = 1, nr1
@@ -671,6 +679,7 @@ SUBROUTINE MULTIPLY(type,np1,nr1,np2,nr2,mat,vec1,omat,flag,q1,q2)
         IF (q2(i2,i1).LT.dynrange*dynrange) q2(i2,i1) = 0.0D+00
      END DO
   END DO
+  !$OMP END PARALLEL DO
   !---------------------------------------------------------------------
   RETURN
 END SUBROUTINE MULTIPLY
@@ -859,6 +868,9 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
   END DO
   ! -- evaluate matrix elements --
   ! loop over wavelengths
+  !$OMP PARALLEL DO FIRSTPRIVATE(alpha,beta,gamma2,delta,nZ) &
+  !$OMP PRIVATE(iL,iY,iP,iZ,jZ,TAUr,Tplus,Tminus,wgmatp,wgmatm) &
+  !$OMP PRIVATE(wmT,fact,wp,wm,addplus,addminus,im,m,xN,yN,faux,resaux,flag,result1,result2)
   DO iL = 1, nL
      ! radial optical depths
      DO iY = 1, nY
@@ -961,13 +973,13 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
               ! angular integration inside cavity
               IF (pstar.GT.0.0D+00) THEN
                  CALL NORDLUND(nY,nP,0,xN,yN,1,iPstar,m,resaux)
-                 IF (error.NE.0) GOTO 999
+                 !IF (error.NE.0) GOTO 999
                  IF (nPcav.GT.iPstar) CALL NORDLUND(nY,nP,0,xN,yN,iPstar+1,nPcav+1,m,result1)
-                 IF (error.NE.0) GOTO 999
+                 !IF (error.NE.0) GOTO 999
                  result1 = result1 + resaux
               ELSE
                  CALL NORDLUND(nY,nP,0,xN,yN,1,nPcav+1,m,result1)
-                 IF (error.NE.0) GOTO 999
+                 !IF (error.NE.0) GOTO 999
               END IF
               ! flag for analytic integration outside cavity
               IF (iY.GT.6) THEN
@@ -978,7 +990,7 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
               ! angular integration outside cavity
               IF (iY.GT.1) THEN
                  CALL NORDLUND(nY,nP,flag,xN,yN,nPcav+1,Plast(iY),m,result2)
-                 IF (error.NE.0) GOTO 999
+                 !IF (error.NE.0) GOTO 999
               ELSE
                  result2 = 0.0D+00
               END IF
@@ -993,6 +1005,7 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
      ! =============================
      ! end of loop over wavelengths
   END DO
+  !$OMP END PARALLEL DO 
   ! save Y and P grids to Yok and Pok, they are needed for analysis
   ! in cases when requirement for finer grids cannot be satisfied and
   ! previous solution is used for output
@@ -1224,7 +1237,7 @@ SUBROUTINE Kint4(TAUaux,iP,iL,nZ,K1p,K2p,K3p,K4p,K1m,K2m,K3m,K4m)
   use interfaces
   IMPLICIT none
   !---parameter
-  INTEGER iP, iL, nZ
+  INTEGER iP, iL, nZ,iic
   DOUBLE PRECISION,allocatable :: TAUaux(:,:,:), K1p(:),K2p(:),K3p(:),&
        K4p(:), K1m(:), K2m(:), K3m(:), K4m(:)
   !---local
@@ -1258,17 +1271,17 @@ SUBROUTINE Kint4(TAUaux,iP,iL,nZ,K1p,K2p,K3p,K4p,K1m,K2m,K3m,K4m)
      tRL = TAUaux(iL,1,iW1+1)-TAUaux(iL,1,iW1)
      ! auxiliary quantity aux/tRL**(n-1)
      deltrton(1) = TAUtot(iL)
-     DO ic= 1, 3
-        deltrton(iC+1) = deltrton(iC)/tRL
+     DO iic= 1, 3
+        deltrton(iiC+1) = deltrton(iiC)/tRL
      END DO
      ! delTAUzp is needed in PHIn fun's
      delTAUzp = TAUaux(iL,iP,iZ+1)-TAUaux(iL,iP,iZ)
      ! integrate this step for all 8 cases
      CALL ROMBERG2(z1,z2,Rresult,w1,wl,iW1,iLaux,delTAUzp,paux)
      ! generate output values
-     DO ic= 1, 4
-        Kaux(iC) = Rresult(iC) * deltrton(iC)
-        Kaux(iC+4) = Rresult(iC+4) * deltrton(iC)
+     DO iic= 1, 4
+        Kaux(iiC) = Rresult(iiC) * deltrton(iiC)
+        Kaux(iiC+4) = Rresult(iiC+4) * deltrton(iiC)
      END DO
      K1m(iZ) = Kaux(1)
      K2m(iZ) = Kaux(2)
@@ -1307,7 +1320,7 @@ SUBROUTINE ROMBERG2(a,b,ss8,w1,wl,iW1,iLaux,delTAUzp,paux)
   use common
   use interfaces
   IMPLICIT NONE
-  INTEGER fconv(8),JMAX,JMAXP,K,KM, J, idone, kaux, iW1,iLaux
+  INTEGER fconv(8),JMAX,JMAXP,K,KM, J, idone, kaux, iW1,iLaux,iic
   PARAMETER (JMAX=50, JMAXP=JMAX+1, K=5, KM=K-1)
   DOUBLE PRECISION ss, ss8(8), S2D(8,JMAXP), h(JMAXP), sjKM(JMAXP),&
        a, b, h0, EPS_romb, dss, s8(8), chk(8), w1,wl,delTAUzp,paux
@@ -1316,8 +1329,8 @@ SUBROUTINE ROMBERG2(a,b,ss8,w1,wl,iW1,iLaux,delTAUzp,paux)
   h0 = 0.0D+00
   h(1)=1.0D+00
   ! intialize convergence flags
-  DO ic = 1, 8
-     fconv(iC) = 0
+  DO iic = 1, 8
+     fconv(iiC) = 0
   END DO
   ! integrate until all 8 intergrals converge
   idone = 0
@@ -1326,28 +1339,28 @@ SUBROUTINE ROMBERG2(a,b,ss8,w1,wl,iW1,iLaux,delTAUzp,paux)
      j = j + 1
      ! integrate with j division points
      call trapzd2(a,b,s8,j,w1,wl,iW1,iLaux,delTAUzp,paux)
-     DO ic = 1, 8
-        S2D(iC,j) = S8(iC)
+     DO iic = 1, 8
+        S2D(iiC,j) = S8(iiC)
      END DO
      ! check if any of 8 integrals has converged
      IF (j.ge.K) THEN
         idone = 1
-        DO ic = 1, 8
-           IF (fconv(iC).EQ.0) THEN
+        DO iic = 1, 8
+           IF (fconv(iiC).EQ.0) THEN
               ! generate array for polint
               DO kaux = 1, j
-                 sjKM(kaux) = S2D(iC,kaux)
+                 sjKM(kaux) = S2D(iiC,kaux)
               END DO
               ! predict the integral for stepsize h->h0=0.0
               CALL polint(h(j-KM),sjKM(j-KM),K,h0,ss,dss)
               IF (dabs(dss).le.EPS_romb*dabs(ss)) THEN
-                 SS8(iC) = ss
-                 fconv(iC) = 1
+                 SS8(iiC) = ss
+                 fconv(iiC) = 1
               ELSE
-                 chk(iC) = dabs(dss)/dabs(ss)
+                 chk(iiC) = dabs(dss)/dabs(ss)
               END IF
            END IF
-           idone = idone*fconv(iC)
+           idone = idone*fconv(iiC)
         END DO
      END IF
      h(j+1)=0.25D+00*h(j)
@@ -1439,6 +1452,7 @@ SUBROUTINE TWOFUN(z,ff,gp,gm,w1,wl,iW1,iLaux,delTAUzp,paux)
   use common
   use interfaces
   implicit none
+  integer iic
   DOUBLE PRECISION w,w1,wl,paux,z,auxw,delTAUzp,etaloc,ff,gm,gm1,gp,gp1,pp,&
        IntETA_matrix
   INTEGER iLaux,iW1
@@ -1450,8 +1464,8 @@ SUBROUTINE TWOFUN(z,ff,gp,gm,w1,wl,iW1,iLaux,delTAUzp,paux)
   ! find local value for ETA function
   etaloc= 0.0D+00
   auxw = 1.
-  DO iC= 1, 4
-     etaloc= etaloc+ ETAcoef(iW1,iC)*auxw
+  DO iiC= 1, 4
+     etaloc= etaloc+ ETAcoef(iW1,iiC)*auxw
      auxw = auxw/w
   END DO
   ! ff, i.e. radial optical depth:
@@ -1480,7 +1494,7 @@ DOUBLE PRECISION FUNCTION IntETA_matrix(p2,iW1,w1,w)
   use common
   use interfaces
   IMPLICIT none
-  INTEGER iW1
+  INTEGER iW1,iic
   DOUBLE PRECISION  p2, w1, w, aux(4), z, z1, aux1(4)
   !-----------------------------------------------------------------------
 
@@ -1489,12 +1503,12 @@ DOUBLE PRECISION FUNCTION IntETA_matrix(p2,iW1,w1,w)
   !    integrals calculated by MAPLE
   CALL Maple3(w,z,p2,aux)
   CALL Maple3(w1,z1,p2,aux1)
-  DO iC = 1, 4
-     aux(iC) = aux(iC) - aux1(iC)
+  DO iiC = 1, 4
+     aux(iiC) = aux(iiC) - aux1(iiC)
   END DO
   IntETA_matrix = 0.0D+00
-  DO iC = 1, 4
-     IntETA_matrix = IntETA_matrix + ETAcoef(iW1,iC) * aux(iC)
+  DO iiC = 1, 4
+     IntETA_matrix = IntETA_matrix + ETAcoef(iW1,iiC) * aux(iiC)
   END DO
   !-----------------------------------------------------------------------
   RETURN

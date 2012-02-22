@@ -36,9 +36,9 @@ subroutine Kernel(path,lpath,tau,Nmodel)
      call OPPEN(model,path,lpath)
      if (iVerb.eq.2) write(*,*) ' going to Solve '
      ! solve radiative transfer for this particular optical depth
-     call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     !call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! old dustys way
-     !CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! if flux is conserved, the solution is obtained. So write out the values
      ! to output files for specified models
      if (fbolOK.eq.1) then
@@ -440,7 +440,23 @@ subroutine SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol,
         call Pgrid(pstar,iPstar,nY,nP,nCav,nIns)
      else
         ! redefine p and z grid for the new y-grid
-	call Pgrid(pstar,iPstar,nY,nP,nCav,nIns)
+        IF ((TAUmax.GT.10000.0)) THEN
+           ! extreme taus
+           Ncav = nY*3
+        ELSE IF ((TAUmax.GT.2000.0)) THEN
+           ! huge taus
+           Ncav = nY*2
+        ELSE IF ((TAUmax.GT.400.0)) THEN
+           ! large taus
+           Ncav = nY
+        ELSE
+           Ncav = (nY*2)/3
+        END IF
+        ! limit Ncav
+        if (Ncav.gt.200) Ncav = 200
+        print*,taumax,ncav,nY
+        IF (iX.NE.0) write(18,'(a20,i3)')' Ncav increased to:',Ncav
+        call Pgrid(pstar,iPstar,nY,nP,nCav,nIns)
      end if
   elseif (slb) then
      if (initial.and.iterfbol.eq.1) then
@@ -732,7 +748,6 @@ subroutine Pgrid(pstar,iPstar,nY,nP,nCav,nIns)
   error  = 0
   ! Ncav = # rays in cavitiy
   ! Ncav = 30
-  Ncav = (nY*2)/3
   p(1) = 0.0d0
   Naux = 1
   iYfirst(Naux) = 1
@@ -771,6 +786,8 @@ subroutine Pgrid(pstar,iPstar,nY,nP,nCav,nIns)
      else
         Nins = 10
      end if
+     ! in old dusty nins is allways 2
+     Nins = 2
      k = Nins
      Plast(i) = iP + 1
      delP = (Y(i+1) - Y(i))/dble(k)
@@ -1069,7 +1086,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   double precision pstar
   double precision,allocatable :: us(:,:), fs(:,:)
   double precision,allocatable :: T4_ext(:)
-  double precision,allocatable :: emiss(:,:,:)
+  double precision,allocatable :: emiss(:,:,:),emiss_total(:,:)
   !---- local variable
   integer :: itlim,conv,iter,iG,iL,iY,iY1, moment
   double precision aux1,maxerrT
@@ -1083,6 +1100,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
 !!$  double precision, dimension(:), allocatable:: xg, wg
   external eta
 
+  allocate(emiss_total(nL,npY))
   !------------------------------------------------------------------------
   error = 0
   if(sph) then
@@ -1134,7 +1152,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
         call find_Text(nY,T4_ext)
      end if
      ! find emission term
-     call Emission(nY,T4_ext,emiss)
+     call Emission(nY,T4_ext,emiss,emiss_total)
      ! moment = 1 is for finding total energy density only
      moment = 1
      call Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
@@ -1178,7 +1196,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
      Jext(iY) = sigma/pi * T4_ext(iY)
   end do
   ! calculate the emission term using the converged Td
-  call Emission(nY,T4_ext,emiss)
+  call Emission(nY,T4_ext,emiss,emiss_total)
   ! calculate total energy density and diffuse flux using the converged Td
   moment = 2
   call Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
@@ -1227,7 +1245,8 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
 !!$        END DO
 !!$      END DO
 !!$   END IF
-999 return
+999 deallocate(emiss_total)
+  return
 end subroutine Rad_Transf
 !***********************************************************************
 
@@ -1705,7 +1724,7 @@ end subroutine SPH_ext_illum
 !***********************************************************************
 
 !***********************************************************************
-subroutine Emission(nY,T4_ext,emiss)
+subroutine Emission(nY,T4_ext,emiss,emiss_total)
 !=======================================================================
 ! This subroutine calculates emission term from the temperature and abund
 ! arrays for flag=0, and adds U to it for flag=1.
@@ -1717,7 +1736,7 @@ subroutine Emission(nY,T4_ext,emiss)
   ! ---- parameter
   integer nY
   double precision, allocatable :: T4_ext(:)
-  double precision, allocatable :: emiss(:,:,:)
+  double precision, allocatable :: emiss(:,:,:),emiss_total(:,:)
   ! ---- local variable 
   integer iG, iY, iL
   double precision  emig, tt, xP,Planck
@@ -1727,10 +1746,12 @@ subroutine Emission(nY,T4_ext,emiss)
   emiss = 0.0d0
   ! calculate emission term for each component and add it to emiss
   ! loop over wavelengths
+  !$OMP PARALLEL DO PRIVATE(xp,tt,emig)
   do iL = 1, nL
      ! loop over radial coordinate
      do iY = 1, nY
         ! loop over grains
+        emiss_total(iL,iY) = 0.
         do iG = 1, nG
            xP = 14400.0d0/(lambda(iL)*Td(iG,iY))
            tt = (Td(iG,iY)**4.0d0) / T4_ext(iY)
@@ -1739,9 +1760,11 @@ subroutine Emission(nY,T4_ext,emiss)
            ! add contribution for current grains
            emiss(iG,iL,iY) = emig
            if (emiss(iG,iL,iY).lt.dynrange) emiss(iG,iL,iY) = 0.0d0
+           emiss_total(iL,iY)  = emiss(iG,iL,iY)
         end do
      end do
   end do
+  !$OMP END PARALLEL DO
   ! --------------------------------------------------------------------
   return
 end subroutine Emission
@@ -1870,29 +1893,44 @@ subroutine Find_Temp(nY,T4_ext)
   double precision, allocatable :: T4_ext(:)
   !--- local variables
   integer iG, iY, iL
-  double precision  xP,Planck, qpt1,qu1, gg, fnum1
+  double precision  xP,Planck, qpt1,qu1, gg, fnum1,wgth
   double precision, allocatable :: fnum(:),ff(:)
   external Planck
   !---------------------------------------------------------------------
-  allocate(fnum(nL))
-  allocate(ff(nL))
+  allocate(fnum(nG))
+  allocate(ff(nG))
   ! if T1 given in input:
   if(typentry(1).eq.5) call find_Text(nY,T4_ext)
   ! loop over grains
+  !$OMP PARALLEL DO PRIVATE(iY,iL,iG,xP)
   do iG = 1, nG
      ! loop over radial positions (solving f1-f2*g(t)=0)
      do iY = 1, nY
         ! calculate f1 and f2
+        fnum1 = 0.
+        gg = 0.
         do iL = 1, nL
-           fnum(iL) = sigmaA(iG,iL)*utot(iL,iY)/lambda(iL)
+           fnum(iG) = sigmaA(iG,iL)*utot(iL,iY)/lambda(iL)
            xP = 14400.0d0/lambda(iL)/Td(iG,iY)
-           ff(iL) = sigmaA(iG,iL)*Planck(xP)/ lambda(iL)
+           ff(iG) = sigmaA(iG,iL)*Planck(xP)/ lambda(iL)
+           !begin simpson
+           if (iL.ne.1.and.iL.ne.nL) then
+              wgth = 0.5d0*(lambda(iL+1)-lambda(iL-1))
+           else
+              if (iL.eq.1) wgth = 0.5d0*(lambda(1+1)-lambda(1))
+              if (iL.eq.nL) wgth = 0.5d0*(lambda(nL)-lambda(nL-1))
+           end if
+           ! add contribution to the integral
+           fnum1 = fnum1 + fnum(iG)*wgth
+           gg = gg + ff(iG)*wgth
+           !end simpson
         end do
-        call Simpson(nL,1,nL,lambda,fnum,fnum1)
-        call Simpson(nL,1,nL,lambda,ff,gg)
+!        call Simpson(nL,1,nL,lambda,fnum,fnum1)
+!        call Simpson(nL,1,nL,lambda,ff,gg)
         Td(iG,iY) = (fnum1*T4_ext(iY)/gg)**(1.0d0/4.0d0)
      end do
   end do
+  !$OMP END PARALLEL DO
   !---------------------------------------------------------------------
   deallocate(fnum)
   deallocate(ff)
@@ -3115,8 +3153,6 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta, flux1,flux2,fbolOK,maxrat)
   ! new size of the y grid
   nY = nY + kins
   ! intepolate etadiscr to new y grid for denstyp = 5 or 6
-  if (allocated(etadiscr)) deallocate(etadiscr)
-  allocate(etadiscr(nY))
   if(sph) then
      do iY = 1, nY
         Yloc = Y(iY)
