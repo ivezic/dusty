@@ -73,7 +73,7 @@
 
         - density type = POWD
         - number of powers = 1                
-        - shell's relative thickness = 1000 
+        - shell's relative thickness = 100.
         - power = 0.
         
         
@@ -84,8 +84,8 @@
    
         - grid type = logarithmic                    % log grid
         - lambda0 = 1.0 micron            % optical depth specified 
-        - tau(min) = 1.0; tau(max) = 1000.0   % for the visual wavelength   
-        - number of models = 4
+        - tau(min) = 1000.0; tau(max) = 1000.0   % for the visual wavelength   
+        - number of models = 1
   ----------------------------------------------------------------------
                                                                         
   III. NUMERICS                                                           

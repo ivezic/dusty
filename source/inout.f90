@@ -687,7 +687,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   ! accuracy for convergence (typical 0.0001)
   ! accuracy for flux conservation
   accFlux = RDINP(Equal,1)
-  accTemp = ((1.+accFlux)**(1./4.)-1.)*1e-2
+  accTemp = ((1.+accFlux)**(1./4.)-1.)*1e-1
   if ((accFlux.le.0.0d0).or.(accFlux.gt.0.75)) then 
      print*,' Problem with specified Flux accuracy !!!'
      stop

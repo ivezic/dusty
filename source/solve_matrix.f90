@@ -2203,6 +2203,7 @@ SUBROUTINE FindErr(nY,flux,maxFerr)
      IF (dabs(aux).LE.accFbol) aux = accFbol
      IF(aux.LT.fmin) fmin = aux
      IF(aux.GT.fmax) fmax = aux
+     !print*,iY,(fmax - dabs(fmin))/(fmax + dabs(fmin))
   END DO
   if (fmax.LE.0.) then
      ! bad solution; overall flux cannot be negative

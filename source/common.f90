@@ -12,7 +12,7 @@ Module common
   integer NREC
   PARAMETER (NREC = 1000)
   double precision :: dynrange          ! dynamical range (1d-20 .. 1d20)
-  PARAMETER (dynrange = 1.d-20)
+  PARAMETER (dynrange = 1.d-30)
   double precision :: accRomb
   PARAMETER (accRomb = 1e-4)
   integer nOutput                       ! number of output columns

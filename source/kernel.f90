@@ -36,9 +36,9 @@ subroutine Kernel(path,lpath,tau,Nmodel)
      call OPPEN(model,path,lpath)
      if (iVerb.eq.2) write(*,*) ' going to Solve '
      ! solve radiative transfer for this particular optical depth
-     !call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! old dustys way
-     CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     !CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! if flux is conserved, the solution is obtained. So write out the values
      ! to output files for specified models
      if (fbolOK.eq.1) then
@@ -247,7 +247,10 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterf
      call BOLOM(fds,fDsbol,nY)
      DO iY = 1, nY
         fbol(iY) = fDebol(iY)+fDsbol(iY)+fsbol(iY)
+        !print*,Y(iY),fDebol(iY),fDsbol(iY),fsbol(iY),Td(1,iY),T4_ext(iY)
+        write(7777,*) Y(iY),fDebol(iY),fDsbol(iY),fsbol(iY),Td(1,iY)
      END DO
+     close(7777)
      call Finderr(nY,fbol,maxFerr)
      if(iVerb.eq.2) write(*,'(A,F10.3,A)') '  Achieved error in bolometric Flux:',maxFerr*100,'%'
 !!$     IF(iInn.eq.1) THEN
@@ -1138,13 +1141,14 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
      call Init_Temp(nY,T4_ext,us)
      if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
   end if
-  itlim = 50000
-!  itlim = 500
+!  itlim = 50000
+  itlim = 200
   conv = 0
   iter = 0
   !=== iterations over dust temperature =========
   do while (conv.eq.0.and.iter.le.itlim)
      iter = iter + 1
+     !print*,iter
      ! find T_external for the new y-grid if T(1) given in input
      if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
         call find_Text(nY,T4_ext)
@@ -1396,9 +1400,9 @@ subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
               expow = ETAzp(1,iY)*TAUtot(iL)
               if(expow.lt.50.0d0) then
                  ! en. denisity
-                 usL(iL,iY) = shpL(iL)*zeta*exp(-expow)
+                 usL(iL,iY) = shpL(iL)*zeta*exp(-expow)*(Y(iY)**2)
                  ! flux
-                 fsL(iL,iY) = 4.0d0*pi*shpL(iL)*exp(-expow)
+                 fsL(iL,iY) = 4.0d0*pi*shpL(iL)*exp(-expow)*(Y(iY)**2)
               else
                  usL(iL,iY) = 0.0d0
                  fsL(iL,iY) = 0.0d0
@@ -1723,6 +1727,7 @@ subroutine SPH_ext_illum(m0,m1,m1p,m1m,nY,nP)
 end subroutine SPH_ext_illum
 !***********************************************************************
 
+
 !***********************************************************************
 subroutine Emission(nY,T4_ext,emiss,emiss_total)
 !=======================================================================
@@ -1746,7 +1751,7 @@ subroutine Emission(nY,T4_ext,emiss,emiss_total)
   emiss = 0.0d0
   ! calculate emission term for each component and add it to emiss
   ! loop over wavelengths
-  !$OMP PARALLEL DO PRIVATE(xp,tt,emig)
+!!!  !$OMP PARALLEL DO PRIVATE(xp,tt,emig) <--- emiss total wrong!
   do iL = 1, nL
      ! loop over radial coordinate
      do iY = 1, nY
@@ -1764,7 +1769,7 @@ subroutine Emission(nY,T4_ext,emiss,emiss_total)
         end do
      end do
   end do
-  !$OMP END PARALLEL DO
+!!!  !$OMP END PARALLEL DO
   ! --------------------------------------------------------------------
   return
 end subroutine Emission
@@ -1927,6 +1932,7 @@ subroutine Find_Temp(nY,T4_ext)
         end do
 !        call Simpson(nL,1,nL,lambda,fnum,fnum1)
 !        call Simpson(nL,1,nL,lambda,ff,gg)
+        if (ISNAN(Td(iG,iY))) print*,'Td NAN',fnum1,T4_ext(iY),gg
         Td(iG,iY) = (fnum1*T4_ext(iY)/gg)**(1.0d0/4.0d0)
      end do
   end do
@@ -2039,7 +2045,6 @@ subroutine SPH_diff_old(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emis
   Iplus1 = 0.0d0
   Iplus2 = 0.0d0
   Iminus = 0.0d0
-  print*,'! extreme inefficient parallelization need to be changed !!!!!!'
   !!** for each radial grid point calculate the integrals from Sec.4.1 in Blueprint:
   do iY = 1, nY
      do iP = 1, Plast(iY)
@@ -2131,7 +2136,6 @@ subroutine SPH_diff_old(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emis
            Iminus(iP,iL) = abs(res1)
         end do ! end loop over wavelengths
         !$OMP END PARALLEL DO
-
      end do ! end loop over impact parameters P=1..Plast(iY)
      !  Find diffuse energy density (U)
      if (moment_loc.eq.1) then
@@ -2237,17 +2241,22 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
   ! --- local variables 
   integer iP,iL,iZ,iZz,nZ,iY,iYy, iNloc,flagN,iG,thread_id,iaux,iiaux
   double precision,allocatable ::  Iplus1(:,:),Iplus2(:,:), Iminus(:,:),&
-       S_fun(:,:), xN(:), yN(:),diff(:,:)
-  double precision result1, result2, res1, frac, S_loc, p_loc, expow1, wgth, &
-       daux1,daux2,int1,int2,int3
+       S_fun(:),S_fun_log(:),P2(:), xN(:), yN(:),diff(:)
+  double precision result1, result2, res1, frac, S_loc, S_loc_lin, p_loc, expow1, wgth, &
+       daux1,daux2,int1,int2,int3,P2at1,P2atN,tmp,eta,f_a,f_b,wgth1
+  REAL*8 CUBIC_SPLINT
+  logical log_spline,lin_spline
+  external eta
   !-----------------------------------------------------------------------
   allocate(Iplus1(nP,nL))
   allocate(Iplus2(nP,nL))
   allocate(Iminus(nP,nL))       
-  allocate(S_fun(nY,max_threads)) 
-  allocate(diff(nY,max_threads)) 
+  allocate(S_fun(nY)) 
+  allocate(S_fun_log(nY)) 
+  allocate(diff(nY)) 
   allocate(xN(nP))
   allocate(yN(nP))
+  allocate(P2(nY))
   Iplus1 = 0.0d0
   Iplus2 = 0.0d0
   Iminus = 0.0d0
@@ -2257,32 +2266,52 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
         iZz  = iY + 1 - iYfirst(iP)  !this is for z in eq.(4.1.5)
         ! upper limit for the counter of z position
         nZ  = nY + 1 - iYfirst(iP)   !nZ is index for zmax=sqrt(Y**2-p**2) [MN]
-        !$OMP PARALLEL DO FIRSTPRIVATE(thread_id,frac,iYy,p_loc,S_loc,iNloc,expow1,res1,iZz,nZ) &
-        !$OMP PRIVATE(int1,int2,int3,wgth,daux1,daux2,iaux,iiaux,iZ,iL)
+        !$OMP PARALLEL DO FIRSTPRIVATE(thread_id,frac,iYy,p_loc,S_loc,S_loc_lin,iNloc,expow1,res1,iP,iZz,nZ) &
+        !$OMP PRIVATE(int1,int2,int3,wgth,daux1,daux2,iaux,iiaux,iZ,iL,S_fun,S_fun_log,P2,P2at1,P2atN,log_spline,diff)
         do iL = 1, nL
            thread_id = omp_get_thread_num()+1
+           !log_spline = .true.
+           log_spline = .false.
+           !lin_spline = .true.
+           lin_spline = .false.
            do iYy = 1, nY
-              S_fun(iYy,thread_id) = 0
+              S_fun(iYy) = 0
               do iG =1, nG
                  frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
                  if (flag1.eq.1) then
                     ! find the diffuse emission term, vec1=em
-                    S_fun(iYy,thread_id) = S_fun(iYy,thread_id) + frac*(1.0d0-omega(iG,iL))*emiss(iG,iL,iYy)*T4_ext(iYy)
+                    S_fun(iYy) = S_fun(iYy) + frac*(1.0d0-omega(iG,iL))*emiss(iG,iL,iYy)*T4_ext(iYy)
                  elseif (flag1.eq.2) then
                     ! find the scattering term, vec1=Us initially, or Utot afterwards
                     if (initial.and.iter.eq.1.and.iterfbol.eq.1) then
-                       S_fun(iYy,thread_id) = S_fun(iYy,thread_id) + frac*omega(iG,iL)*us(iL,iYy)*T4_ext(iYy)
+                       S_fun(iYy) = S_fun(iYy) + frac*omega(iG,iL)*us(iL,iYy)*T4_ext(iYy)
                     else
-                       S_fun(iYy,thread_id) = S_fun(iYy,thread_id) + frac*omega(ig,iL)*utot(iL,iYy)*T4_ext(iYy)
+                       S_fun(iYy) = S_fun(iYy) + frac*omega(ig,iL)*utot(iL,iYy)*T4_ext(iYy)
                     end if
+                 end if
+                 if (S_fun(iYy).le.0.0) then 
+                    log_spline=.false. 
+                 else
+                    S_fun_log(iYy) = log(S_fun(iYy))
                  end if
               end do
            end do ! end do over dummy iYy
+           !print*,maxval(S_fun)/minval(S_fun)
+           if (log_spline) then 
+              P2at1 = (S_fun_log(2)-S_fun_log(1))/(Y(2)-Y(1))
+              P2atN = (S_fun_log(nY)-S_fun_log(nY-1))/(Y(nY)-Y(nY-1))
+              CALL SPLINE(Y,S_fun_log,nY,P2at1,P2atN,P2)
+           end if
+           if (lin_spline) then 
+              P2at1 = (S_fun(2)-S_fun(1))/(Y(2)-Y(1))
+              P2atN = (S_fun(nY)-S_fun(nY-1))/(Y(nY)-Y(nY-1))
+              CALL SPLINE(Y,S_fun,nY,P2at1,P2atN,P2)
+           end if
            if (P(iP).le.1.0d0) then
               ! inside the cavity
               do iZ = 1, nZ
                  iYy = iYfirst(iP) + iZ - 1
-                 diff(iZ,thread_id) = S_fun(iYy,thread_id)
+                 diff(iZ) = S_fun(iYy)
               end do
            else
               ! in the shell
@@ -2290,36 +2319,35 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
                  iYy = iYfirst(iP) + iZ - 1
                  if(iZ.eq.1.and.P(iP).gt.Y(iYy).and.P(iP).lt.Y(iYy+1)) then
                     p_loc = P(iP)
-                    ! call LININTER(nY,nY,Y,aux,p_loc,iNloc,S_loc)
-                    ! LININTER(nn,n,x,y,xloc,iNloc,Yloc)
-                    if (nY.gt.1) then
-                       if ((Y(1)-p_loc)*(Y(nY)-p_loc).le.0.0d0) then
-                          iaux = 0
-                          iiaux = 1
-                          do while (iaux.ne.1)
-                             iiaux = iiaux + 1
-                             if (iiaux.gt.nY) stop 'lininter ???'
-                             if (Y(iiaux).ge.p_loc) then
-                                iaux = 1
-                                iNloc = iiaux
-                                S_loc = S_fun(iiaux-1,thread_id)+(S_fun(iiaux,thread_id)-&
-                                     S_fun(iiaux-1,thread_id))/(Y(iiaux)-Y(iiaux-1))*(p_loc-Y(iiaux-1))
-                             end if
-                          end do
+                    call LININTER(nY,nY,Y,S_fun,p_loc,iNloc,S_loc_lin)
+                    if (log_spline) then 
+                       S_loc = CUBIC_SPLINT(nY,Y,S_fun_log,P2,p_loc)
+                       if (S_loc.eq.0.0) then 
+                          S_loc=S_loc_lin !call LININTER(nY,nY,Y,S_fun,p_loc,iNloc,S_loc)
+                          log_spline = .false.
                        else
-                          if (p_loc.le.Y(1)) S_loc = S_fun(1,thread_id)
-                          if (p_loc.ge.Y(nY)) S_loc = S_fun(nY,thread_id)
+                          S_loc = exp(S_loc)
+                          if ((S_loc/S_loc_lin.gt.1.).or.(S_loc_lin/S_loc.gt.1.5)) then
+                             log_spline = .false.
+                             S_loc = S_loc_lin
+                          end if
+                       end if
+                    else if (lin_spline) then 
+                       S_loc = CUBIC_SPLINT(nY,Y,S_fun,P2,p_loc)
+                       if ((S_loc.eq.0.0)) then!.or.&
+                          !(S_loc/S_loc_lin.gt.1.).or.(S_loc_lin/S_loc.gt.1.5)) then
+                          log_spline = .false.
+                          S_loc = S_loc_lin
                        end if
                     else
-                       S_loc = S_fun(1,thread_id)
+                       S_loc = S_loc_lin !call LININTER(nY,nY,Y,S_fun,p_loc,iNloc,S_loc)
                     end if
-                    ! END lininter
-                    diff(iZ,thread_id) = abs(S_loc)
+                    diff(iZ) = abs(S_loc)
                  else
-                    diff(iZ,thread_id) = S_fun(iYy,thread_id)
+                    diff(iZ) = S_fun(iYy)
                  end if
               end do
-              diff(nZ,thread_id) = S_fun(nY,thread_id)
+              diff(nZ) = S_fun(nY)
            end if
            int1 = 0.
            int2 = 0.
@@ -2343,9 +2371,9 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
                        wgth = 0.5d0*(daux2-daux1)
                     end if
                  end if
+                 int1 = int1 + diff(iZ)*wgth
                  ! add contribution to the integral
-                 int1 = int1 + diff(iZ,thread_id)*wgth
-                 if ((iZ.lt.iZz).and.(iZz.gt.1)) then 
+                 if ((iZ.le.iZz).and.(iZz.gt.1)) then 
                     if (iZ.ne.1.and.iZ.ne.iZz) then
                        daux1 = exp(-tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,iZ-1)))
                        daux2 = exp(-tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,iZ+1)))
@@ -2363,9 +2391,9 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
                        end if
                     end if
                     ! add contribution to the integral
-                    int2 = int2 + diff(iZ,thread_id)*wgth
+                    int2 = int2 + diff(iZ)*wgth
                  end if
-                 if ((iZ.gt.iZz).and.(iZz.lt.nZ)) then 
+                 if ((iZ.ge.iZz).and.(iZz.lt.nZ)) then 
                     if (iZ.ne.iZz.and.iZ.ne.nZ) then
                        daux1 = exp(-tautot(iL)*abs(ETAzp(iP,iZ-1) - ETAzp(iP,iZz)))
                        daux2 = exp(-tautot(iL)*abs(ETAzp(iP,iZ+1) - ETAzp(iP,iZz)))
@@ -2383,23 +2411,22 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
                        end if
                     end if
                     ! add contribution to the integral
-                    int3 = int3 + diff(iZ,thread_id)*wgth
+                    int3 = int3 + diff(iZ)*wgth
                  end if
                  ! END SIMPSON
               end do
            end if
            ! 1st term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
            !     from z0-midpoint to the outer edge of the shell (on the left side)  [MN]
-           Iplus1(iP,iL) = abs(int1)*exp(-tautot(iL)*ETAzp(iP,iZz))
+           Iplus1(iP,iL) = abs(int1)*exp(-tautot(iL)*ETAzp(iP,iZz))/T4_ext(iY)
            ! 2nd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
            !     from z0-midpoint to the running z-point
-           Iplus2(iP,iL) = abs(int2)
+           Iplus2(iP,iL) = abs(int2)/T4_ext(iY)
            ! 3rd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
            !     from the running z-point to the outer edge of the shell [MN]
-           Iminus(iP,iL) = abs(int3)
+           Iminus(iP,iL) = abs(int3)/T4_ext(iY)
         end do ! end loop over wavelengths
         !$OMP END PARALLEL DO
-!        print*,iplus1(ip,:10)
      end do ! end loop over impact parameters P=1..Plast(iY)
      !  Find diffuse energy density (U)
      if (moment_loc.eq.1) then
@@ -2432,7 +2459,7 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
               result2 = 0.0
            END IF
            !!**result1 is for inside, result2 is for outside the cavity [MN]
-           vec2(iL,iY)= 0.5*(result1 + result2)/T4_ext(iY)
+           vec2(iL,iY)= 0.5*(result1 + result2)!/T4_ext(iY)
         end do  !end do over lambda
         !$OMP END PARALLEL DO
         !  Find diffuse flux
@@ -2463,7 +2490,7 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
               result2 = 0.0
            END IF
            !!** result1 is for inside, result2 is for outside the cavity [MN]
-           vec2(iL,iY) = 2.0d0*pi*abs(result1+result2)/T4_ext(iY)
+           vec2(iL,iY) = 2.0d0*pi*abs(result1+result2)!/T4_ext(iY) !original
         end do  !end do over lambda
         !$OMP END PARALLEL DO
      end if !end if for diffuse flux
@@ -2473,9 +2500,11 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us
   deallocate(Iplus2)
   deallocate(Iminus)
   deallocate(S_fun) 
+  deallocate(S_fun_log) 
   deallocate(diff) 
   deallocate(xN)
   deallocate(yN)
+  deallocate(P2)
 999 return
 end subroutine SPH_diff
 !***********************************************************************
@@ -3032,8 +3061,9 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta, flux1,flux2,fbolOK,maxrat)
   !---local
   integer :: iY,flag, kins, istop,i_ins,n_ins,iG,iL,idm,k,j
   integer,allocatable :: iYins(:)
-  double precision :: eta,deltaumax,temp_mean,ee,Yloc,tmp1,tmp2
+  double precision :: eta,deltaumax,temp_mean,ee,Yloc,tmp1,tmp2,avg_flux
   double precision, allocatable :: ratio(:),tauaux(:),etatemp(:),Yins(:),tmp(:)
+  real*8 :: median
   external eta
 !!$  integer iYins(npY), k, kins, i, iY, idm, nn, flag, error, istop, fbolOK, i_ins,n_ins,iG,iL
 !!$  double precision  tauaux(npY),Yins(npY), flux1(npY), flux2(npY), &
@@ -3071,9 +3101,26 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta, flux1,flux2,fbolOK,maxrat)
   call FindErr(nY,flux1,maxrat)
   IF (maxval(flux1).lt.dynrange**2) maxrat = dynrange
   if (maxrat.gt.accFlux) then 
+     tmp2 = 1.
+     avg_flux = 0.
      do iY = 2, nY
         tmp1 = dabs(Td(1,iY-1)/Td(1,iY))
-        if  (max(tmp1,1./tmp1).gt.(1.+accFlux)**(0.25)) then
+        if (max(tmp1,1./tmp1).gt.tmp2) tmp2 = max(tmp1,1./tmp1)
+        avg_flux = avg_flux + flux1(iY) 
+     end do
+     avg_flux = avg_flux/nY
+     do iY = 2, nY
+        tmp1 = dabs(Td(1,iY-1)/Td(1,iY))
+        !print*,iY,tauaux(iY),(tauaux(iY)-tauaux(iY-1)),flux1(iY),dabs(Td(1,iY-1)/Td(1,iY))
+        !print*,Y(iY),median(flux1,nY),flux1(iY),flux1(iY)/median(flux1,nY),max(tmp1,1./tmp1),tmp2,Td(1,iY)
+        !print*,'-------'
+!        if  (max(tmp1,1./tmp1).gt.(1.+2*accFlux)**(0.25)) then
+        if  (((max(tmp1,1./tmp1).gt.0.95*tmp2).and.(tmp2.gt.1.1)).or.&
+             ((flux1(iY)-avg_flux)/(avg_flux+flux1(iY)).gt.accFlux)) then
+!        if  (((max(tmp1,1./tmp1).gt.0.95*tmp2).and.(tmp2.gt.1.1)).or.&
+!           (flux1(iY)/median(flux1,nY).gt.0.8*maxval(flux1/median(flux1,nY)))) then
+!        if  ((flux1(iY)/median(flux1,nY).gt.0.9*maxval(flux1/median(flux1,nY)))) then
+           !print*,(max(tmp1,1./tmp1)),0.9*tmp2
 !       if  ((1.-dabs(Td(1,iY-1)/Td(1,iY)))/(1.-(1.+accuracy)**(0.25)).gt.2) then
 !           n_ins = (1.-dabs(Td(1,iY-1)/Td(1,iY)))/(1.-(1.+accFlux)**(0.25))
 !           if (n_ins.lt.1) n_ins=1
@@ -3083,7 +3130,6 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta, flux1,flux2,fbolOK,maxrat)
 !              n_ins = 1
 !           endif
            n_ins = 1
-!           print*,iY,(tauaux(iY)-tauaux(iY-1)),flux1(iY),dabs(Td(1,iY-1)/Td(1,iY)),n_ins
            kins = kins + n_ins
            do i_ins = 1,n_ins
               Yins(kins-n_ins+i_ins) = Y(iY-1)+1.*i_ins/(1.*(n_ins+1))*(Y(iY)-Y(iY-1))
@@ -3130,7 +3176,8 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta, flux1,flux2,fbolOK,maxrat)
            end do
            Y(iYins(k)+k-1+1) = Yins(k)
            do iG=1,nG
-              temp_mean = (0.5*(Td(iG,iYins(k)+k-1)**4. + Td(iG,iYins(k)+k)**4.))**(1./4.)
+              !temp_mean = (0.5*(Td(iG,iYins(k)+k-1)**4. + Td(iG,iYins(k)+k)**4.))**(1./4.)
+              temp_mean = max(Td(iG,iYins(k)+k-1) ,Td(iG,iYins(k)+k))
               !shiftIns(x,Nmax,n,xins,i)
               do j = nY+k-1+1, iYins(k)+k-1+2, -1
                  Td(iG,j) = Td(iG,j-1)
@@ -3139,7 +3186,8 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta, flux1,flux2,fbolOK,maxrat)
               ! call shiftIns(Td(iG,:),npY,nY+k-1,temp_mean,iYins(k)+k-1)
            end do
            do iL=1,nL
-              temp_mean = 0.5*(utot(iL,iYins(k)+k-1)+utot(iL,iYins(k)+k))
+              !temp_mean = 0.5*(utot(iL,iYins(k)+k-1)+utot(iL,iYins(k)+k))
+              temp_mean = max(utot(iL,iYins(k)+k-1),utot(iL,iYins(k)+k))
               !shiftIns(x,Nmax,n,xins,i)
               do j = nY+k-1+1, iYins(k)+k-1+2, -1
                  utot(iL,j) = utot(iL,j-1)
@@ -4352,3 +4400,76 @@ SUBROUTINE GetbOut(nP,pstar,k)
   RETURN
 END SUBROUTINE GetbOut
 !***********************************************************************
+
+FUNCTION CUBIC_SPLINT(N, XI, FI, P2, X)
+  IMPLICIT NONE
+  INTEGER, INTENT (IN) :: N
+  REAL*8, INTENT (IN), DIMENSION (N):: XI, FI, P2
+  REAL*8, INTENT (IN) :: X
+  REAL*8 :: CUBIC_SPLINT
+  INTEGER klo,khi,k
+  REAL*8 :: h,b,a,tmp
+  INTEGER LOCAT
+
+  klo=max(min(locat(XI,N,X),N-1),1)
+  khi=klo+1
+  h=XI(khi)-XI(klo)
+  a=(XI(khi)-X)/h
+  b=(X-XI(klo))/h
+  tmp = a*FI(klo)+b*FI(khi)+((a*a*a-a)*P2(klo)+&
+       (b*b*b-b)*P2(khi))*(h*h)/6.0D0
+  !if ((tmp.ge.min(FI(klo),FI(khi))).and.(tmp.le.max(FI(klo),FI(khi)))) then 
+     CUBIC_SPLINT= tmp
+  !ELSE
+  !   CUBIC_SPLINT=0.0
+  !END IF
+END FUNCTION CUBIC_SPLINT
+
+function locat(v, n, x)
+  !   Sei v ein geordneter Vektor der Lange n und x eine beliebige Zahl.
+  !   Wenn  v(1) < v(2) < ... < v(n),  so liegt x  im halboffenen 
+  !   Intervall  (v(j), v(j+1)].
+  !   Falls   x <= v(1):   j = 0.   Falls   v(n) < x:   j = n
+  !   Wenn  v(1) > v(2) > ... > v(n),  so liegt x  im halboffenen 
+  !   Intervall  (v(j+1), v(j)].
+  !   Falls   x > v(1):   j = 0.    Falls   v(n) >= x:  j = n
+  implicit none
+  real*8,intent(in)	:: v(n)
+  integer,intent(in) 	:: n
+  real*8,intent(in) 	:: x
+  integer               :: locat
+  integer		:: jlow,jup,jm
+  jlow = 0
+  jup  = n + 1
+10 continue
+  if(jup-jlow .gt. 1) then
+     jm = (jup + jlow) / 2
+     if( (v(n).gt.v(1) ) .eqv. ( x.gt.v(jm)) ) then
+        jlow = jm
+     else
+        jup  = jm
+     end if
+     go to 10
+  end if
+  locat      = jlow
+  return
+end function locat
+
+FUNCTION  Median(X, N)
+  IMPLICIT  NONE
+  REAL*8, DIMENSION(1:N), INTENT(IN) :: X
+  INTEGER, INTENT(IN)                :: N
+  REAL*8, DIMENSION(1:N)            :: Temp
+  INTEGER                            :: i
+  REAL*8 :: MEDIAN
+  
+  DO i = 1, N                       ! make a copy
+     Temp(i) = X(i)
+  END DO
+  CALL  Sort(Temp, N)               ! sort the copy
+  IF (MOD(N,2) == 0) THEN           ! compute the median
+     Median = (Temp(N/2) + Temp(N/2+1)) / 2.0
+  ELSE
+     Median = Temp(N/2+1)
+  END IF
+END FUNCTION  Median
