@@ -8,7 +8,7 @@ signaled by an entry of the number of  grid points, which must be equal to the
 value of npL in userpar.inc and to the  actual number of entries in the list. 
 The list entries can be one per line or  many per line, delimited by tabs or
 spaces but not commas.  The order is  arbitrary --- DUSTY will sort the list 
-and use only the sorted version for  internal work and output.
+and use only the sorted version for internal work and output.
 
 Wavelengths can be arbitrarily removed or added. However, the following rules
 must be strictly obeyed: 
@@ -21,7 +21,7 @@ must be strictly obeyed:
 3) The ratio of each consecutive pair in the 0.01--36,000 micron interval must 
    not exceed 1.5.
 -----------------------------------------------------------------------------
-npL = 125
+npL = 118
 1.00E-02
 1.50E-02
 2.00E-02
@@ -43,7 +43,7 @@ npL = 125
 8.50E-01
 1.00E+00
 1.15E+00
-1.30E+00
+1.30e+00
 1.70E+00
 2.00E+00
 2.20E+00
@@ -79,7 +79,6 @@ npL = 125
 9.90E+00
 9.95E+00
 1.00E+01
-1.02E+01
 1.05E+01
 1.10E+01
 1.13E+01
@@ -91,17 +90,11 @@ npL = 125
 1.40E+01
 1.45E+01
 1.50E+01
-1.55E+01
 1.60E+01
-1.65E+01
 1.70E+01
-1.75E+01
 1.80E+01
-1.85E+01
 1.90E+01
-1.95E+01
 2.00E+01
-2.10E+01
 2.20E+01
 2.30E+01
 2.40E+01

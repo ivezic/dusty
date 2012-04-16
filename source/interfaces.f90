@@ -61,6 +61,11 @@ module interfaces
        double precision, allocatable :: T4_ext(:),emiss(:,:,:),us(:,:),vec2(:,:)
        logical initial
      end subroutine SPH_DIFF
+     subroutine SPH_DIFF_u(nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,vec2)
+       integer nY,nP,iter,iterfbol
+       double precision, allocatable :: T4_ext(:),emiss(:,:,:),us(:,:),vec2(:,:)
+       logical initial
+     end subroutine SPH_DIFF_u
      subroutine Simpson(n,n1,n2,x,y,integral)
        integer n, n1, n2
        double precision integral
@@ -86,11 +91,16 @@ module interfaces
        double precision,allocatable :: Us(:,:), Uold(:,:), Em(:,:,:),&
             mat(:,:,:),omat(:,:)
      end subroutine invert
-     subroutine matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
+     subroutine lambda_iter(nY,mat,Us,Em,Uold,omat)
+       integer nY
+       double precision,allocatable :: Us(:,:), Uold(:,:), Em(:,:,:),&
+            mat(:,:,:),omat(:,:)
+     end subroutine lambda_iter
+     subroutine matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok,T4_ext)
        integer nP,nY,nPok,nYok,iPstar
        double precision :: pstar 
        double precision,allocatable :: m0(:,:,:), m1(:,:,:), mifront(:,:,:), &
-            miback(:,:,:)
+            miback(:,:,:),T4_ext(:)
      end subroutine matrix
      subroutine add(np1,nr1,np2,nr2,q1,q2,q3,qout)
        integer np1, nr1, np2, nr2
@@ -158,10 +168,10 @@ module interfaces
        integer :: nY
        double precision, allocatable :: flxs(:,:),flxe(:,:),fbsum(:)
      end subroutine add2
-     subroutine Flux_Consv(nY,nYprev,Ncav,itereta, flux1,flux2,fbolOK,maxrat)
-       integer nY,nYprev,itereta,fbolOK
+     subroutine Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol, fbolom,fbol_em,fbol_sc,fbolOK,maxrat)
+       integer nY,nYprev,itereta,fbolOK,iterfbol
        double precision :: maxrat
-       double precision, allocatable :: flux1(:),flux2(:)
+       double precision, allocatable :: fbolom(:),fbol_em(:),fbol_sc(:)
      end subroutine Flux_Consv
      subroutine shiftIns(x,Nmax,n,xins,i)
        integer :: Nmax,n,i
@@ -193,5 +203,9 @@ module interfaces
        integer nP
        double precision :: pstar
      END SUBROUTINE GetbOut
+!!$     subroutine gen_spline_tau(nY,nP,spline)
+!!$       integer nY,nP
+!!$       double precision,allocatable :: spline(:,:,:,:,:,:)
+!!$     end subroutine gen_spline_tau
   END INTERFACE
 end module interfaces

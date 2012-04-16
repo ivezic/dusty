@@ -242,7 +242,8 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   double precision,allocatable :: mat0(:,:,:), mat1(:,:,:),&
        mifront(:,:,:), miback(:,:,:), UbolChck(:), Uchck(:,:), fbolold(:)
   double precision ::  BolConv, dmaxF, dmaxU, maxFerr,wgth
-  double precision, allocatable :: omat(:,:),emiss_total(:,:)
+  double precision, allocatable :: omat(:,:),emiss_total(:,:),fdebol(:), &
+       fdsbol(:)
  
 !!$  integer iPstar, nG, FbolOK, error, iterFbol, model, &
 !!$       BolConv, Conv, iaux, Fconv, iter,itnum, iY, itlim, uconv
@@ -264,6 +265,8 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   allocate(UbolChck(npY))
   allocate(Uchck(nL,npY))
   allocate(fbolold(npY))
+  allocate(fdebol(npY))
+  allocate(fdsbol(npY))
   !------------------------------------------------------------------------
   ! generate, or improve, or do not touch the Y and P grids
   IF (iterETA.EQ.1.OR.iterFbol.GT.1) THEN
@@ -277,8 +280,8 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
         IF (iVerb.EQ.2) write(*,*) 'Done with SetGrids'
      ELSE
         ! or improve the grid from previous iteration
-!        CALL ChkFlux(nY,nYprev,fBol,accFlux,iaux,iterEta)
-        call Flux_Consv(nY,nYprev,Ncav,itereta,fbol,fbol,fbolOK,maxFerr)
+        CALL ChkFlux(nY,nYprev,fBol,accFlux,iaux,iterEta)
+        !call Flux_Consv(nY,nYprev,Ncav,itereta,fbol,fbol,fbolOK,maxFerr)
         ! added in ver.2.06
         ! IF (maxFerr.GT.0.5D+00) CALL DblYgrid(error) --**--
         IF (error.NE.0) goto 999
@@ -340,6 +343,10 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
      call Init_Temp(nY,T4_ext,us)
      if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
   end if
+  do iY=1,nY
+     Td(1,:iY) = 1e3
+  end do
+  print*,Td(1,:nY)
   !IF (iVerb.EQ.2) write(*,*) 'Done with InitTemp'
   ! find radiative transfer matrices
   IF (iX.NE.0) write(18,*)' Calculating weight matrices'
@@ -349,12 +356,12 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
      ! if disk included:
      ! CALL MatrixD(ETAzp,pstar,iPstar,mat0,mat1,matD,mifront,miback)
   ELSE
-     CALL Matrix(pstar,iPstar,mat0,mat1,mifront,miback,nP,nY,nPok,nYok)
+     CALL Matrix(pstar,iPstar,mat0,mat1,mifront,miback,nP,nY,nPok,nYok,T4_ext)
   END IF
   Conv = 0
   iter = 0
   ! itlim is an upper limit on number iterations
-  itlim = 1000
+  itlim = 5000
   IF (iX.NE.0) write(18,*)' Weight matrices OK, calculating Tdust'
   IF (iVerb.EQ.2) write(*,*)' Weight matrices OK, calculating Tdust'
  !!$  IF (iInn.eq.1) THEN
@@ -368,7 +375,13 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   end if
   do iY = 1, nY
      Jext(iY) = sigma/pi * T4_ext(iY)
+     do iL=1,nL
+        u_old(iL,iY) = shpR(iL)
+        utot(iL,iY) = shpR(iL)
+     end do
   end do
+  CALL Bolom(Utot,Ubol,nY)
+  print*,ubol(:nY)
   ! === Iterations over dust temperature =========
   DO WHILE (Conv.EQ.0.AND.iter.LE.itlim)
      iter = iter + 1
@@ -377,12 +390,23 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
      ! Emission and we need the flag for geometry (1-for sphere).
      !CALL Emission_matrix(1,0,nG,Us,Em)
      call Emission(nY,T4_ext,emiss,emiss_total)
+     CALL Bolom(emiss_total,Ubol,nY)
      ! solve for Utot
-     CALL Invert(nY,mat0,Us,Emiss,U_old,omat)
+     !CALL Invert(nY,mat0,Us,Emiss,U_old,omat)
+     print*,Td(1,:nY)
+     CALL LAMBDA_ITER(nY,mat0,Us,Emiss,U_old,omat)
      IF(error.NE.0) goto 999
      ! find new Td
      ! CALL FindTemp(1,Utot,nG,Td) --**--
      call Find_Temp(nY,T4_ext)
+     CALL Bolom(Utot,Ubol,nY)
+     print*,'................'
+     print*,ubol(:nY)
+     print*,Td(1,:nY)
+     print*,Jext(:nY),T4_ext(:nY),sigma/pi*1e3**4.,Jo,Ji
+     print*,Y(:nY)
+     print*,'----------------'
+     pause
      ! --------------------------------------
      ! every itnum-th iteration check convergence:
      if (iter.gt.500) then
@@ -440,7 +464,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
 !!$           write(38,'(i7,1p,5e12.4)') iter,maxFerr,dmaxU,dmaxF,Td(1,1),sigma*Tei**4.0D+00
 !!$        END IF
         !--------------------------------------------------------------
-        IF (maxFerr.LE.accFlux) THEN
+        IF (abs(maxFerr).LE.accFlux) THEN
            BolConv = 1
         ELSE
            BolConv = 0
@@ -458,7 +482,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
      write(18,'(a30,1p,e8.1)') ' Flux conservation OK within:',maxFerr
      IF (iter.GE.itlim) THEN
         CALL MSG(2)
-        print*,"MSG(2)"
+        print*," Reached max number of iterations:",itlim
      END IF
   END IF
   ! calculate the emission term for the converged Td
@@ -488,6 +512,13 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
      end do
   end do
   !$OMP END PARALLEL DO
+  call BOLOM(fs,fsbol,nY)
+  call BOLOM(fde,fDebol,nY)
+  call BOLOM(fds,fDsbol,nY)
+  DO iY = 1, nY
+     write(7777,*) Y(iY),fDebol(iY),fDsbol(iY),fsbol(iY),Td(1,iY)
+  END DO
+  close(7777)
   !CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
   ! CALL Bolom(ftot,fbol,nY)
   ! check whether, and how well, is bolometric flux conserved
@@ -560,6 +591,8 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   deallocate(fbolold)
   deallocate(omat)
   deallocate(emiss_total)
+  deallocate(fdebol)
+  deallocate(fdsbol)
   RETURN
 END SUBROUTINE RADTRANSF_matrix
 !***********************************************************************
@@ -635,6 +668,55 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold,omat)
   deallocate(X)
   RETURN
 END SUBROUTINE INVERT
+!***********************************************************************
+!!$
+!***********************************************************************
+SUBROUTINE LAMBDA_ITER(nY,mat,Us,Em,Uold,omat)
+!=======================================================================
+!This subroutine solves the linear system
+![Utot] = [Us+Em] + [mat0]*[omega*Utot] by calling LINSYS subroutine.
+!       [Z.I., Nov. 1995]
+!=======================================================================
+  use common
+  use interfaces
+  IMPLICIT none
+  !--- parameter
+  integer nY
+  double precision,allocatable :: Us(:,:), Uold(:,:), Em(:,:,:),mat(:,:,:),&
+       omat(:,:)
+  !--- local
+  DOUBLE PRECISION  delTAUsc, facc, EtaRat, accFbol
+  INTEGER iG,iL,iY, iYaux, Kronecker
+  !--------------------------------------------------------------------
+  error = 0
+  ! first copy Utot to Uold
+  DO iL = 1, nL
+     DO iY = 1, nY
+        Uold(iL,iY) = Utot(iL,iY)
+     END DO
+  END DO
+  ! calculate new energy density
+  ! loop over wavelengths
+  !$OMP PARALLEL DO PRIVATE(iL,Kronecker,iY,iYaux,iG) 
+  DO iL = 1, nL
+     DO iY = 1, nY
+        Uold(iL,iY) = Utot(iL,iY)
+        Utot(iL,iY) = Us(iL,iY)
+        DO iYaux = 1, nY
+           Utot(iL,iY) = Utot(iL,iY)+omat(iL,iYaux)*Uold(iL,iYaux)*mat(iL,iY,iYaux)
+           do iG=1,nG
+              Utot(iL,iY) = Utot(iL,iY)+(1.-omat(iL,iYaux))*Em(iG,iL,iYaux)*mat(iL,iY,iYaux)
+           end do
+        END DO
+        IF (Utot(iL,iY).lt.dynrange) THEN
+           Utot(iL,iY) = 0.0D+00
+        END IF
+     END DO
+  END DO
+  !$OMP END PARALLEL DO
+  !-----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE LAMBDA_ITER     
 !***********************************************************************
 !!$
 !!$
@@ -799,7 +881,7 @@ END SUBROUTINE Converg2
 !!$!***********************************************************************
 
 !***********************************************************************
-SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
+SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok,T4_ext)
 !=======================================================================
 !This subroutine evaluates radiative transfer matrix for spherically
 !symmetric envelope. Here m is the order of moment (0 for energy dens.,
@@ -813,7 +895,7 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
   integer nP,nY,nPok,nYok,iPstar
   double precision :: pstar 
   double precision,allocatable :: m0(:,:,:), m1(:,:,:), mifront(:,:,:), &
-       miback(:,:,:)
+       miback(:,:,:),T4_ext(:)
   ! --- local
   INTEGER m,iP, flag,iL,iY,iZ,jZ,im,iW
   integer,allocatable :: nZ(:)
@@ -854,6 +936,7 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
      ! parameter alowing for a line of sight terminating on the star
      ! H(x1,x2) is the step function.
      haux(iP) = H(P(iP),pstar)
+     ! if (haux(iP).lt.dynrange) haux(iP)=0.0D0
      ! upper limit for the counter of z position
      nZ(iP) = nY + 1 - iYfirst(iP)
   END DO
@@ -966,8 +1049,10 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
                  yN(iP) = Tplus(iP,iY,iW) + faux*Tminus(iP,iY,iW)
                  ! store matrix elements to evaluate intensity (*1/4Pi)
                  IF (im.EQ.1.AND.iY.EQ.nY) THEN
-                    mifront(iL,iP,iW) = 0.0795775D+00 * Tplus(iP,iY,iW)
-                    miback(iL,iP,iW) = 0.0795775D+00 * Tminus(iP,iY,iW)
+!                    mifront(iL,iP,iW) = 0.0795775D+00 * Tplus(iP,iY,iW)
+!                    miback(iL,iP,iW) = 0.0795775D+00 * Tminus(iP,iY,iW)
+                    mifront(iL,iP,iW) = Tplus(iP,iY,iW)/(4.0D0*pi)
+                    miback(iL,iP,iW) = Tminus(iP,iY,iW)/(4.0D0*pi)
                  END IF
               END DO
               ! angular integration inside cavity
@@ -996,9 +1081,9 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok)
               END IF
               ! store current matrix element
               IF (m.EQ.0) m0(iL,iY,iW) = 0.5D+00*Y(iY)*Y(iY)*(result1 + result2)
-              IF (m.EQ.1) THEN
-                 m1(iL,iY,iW) = 0.5D+00*Y(iY)*Y(iY)*(result1 + result2)
-              END IF
+              IF (m.EQ.1) m1(iL,iY,iW) = 0.5D+00*Y(iY)*Y(iY)*(result1 + result2)
+!              IF (m.EQ.0) m0(iL,iY,iW) = 0.5D+00*(result1 + result2)*Y(iY)*Y(iY)/pi ! seems to work for external illumination
+!              IF (m.EQ.1) m1(iL,iY,iW) = 0.5D+00*(result1 + result2)*Y(iY)*Y(iY)/pi ! seems to work for external illumination
            END DO
         END DO
      END DO
@@ -1191,12 +1276,14 @@ SUBROUTINE WEIGHTS(TAUaux,iP,iL,nZ,alpha,beta,gamma2,delta,wgp,wgm,nY)
         IF (iZ.GT.1) THEN
            waux = alpha(iW-1,j)*K1p(iZ) + beta(iW-1,j)*K2p(iZ)
            wgp(iZ,j)=waux + gamma2(iW-1,j)*K3p(iZ)+delta(iW-1,j)*K4p(iZ)
+!           if (wgp(iZ,j).lt.dynrange) wgp(iZ,j) = 0.0D0
         ELSE
            wgp(1,j) = 0.0D+00
         END IF
         IF (iZ.LT.nZ) THEN
            wgm(iZ,j) = alpha(iW,j)*K1m(iZ) + beta(iW,j)*K2m(iZ)
            wgm(iZ,j) = wgm(iZ,j)+gamma2(iW,j)*K3m(iZ)+delta(iW,j)*K4m(iZ)
+!           if (wgm(iZ,j).lt.dynrange) wgm(iZ,j) = 0.0D0
         ELSE
            wgm(nZ,j) = 0.0D+00
         END IF
@@ -1958,151 +2045,151 @@ END FUNCTION IntETA_matrix
 !!$!***********************************************************************
 !!$
 !!$
-!!$!***********************************************************************
-!!$SUBROUTINE ChkFlux(nY,nYprev,flux,tolern,consfl,iterEta)
-!!$!=======================================================================
-!!$!Checks the bolometri!flux conservation at any point of a given Ygrid.
-!!$!In case of nonconservation increases the number of points at certain
-!!$!places. The current criterion is increasing the flux difference from
-!!$!tolern to its maximum value.                         [MN & ZI,July'96]
-!!$!=======================================================================
-!!$  use common
-!!$  use interfaces
-!!$  IMPLICIT none
-!!$  !---parameter
-!!$  DOUBLE PRECISION,allocatable :: flux(:)
-!!$  DOUBLE PRECISION :: tolern
-!!$  INTEGER consfl, nY,nYprev,iterEta
-!!$  !---local
-!!$  integer iY,k,kins,flag,istop,iDm
-!!$  integer,allocatable :: iYins(:)
-!!$  DOUBLE PRECISION delTAUMax,devfac,devmax,ee,ff,ffold,fmax,Yloc,ETA
-!!$  double precision,allocatable :: EtaTemp(:),Yins(:)
-!!$  !--------------------------------------------------------------------
-!!$  allocate(iYins(nY))
-!!$  allocate(EtaTemp(nY))
-!!$  allocate(Yins(nY))
-!!$  ! save old grid and values of Eta (important for denstyp = 5 or 6)
-!!$  IF (denstyp.eq.3) THEN !3(RDW)
-!!$     DO iY = 1, nY
-!!$        Yprev(iY) = Y(iY)
-!!$        EtaTemp(iY) = ETAdiscr(iY)
-!!$     END DO
-!!$     nYprev = nY
-!!$  END IF
-!!$  IF(Right.gt.0) THEN
-!!$     ! Find fmed - the median value of the bol.flux
-!!$     ! (if there is an external source fbol < 1)
-!!$     ! CALL SLBmisc(flux,fmax,fmed,AveDev,RMS,nY)
-!!$     print*,'! CALL SLBmisc(flux,fmax,fmed,AveDev,RMS,nY)'
-!!$  ELSE
-!!$     fmed = 1.0D+00
-!!$  END IF
-!!$  error = 0
-!!$  kins = 0
-!!$  devmax = 0.0D+00
-!!$  ! maximal delTAU is no more than 2 times the average value
-!!$  delTAUmax = 2.0D+00*TAUtot(1)*ETAzp(1,nY)/nY
-!!$  ! maximal deviation from fmed
-!!$  DO iY = 2, nY
-!!$     IF (dabs(flux(iY)-fmed).GT.devmax) devmax = dabs(flux(iY)-fmed)
-!!$  END DO
-!!$  ff = 0.0D+00
-!!$  istop = 0
-!!$  devfac = 0.1D+00
-!!$  ! search for places to improve the grid
-!!$  DO WHILE (istop.NE.1)
-!!$     DO iY = 2, nY
-!!$        ffold = ff
-!!$        ff = dabs(flux(iY) - fmed)
-!!$        flag = 0
-!!$        ! if any of these criteria is satisfied insert a point:
-!!$        ! 1) if error is increasing too fast
-!!$        IF (abs(ff-ffold).GT.devfac*devmax) flag = 1
-!!$        ! 2) if delTAU is too large
-!!$        IF (TAUtot(1)*(ETAzp(1,iY)-ETAzp(1,iY-1)).GT. &
-!!$             delTAUmax) flag = 1
-!!$        IF(flag.EQ.1.AND.devmax.GE.tolern) THEN
-!!$           kins = kins + 1
-!!$           Yins(kins) = Y(iY-1)+0.5D+00*(Y(iY)-Y(iY-1))
-!!$           iYins(kins) = iY-1
-!!$        END IF
-!!$     END DO
-!!$     IF (devmax.LT.tolern.OR.devfac.LT.0.01D+00) THEN
-!!$        istop = 1
-!!$     ELSE
-!!$        IF (kins.GT.0) istop = 1
-!!$     END IF
-!!$     devfac = devfac / 2.0D+00
-!!$  END DO
-!!$  IF (kins.EQ.0) THEN
-!!$     IF (consfl.NE.5) consfl = 1
-!!$  ELSE
-!!$     ! Add all new points to Y(nY). This gives the new Y(nY+kins).
-!!$     ! However, check if npY is large enough to insert all points:
-!!$     IF ((nY+kins).GT.npY) THEN
-!!$        ! consfl.EQ.5 is a signal that Chkflux was called from SetGrids,
-!!$        ! in this case continue without inserting new points. If this is
-!!$        ! full problem then give it up.
-!!$        IF (consfl.NE.5) THEN
-!!$           consfl = 1
-!!$        ELSE
-!!$           consfl = 7
-!!$           goto 777
-!!$        END IF
-!!$        IF (iX.GE.1) THEN
-!!$           write(18,*)' ****************     WARNING   ******************'
-!!$           write(18,*)'  The new Y grid can not accomodate more points!'
-!!$           write(18,'(a,i3)')'   Specified accuracy would require',nY+kins
-!!$           write(18,'(a,i3,a)')'   points, while npY =',npY,'.'
-!!$           write(18,*)'  For the required accuracy npY must be increased,'
-!!$           write(18,*)'  (see the manual S3.5 Numerical Accuracy).'
-!!$           write(18,*)' *************************************************'
-!!$        END IF
-!!$        kins = npY - nY
-!!$        error = 2
-!!$     END IF
-!!$     DO k = 1, kins
-!!$        CALL SHIFT(Y,nY,nY+k-1,Yins(k),iYins(k)+k-1)
-!!$     END DO
-!!$  END IF
-!!$  ! new size of the Y grid
-!!$  nY = nY + kins
-!!$  ! intepolate ETAdiscr to new Y grid for denstyp = 5 or 6
-!!$  DO iY = 1, nY
-!!$     Yloc = Y(iY)
-!!$     IF (iterETA.GT.1) THEN
-!!$        CALL LinInter(nY,nYprev,Yprev,EtaTemp,Yloc,iDm,ee)
-!!$        ETAdiscr(iY) = ee
-!!$     ELSE
-!!$        ETAdiscr(iY) = ETA(Yloc)
-!!$     END IF
-!!$  END DO
-!!$  !-----------------------------------------------------------------------
-!!$777 deallocate(iYins)
-!!$  deallocate(EtaTemp)
-!!$  deallocate(Yins)
-!!$  RETURN
-!!$END SUBROUTINE ChkFlux
-!!$!***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$SUBROUTINE SHIFT(X,Nmax,N,Xins,i)
-!!$!=======================================================================
-!!$!Rearranges a vector X by inserting a new element Xins.    [MN, Aug'96]
-!!$!=======================================================================
-!!$  implicit none
-!!$  integer Nmax, N, i,j
-!!$  DOUBLE PRECISION X(Nmax),Xins
-!!$!-----------------------------------------------------------------------
-!!$  DO j = N+1, i+2, -1
-!!$     x(j) = x(j-1)
-!!$  END DO
-!!$  x(i+1) = xins
-!!$  !-----------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE SHIFT
-!!$!***********************************************************************
+!***********************************************************************
+SUBROUTINE ChkFlux(nY,nYprev,flux,tolern,consfl,iterEta)
+!=======================================================================
+!Checks the bolometri!flux conservation at any point of a given Ygrid.
+!In case of nonconservation increases the number of points at certain
+!places. The current criterion is increasing the flux difference from
+!tolern to its maximum value.                         [MN & ZI,July'96]
+!=======================================================================
+  use common
+  use interfaces
+  IMPLICIT none
+  !---parameter
+  DOUBLE PRECISION,allocatable :: flux(:)
+  DOUBLE PRECISION :: tolern
+  INTEGER consfl, nY,nYprev,iterEta
+  !---local
+  integer iY,k,kins,flag,istop,iDm
+  integer,allocatable :: iYins(:)
+  DOUBLE PRECISION delTAUMax,devfac,devmax,ee,ff,ffold,fmax,Yloc,ETA
+  double precision,allocatable :: EtaTemp(:),Yins(:)
+  !--------------------------------------------------------------------
+  allocate(iYins(nY))
+  allocate(EtaTemp(nY))
+  allocate(Yins(nY))
+  ! save old grid and values of Eta (important for denstyp = 5 or 6)
+  IF (denstyp.eq.3) THEN !3(RDW)
+     DO iY = 1, nY
+        Yprev(iY) = Y(iY)
+        EtaTemp(iY) = ETAdiscr(iY)
+     END DO
+     nYprev = nY
+  END IF
+  IF(Right.gt.0) THEN
+     ! Find fmed - the median value of the bol.flux
+     ! (if there is an external source fbol < 1)
+     ! CALL SLBmisc(flux,fmax,fmed,AveDev,RMS,nY)
+     print*,'! CALL SLBmisc(flux,fmax,fmed,AveDev,RMS,nY)'
+  ELSE
+     fmed = 1.0D+00
+  END IF
+  error = 0
+  kins = 0
+  devmax = 0.0D+00
+  ! maximal delTAU is no more than 2 times the average value
+  delTAUmax = 2.0D+00*TAUtot(1)*ETAzp(1,nY)/nY
+  ! maximal deviation from fmed
+  DO iY = 2, nY
+     IF (dabs(flux(iY)-fmed).GT.devmax) devmax = dabs(flux(iY)-fmed)
+  END DO
+  ff = 0.0D+00
+  istop = 0
+  devfac = 0.1D+00
+  ! search for places to improve the grid
+  DO WHILE (istop.NE.1)
+     DO iY = 2, nY
+        ffold = ff
+        ff = dabs(flux(iY) - fmed)
+        flag = 0
+        ! if any of these criteria is satisfied insert a point:
+        ! 1) if error is increasing too fast
+        IF (abs(ff-ffold).GT.devfac*devmax) flag = 1
+        ! 2) if delTAU is too large
+        IF (TAUtot(1)*(ETAzp(1,iY)-ETAzp(1,iY-1)).GT. &
+             delTAUmax) flag = 1
+        IF(flag.EQ.1.AND.devmax.GE.tolern) THEN
+           kins = kins + 1
+           Yins(kins) = Y(iY-1)+0.5D+00*(Y(iY)-Y(iY-1))
+           iYins(kins) = iY-1
+        END IF
+     END DO
+     IF (devmax.LT.tolern.OR.devfac.LT.0.01D+00) THEN
+        istop = 1
+     ELSE
+        IF (kins.GT.0) istop = 1
+     END IF
+     devfac = devfac / 2.0D+00
+  END DO
+  IF (kins.EQ.0) THEN
+     IF (consfl.NE.5) consfl = 1
+  ELSE
+     ! Add all new points to Y(nY). This gives the new Y(nY+kins).
+     ! However, check if npY is large enough to insert all points:
+     IF ((nY+kins).GT.npY) THEN
+        ! consfl.EQ.5 is a signal that Chkflux was called from SetGrids,
+        ! in this case continue without inserting new points. If this is
+        ! full problem then give it up.
+        IF (consfl.NE.5) THEN
+           consfl = 1
+        ELSE
+           consfl = 7
+           goto 777
+        END IF
+        IF (iX.GE.1) THEN
+           write(18,*)' ****************     WARNING   ******************'
+           write(18,*)'  The new Y grid can not accomodate more points!'
+           write(18,'(a,i3)')'   Specified accuracy would require',nY+kins
+           write(18,'(a,i3,a)')'   points, while npY =',npY,'.'
+           write(18,*)'  For the required accuracy npY must be increased,'
+           write(18,*)'  (see the manual S3.5 Numerical Accuracy).'
+           write(18,*)' *************************************************'
+        END IF
+        kins = npY - nY
+        error = 2
+     END IF
+     DO k = 1, kins
+        CALL SHIFT(Y,nY,nY+k-1,Yins(k),iYins(k)+k-1)
+     END DO
+  END IF
+  ! new size of the Y grid
+  nY = nY + kins
+  ! intepolate ETAdiscr to new Y grid for denstyp = 5 or 6
+  DO iY = 1, nY
+     Yloc = Y(iY)
+     IF (iterETA.GT.1) THEN
+        CALL LinInter(nY,nYprev,Yprev,EtaTemp,Yloc,iDm,ee)
+        ETAdiscr(iY) = ee
+     ELSE
+        ETAdiscr(iY) = ETA(Yloc)
+     END IF
+  END DO
+  !-----------------------------------------------------------------------
+777 deallocate(iYins)
+  deallocate(EtaTemp)
+  deallocate(Yins)
+  RETURN
+END SUBROUTINE ChkFlux
+!***********************************************************************
+
+!***********************************************************************
+SUBROUTINE SHIFT(X,Nmax,N,Xins,i)
+!=======================================================================
+!Rearranges a vector X by inserting a new element Xins.    [MN, Aug'96]
+!=======================================================================
+  implicit none
+  integer Nmax, N, i,j
+  DOUBLE PRECISION X(Nmax),Xins
+!-----------------------------------------------------------------------
+  DO j = N+1, i+2, -1
+     x(j) = x(j-1)
+  END DO
+  x(i+1) = xins
+  !-----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE SHIFT
+!***********************************************************************
 !!$
 !!$!***********************************************************************
 !!$SUBROUTINE Emission_matrix(geom,flag,nG,Uin,Emiss)

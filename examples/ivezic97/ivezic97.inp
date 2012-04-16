@@ -51,8 +51,9 @@
 
 %(available options: flux\Lum_r1\energy_den\dilutn_fac\T1)
 
-         Scale:         type of entry = T1      % Td at the inner boundary  
-                                   Td = 800  K
+         Scale:         type of entry = T1   % Td at the inner boundary  
+	                             % dilut = 0.008  
+				      Td = 800  K
                
 
      2) Dust Properties 
@@ -73,8 +74,8 @@
 
         - density type = POWD
         - number of powers = 1                
-        - shell's relative thickness = 100.
-        - power = 0.
+        - shell's relative thickness = 1000.
+        - power = 2.
         
         
         

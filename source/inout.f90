@@ -161,6 +161,12 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
               dilutn = RDINP(Equal,1)
               Jo = dilutn*spec_scale/(pi)
            endif
+           if (typentry(2).eq.5) then
+              print*,' !!!!!Error!!!!!'
+              print*,' Input of Temperature at the inner boundery not possible for two side illumination:'
+              print*,' !!!!!Error!!!!!'
+              stop
+           end if
         else
            ! ksi is the relative bol.flux of the second source
            ksi = RDINP(Equal,1)
@@ -687,7 +693,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   ! accuracy for convergence (typical 0.0001)
   ! accuracy for flux conservation
   accFlux = RDINP(Equal,1)
-  accTemp = ((1.+accFlux)**(1./4.)-1.)*1e-1
+  accTemp = ((1.+accFlux)**(1./4.)-1.)
   if ((accFlux.le.0.0d0).or.(accFlux.gt.0.75)) then 
      print*,' Problem with specified Flux accuracy !!!'
      stop
@@ -940,7 +946,7 @@ subroutine inp_rad(shp,spec_scale,startyp)
   double precision,allocatable :: shp(:)
   !---local
   integer i,iL,iLs,nLs,k, l, nBB,ios1,filetype,nLamtr,kstop
-  double precision sum, tsum, value, RDINP, xSiO, bb, x, planck
+  double precision sum, value, RDINP, xSiO, bb, x, planck
   double precision a,b, EMfunc,fplbol
   double precision,allocatable :: Tbb(:),rellum(:),lambda_s(:),shp_s(:),&
        tmp_sort1(:),tmp_sort2(:),lamTr(:),klam(:),fl(:),fpl(:)
@@ -998,10 +1004,8 @@ subroutine inp_rad(shp,spec_scale,startyp)
            stop
         end if
         ! Normalize
-        tsum = 0.0d0
         do i = 1, nbb
            rellum(i) = rellum(i)/sum
-           tsum = tsum + rellum(i)*Tbb(i)**(4.0d0)
         end do
         write(12,'(a2,i2,a13)')'  ', nBB,' black bodies'
         write(12,'(a28)')'  with temperatures (in K):'
@@ -1016,6 +1020,10 @@ subroutine inp_rad(shp,spec_scale,startyp)
            bb = bb + rellum(k)*Planck(x)
         end do
         shp(iL) = bb
+     end do
+     spec_scale = 0.0D0
+     do k = 1, nbb
+        spec_scale = spec_scale + rellum(k)*sigma*(Tbb(k)**4.0D0)
      end do
      deallocate(Tbb)
      deallocate(rellum)
@@ -1190,7 +1198,7 @@ subroutine inp_rad(shp,spec_scale,startyp)
      deallocate(tmp_sort2)
   end if
   ! get total scale
-  call Simpson(nL,1,nL,lambda,shp,spec_scale)
+  if (str(1:L).ne.'BLACK_BODY') call Simpson(nL,1,nL,lambda,shp,spec_scale)
   return
 end subroutine inp_rad
 
@@ -1479,7 +1487,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   double precision :: delta
   !---local variables
   integer :: i, j, iLV, iG, iL, iY, unt, imu
-  double precision, allocatable::Elems(:,:),ftotL(:),ftotR(:),faux(:)
+  double precision, allocatable::Elems(:,:),ftotL(:),ftotR(:),faux(:),sigma_tmp(:)
   double precision :: sigmaVs,sigmaVa,sigmaVe
   double precision :: FbolL, FbolR, FbolIL,FbolIR,res, xAttTotL,&
        xAttTotR,xDsTotL,xDsTotR,xDeTotL,xDeTotR,temp1,temp2, &
@@ -1500,11 +1508,18 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   allocate(ftotL(nL))
   allocate(ftotR(nL))
   allocate(faux(nL))
+  allocate(sigma_tmp(nL))
   if(allocated(Elems)) deallocate(Elems)
   if (nG.gt.1) allocate(Elems(nL,3+2*nG))
   if (nG.eq.1) allocate(Elems(nL,3))
-  call lininter(nL,nL,lambda,sigmaS(nG+1,:),lamfid,iLV,sigmaVs)
-  call lininter(nL,nL,lambda,sigmaA(nG+1,:),lamfid,iLV,sigmaVa)
+  do iL=1,nL
+     sigma_tmp(iL) = sigmaS(nG+1,iL)
+  end do
+  call lininter(nL,nL,lambda,sigma_tmp,lamfid,iLV,sigmaVs)
+  do iL=1,nL
+     sigma_tmp(iL) = sigmaA(nG+1,iL)
+  end do
+  call lininter(nL,nL,lambda,sigma_tmp,lamfid,iLV,sigmaVa)
   sigmaVe = sigmaVa+sigmaVs
   Elems(:,1) = lambda(:)
   Elems(:,2) = SigmaA(nG+1,:)/(sigmaVa+sigmaVs)

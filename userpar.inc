@@ -17,7 +17,8 @@
 !c     entries in file lambda_grid.dat
 !c      PARAMETER (npL=105)
 !c      PARAMETER (npL=118)
-      PARAMETER (npL=125)
+!c      PARAMETER (npL=125)
+      PARAMETER (npL=96)
       PARAMETER (npR=90)
       PARAMETER (npG=10)
 
@@ -27,7 +28,7 @@
 !c     a safe limit which works even on old machines and PCs
 !c      PARAMETER (npY=55)
 !c     for a typical workstation  
-      PARAMETER (npY=170)
+      PARAMETER (npY=1000)
 !c     do not change these coefficients!
       PARAMETER (npP=20*npY+20)  
 !c     do not change except if added disk: 

@@ -53,7 +53,7 @@
 %(available options: flux\lum_r1\energy_den\dilutn_fac\T1)
 
 	Scale:         type of entry = dilutn_fac
-                       	          dil = 1.     %E_DEN =  1.80e4
+                       	       dil = 1.     %E_DEN =  1.80e4
 
      2) Dust Properties 
 
@@ -63,7 +63,8 @@
 
            optical properties index = tabulated
                     ism-noscatt.dat                         
-                                 
+
+    Tsub = 15000.                                 
 
      3) Density Distribution
 
@@ -71,7 +72,7 @@
 
         - density type = powd                    
         - number of powers = 1                
-        - shell's relative thickness = 100.0
+        - shell's relative thickness = 1000.0
         - power = 0.0 
                       
         
@@ -81,16 +82,13 @@
 
         - grid type = logarithmic                  % log grid
         - lambda0 = 0.55 micron            % optical depth specified 
-        - tau(min) = 1.0; tau(max) = 1.0   % for the visual wavelength   
+        - tau(min) = 1.0e0; tau(max) = 1.0e0   % for the visual wavelength   
         - number of models = 1
   ----------------------------------------------------------------------
                                                                         
   III. NUMERICS                                                           
       
-     - accuracy for flux conservation = 0.1
-     - accuracy for Temperature fluctuation  = 1e-3
-     - starting optical depth = 1.0
-     - increment in optical depth = 2.0 
+     - accuracy for flux conservation = 5e-2
   ----------------------------------------------------------------------
                                                                         
   IV. OUTPUT PARAMETERS                                                 
