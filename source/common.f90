@@ -21,7 +21,7 @@ Module common
   PARAMETER (npY = 1000)
   PARAMETER (npP = 20*npY+20)
   PARAMETER (npL = 125)
-  PARAMETER (npG = 16)
+  PARAMETER (npG = 1)
   PARAMETER (npR = 90)
 
   double precision,allocatable :: ETAdiscr(:)

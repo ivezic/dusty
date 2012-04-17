@@ -126,7 +126,7 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
               goto 999
            END IF
            ! if Fbol not conserved try again with a finer grid
-           IF (FbolOK.EQ.0.AND.iterFbol.LT.10.AND.iX.NE.0) THEN
+           IF (FbolOK.EQ.0.AND.iterFbol.LT.20.AND.iX.NE.0) THEN
               write(18,*)'  ******** MESSAGE from SOLVE ********'
               write(18,*)'  Full solution does not conserve Fbol'
               write(18,*)'       Y       TAU/TAUtot        fbol'
@@ -137,7 +137,7 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
               write(18,*)'  Trying again with finer grids'
            END IF
              ! if could not conserve Fbol in 10 trials give it up
-             IF (FbolOK.EQ.0.AND.iterFbol.GE.10) THEN
+             IF (FbolOK.EQ.0.AND.iterFbol.GE.20) THEN
                 IF (denstyp.eq.3) THEN !3(RDW)
                    IF (iX.NE.0) THEN
                       write(18,*)' **********  WARNING from SOLVE  **********'
@@ -237,8 +237,8 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   double precision,allocatable :: u_old(:,:),us(:,:), fs(:,:),T4_ext(:),emiss(:,:,:)
   logical initial
   !---local
-  integer iaux,nPok,nYok, itlim, iter, conv, itnum, Fconv, Uconv, aconv, &
-       iY,iL
+  integer iaux,nPok,nYok, itlim, iter, conv, itnum, Fconv,  aconv, &
+       iY,iL,Uconv,Uconv1,Uconv2,Uconv3
   double precision,allocatable :: mat0(:,:,:), mat1(:,:,:),&
        mifront(:,:,:), miback(:,:,:), UbolChck(:), Uchck(:,:), fbolold(:)
   double precision ::  BolConv, dmaxF, dmaxU, maxFerr,wgth
@@ -280,8 +280,8 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
         IF (iVerb.EQ.2) write(*,*) 'Done with SetGrids'
      ELSE
         ! or improve the grid from previous iteration
-        CALL ChkFlux(nY,nYprev,fBol,accFlux,iaux,iterEta)
-        !call Flux_Consv(nY,nYprev,Ncav,itereta,fbol,fbol,fbolOK,maxFerr)
+        !CALL ChkFlux(nY,nYprev,fBol,accFlux,iaux,iterEta)
+        call Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol,fbol,fdebol,fdsbol,fbolOK,maxFerr)
         ! added in ver.2.06
         ! IF (maxFerr.GT.0.5D+00) CALL DblYgrid(error) --**--
         IF (error.NE.0) goto 999
@@ -357,7 +357,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   Conv = 0
   iter = 0
   ! itlim is an upper limit on number iterations
-  itlim = 5000
+  itlim = 10000
   IF (iX.NE.0) write(18,*)' Weight matrices OK, calculating Tdust'
   IF (iVerb.EQ.2) write(*,*)' Weight matrices OK, calculating Tdust'
  !!$  IF (iInn.eq.1) THEN
@@ -380,20 +380,22 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   ! === Iterations over dust temperature =========
   DO WHILE (Conv.EQ.0.AND.iter.LE.itlim)
      iter = iter + 1
+     if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
+        call find_Text(nY,T4_ext)
+     elseif (.not.initial.and.typentry(1).eq.5) then
+        call find_Text(nY,T4_ext)
+     end if
      ! find emission term
-     ! because there is no alpha now, y^2 appears explicitly in
-     ! Emission and we need the flag for geometry (1-for sphere).
-     !CALL Emission_matrix(1,0,nG,Us,Em)
      call Emission(nY,T4_ext,emiss,emiss_total)
-     CALL Bolom(emiss_total,Ubol,nY)
      ! solve for Utot
      CALL Invert(nY,mat0,Us,Emiss,U_old,omat)
      !CALL LAMBDA_ITER(nY,mat0,Us,Emiss,U_old,omat)
+     call Find_Temp(nY,T4_ext)
      IF(error.NE.0) goto 999
+     u_old = utot
      ! find new Td
      ! CALL FindTemp(1,Utot,nG,Td) --**--
-     call Find_Temp(nY,T4_ext)
-     CALL Bolom(Utot,Ubol,nY)
+     !CALL Bolom(Utot,Ubol,nY)
      ! --------------------------------------
      ! every itnum-th iteration check convergence:
      if (iter.gt.500) then
@@ -405,17 +407,37 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
      END IF
      ! first find 'old' flux (i.e. in the previous iteration)
      IF (MOD(iter+1,itnum).EQ.0) THEN
+        call Emission(nY,T4_ext,emiss,emiss_total)
         CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omat,0,fs,fds)
         CALL Multiply(0,nY,nY,nL,nL,mat1,emiss_total,omat,0,fs,fde)
-        CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
+        do iY=1,nY
+           fbolold(iY) = 0.
+           do iL=1,nL
+              fds(iL,iY) = fds(iL,iY)*4*pi
+              fde(iL,iY) = fde(iL,iY)*4*pi
+              ftot(iL,iY) = fs(iL,iY)+fds(iL,iY) + fde(iL,iY)
+              ! begin simpson intgral
+              ! weigths
+              if (iL.ne.1.and.iL.ne.nL) then
+                 wgth = 0.5d0*(lambda(iL+1)-lambda(iL-1))
+              else
+                 if (iL.eq.1) wgth = 0.5d0*(lambda(1+1)-lambda(1))
+                 if (iL.eq.nL) wgth = 0.5d0*(lambda(nL)-lambda(nL-1))
+              end if
+              ! add contribution to the integral
+              fbolold(iY) = fbolold(iY) + ftot(iL,iY)/lambda(iL)*wgth
+              ! end simpson integral
+           end do
+        end do
+        !CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
         ! find bolometric flux
-        CALL Bolom(ftot,fbolold,nY)
+        !CALL Bolom(ftot,fbolold,nY)
      END IF
      IF (MOD(iter,itnum).EQ.0) THEN
         ! first calculate total flux
+        call Emission(nY,T4_ext,emiss,emiss_total)
         CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omat,0,fs,fds)
         CALL Multiply(0,nY,nY,nL,nL,mat1,emiss_total,omat,0,fs,fde)
-        !$OMP PARALLEL DO PRIVATE (wgth)
         do iY=1,nY
            fbol(iY) = 0.
            do iL=1,nL
@@ -435,10 +457,9 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
               ! end simpson integral
            end do
         end do
-        !$OMP END PARALLEL DO
-        ! CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
+        !CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
         ! find bolometric flux
-        ! CALL Bolom(ftot,fbol,nY)
+        !CALL Bolom(ftot,fbol,nY)
         ! check convergence of bolometric flux
         ! call Flux_Consv(nY,nYprev,Ncav,itereta,fbol,fbol,fbolOK,maxFerr)
         CALL Converg1(nY,fbolold,fbol,Fconv,dmaxF)
@@ -456,6 +477,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
         ELSE
            BolConv = 0
         END IF
+        !print*,Fconv,Uconv,BolConv,dmaxF,accFlux
         ! total criterion for convergence: Utot must converge, and ftot
         ! must either converge or have the required accuracy
         IF (Uconv*(Fconv+BolConv).GT.0) Conv = 1
@@ -478,7 +500,6 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   ! calculate flux
   CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omat,0,fs,fds)
   CALL Multiply(0,nY,nY,nL,nL,mat1,emiss_total,omat,0,fs,fde)
-  !$OMP PARALLEL DO PRIVATE (wgth)
   do iY=1,nY
      fbol(iY) = 0.
      do iL=1,nL
@@ -498,7 +519,6 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
         ! end simpson integral
      end do
   end do
-  !$OMP END PARALLEL DO
   call BOLOM(fs,fsbol,nY)
   call BOLOM(fde,fDebol,nY)
   call BOLOM(fds,fDsbol,nY)
@@ -513,6 +533,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   CALL FindErr(nY,fbol,maxFerr)
   ! added in ver.2.06
   IF (maxFerr.LT.accFlux) FbolOK = 1
+  IF (iVerb.EQ.2) write(*,*)' Achieved Flux accuracy:',maxFerr
   !***********************************
   ! calculate additional output quantities
   ! 1) energy densities
@@ -785,7 +806,7 @@ SUBROUTINE Converg1(nY,Aold,Anew,Aconv,dmax)
         IF (delta.GT.dmax) dmax = delta
      END IF
   END DO
-  IF (dmax.GT.accFlux) Aconv = 0
+  IF (dmax.GT.accFlux/nL*1e-2) Aconv = 0
   !---------------------------------------------------------------------
   RETURN
 END SUBROUTINE Converg1

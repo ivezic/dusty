@@ -36,9 +36,9 @@ subroutine Kernel(path,lpath,tau,Nmodel)
      call OPPEN(model,path,lpath)
      if (iVerb.eq.2) write(*,*) ' going to Solve '
      ! solve radiative transfer for this particular optical depth
-     call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     !call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! old dustys way
-     !CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! if flux is conserved, the solution is obtained. So write out the values
      ! to output files for specified models
      if (fbolOK.eq.1) then
@@ -1738,7 +1738,7 @@ subroutine Emission(nY,T4_ext,emiss,emiss_total)
   ! calculate emission term for each component and add it to emiss
   ! loop over wavelengths
   !$OMP PARALLEL DO &
-  !$OMP REDUCTION(+:emiss_total) PRIVATE(iY,iG,xP,tt,emig)
+  !$OMP PRIVATE(iL,iY,iG,xP,tt,emig)
   do iL = 1, nL
      ! loop over radial coordinate
      do iY = 1, nY
