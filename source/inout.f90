@@ -1296,14 +1296,17 @@ subroutine getOmega(nY)
 !!** Note that Omega(iG,iL) here is re-defined compared to the old Dusty. [MN]
 !=======================================================================
   use common
+  use interfaces
   implicit none
   integer  iG, iL, iY, nY
-  double precision ext(npL),sca(nPL)
+  double precision,allocatable :: ext(:),sca(:)
 !-----------------------------------------------------------------------
 
   ! generate overall albedo through the envelope
   ! ** this is for future multigrain code **
   ! ** for single grains it is trivial **
+  allocate(ext(nL))
+  allocate(sca(nL))
   do iL = 1, nL
      ext(iL) = 0
      sca(iL) = 0
@@ -1321,6 +1324,8 @@ subroutine getOmega(nY)
         abund(iG,iY) = 1.0d0
      end do
   end do
+  deallocate(ext)
+  deallocate(sca)
   !--------------------------------------------------------------------
   return
 end subroutine getOmega
@@ -1339,8 +1344,8 @@ end subroutine getOmega
 !!$  integer iY, iL, iLs, nLs, k, kstop, i, error, nLambdam, nis, is
 !!$!  nLambdam is the max number entries for a user supplied stellar spectrum
 !!$  parameter (nLambdam = 10000, nis = 2)
-!!$  double precision lambdas(nLambdam), Llamstar(nLambdam), shp(npL), &
-!!$       stellar(nLambdam), fl(100), fpl(npL), Lstar, EMfunc, bp, bb, &
+!!$  double precision lambdas(nLambdam), Llamstar(nLambdam), shp(nL), &
+!!$       stellar(nLambdam), fl(100), fpl(nL), Lstar, EMfunc, bp, bb, &
 !!$       x, Planck,fplbol
 !!$!-----------------------------------------------------------------------
 !!$
@@ -1382,7 +1387,7 @@ end subroutine getOmega
 !!$        end do
 !!$     end if
 !!$  end if
-!!$  call Simpson(npL,1,nL,lambda,fpl,fplbol)
+!!$  call Simpson(nL,1,nL,lambda,fpl,fplbol)
 !!$  ! loop over wavelengths
 !!$  do iL = 1, nL
 !!$     if (startyp(is).eq.1) then
@@ -1500,11 +1505,12 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   
 !!$  integer iG, iY, iL, i, model, j, unt, imu, nrows, ncols,nG, iOut, iNloc , iLV
 !!$!  parameter (nrows=200, ncols=25)
-!!$  double precision psfn, psffunc(20,1000),eta, faux(npL), omega(npG+1,npL),ftotL(npL),ftotR(npL),  &
+!!$  double precision psfn, psffunc(20,1000),eta, faux(nL), omega(npG+1,nL),ftotL(nL),ftotR(nL),  &
 !!$       , xs, xds, xde, res, fnormL, fnormR, dmax, limval, GinfG1, delta, &
 !!$       y_loc, J_loc, Jbol(10), xAttTotL,xAttTotR,xDsTotL,xDsTotR,xDeTotL,xDeTotR,temp1,temp2
 !----------------------------------------------------------------------
 !!$
+
   allocate(ftotL(nL))
   allocate(ftotR(nL))
   allocate(faux(nL))
@@ -1535,10 +1541,10 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
         Elems(:,3+2*iG) = SigmaS(iG,:)/(sigmaVa+sigmaVs)
      end do
      write(855,'(A)') hdrdyn(:34+nG*22)
-     call maketable(Elems,npL,3+2*nG,855)
+     call maketable(Elems,nL,3+2*nG,855)
   else
      write(855,*) hdrdyn
-     call maketable(Elems,npL,3,855)
+     call maketable(Elems,nL,3,855)
   end if
   close(855)
   do iL=1,nL
@@ -1552,7 +1558,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   FbolIL=FbolIL*Jext(1)
   FbolIR=FbolIR*Jext(nY)
   if(allocated(Elems)) deallocate(Elems)
-  allocate(Elems(npL,8))
+  allocate(Elems(nL,8))
   !  find the bolometric fluxes at the boundaries [MN]
   !** FH changed to find ftot everywhere
   do iY = 1, nY
@@ -1625,7 +1631,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
      do iL=1,nL
         faux(iL) = (sigmaS(nG+1,iL)+sigmaA(nG+1,iL))*ftot(iL,iY)/lambda(iL)
      end do
-     call Simpson(npL,1,nL,lambda,faux,temp1)
+     call Simpson(nL,1,nL,lambda,faux,temp1)
      RPr(iY) = temp1/(4*pi*clight*mprot*Gconst)*1.0D4*3.84e26/1.988e30*5.0D-26*Jext(iY)/sigmaVe
   enddo
   res = 0.0d00
@@ -1641,54 +1647,54 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   else
      call getfs(SmC(5,model)*100.0d0,0,2,Serr)
   end if
-!!$
-!--------------  overall parameters to *.out file -----------------------
-! write header to output file *.out
+  !--------------  overall parameters to *.out file -----------------------
+  ! write header to output file *.out
   if (model.eq.1) then
-   write(12,*)'         '
-   write(12,*)' RESULTS:'
-   write(12,*)' --------'
-   if (slb) then
-!    slab output
-      s1=' ###    Tau0    Psi/Psi0     FiL      FiR       FbolL    FbolR     r1(cm)    TdL(K)    TdR(K)    RPr(1)   e(%)'
-     su1=' ###      1        2          3        4          5        6         7          8         9       10      11'
-     write(12,'(a)') s1
-     write(12,'(a)') su1
-     write(12,'(a)') &
-         ' ============================================================================================================='
-!  output for sphere
-   elseif(sph) then
-      s1= ' ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1   T1(K)    Td(K)    RPr(1)  e(%)'
-     su1= ' ###     1       2        3        4        5        6        7        8        9      10'
-     if((denstyp.eq.3).or.(denstyp.eq.4)) then ! 3(RDW) 4(RDWA)
-      s2='  Mdot      Ve       M> '
-     su2='   11       12       13 '
-     write(12,'(a,a)') s1,s2
-     write(12,'(a,a)')su1,su2
-     write(12,'(a)') &
-     ' ====================================================================================================================='
-! **  private rdw file **
-      if (denstyp.eq.6) then ! 6(RDWPR)
-       s1= '###   tau0      tauF     Mdot      Ve       M>       '
-       su1='###    1          2        3        4       5       6'
-       s2= 'Ginf/G1   P    delta  d/sqrt(w1)  winf     Phi    zeta(1)'
-       su2='        7        8        9        10       11       12'
-       write(66,'(a53,a57)') s1,s2
-       write(66,'(a53,a55)')su1,su2
-      end if
-     else
-      write(12,'(a)') s1
-      write(12,'(a)') su1
-      write(12,'(a)') &
-         ' ========================================================================================'
-     end if
-   end if !end if for sphere
+     write(12,*)'         '
+     write(12,*)' RESULTS:'
+     write(12,*)' --------'
+     if (slb) then
+        !    slab output
+        s1=' ###    Tau0    Psi/Psi0     FiL      FiR       FbolL    FbolR     r1(cm)    TdL(K)    TdR(K)    RPr(1)   e(%)'
+        su1=' ###      1        2          3        4          5        6         7          8         9       10      11'
+        write(12,'(a)') s1
+        write(12,'(a)') su1
+        write(12,'(a)') &
+             ' ============================================================================================================='
+        !  output for sphere
+     elseif(sph) then
+        s1= ' ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1   T1(K)    Td(K)    RPr(1)  e(%)'
+        su1= ' ###     1       2        3        4        5        6        7        8        9      10'
+        if((denstyp.eq.3).or.(denstyp.eq.4)) then ! 3(RDW) 4(RDWA)
+           s2='  Mdot      Ve       M> '
+           su2='   11       12       13 '
+           write(12,'(a,a)') s1,s2
+           write(12,'(a,a)')su1,su2
+           write(12,'(a)') &
+                ' =======================================================&
+                =============================================================='
+           ! **  private rdw file **
+           if (denstyp.eq.6) then ! 6(RDWPR)
+              s1= '###   tau0      tauF     Mdot      Ve       M>       '
+              su1='###    1          2        3        4       5       6'
+              s2= 'Ginf/G1   P    delta  d/sqrt(w1)  winf     Phi    zeta(1)'
+              su2='        7        8        9        10       11       12'
+              write(66,'(a53,a57)') s1,s2
+              write(66,'(a53,a55)')su1,su2
+           end if
+        else
+           write(12,'(a)') s1
+           write(12,'(a)') su1
+           write(12,'(a)') &
+                ' ========================================================================================'
+        end if
+     end if !end if for sphere
   end if
-!!$! print output tables for ea.model
-!---------------- Output for slab: ---------------------------
+  ! print output tables for ea.model
+  !---------------- Output for slab: ---------------------------
   if(slb) then
      write(12,'(i4,1p,10e10.2,a3)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
-!---------- for spherical shell ------------------------------
+     !---------- for spherical shell ------------------------------
   elseif(sph) then
      if ((denstyp.eq.3).or.(denstyp.eq.4).or.(denstyp.eq.6)) then ! 3(RDW) 4(RDWA) 6(RDWPR)
         write(12,'(i4,1p,9e9.2,a1,a3,a1,1p,3e9.2)') &
@@ -1714,18 +1720,18 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
              model, taufid, tauF(nY), CMdot, CVe, CM, &
              GinfG1, Prdw, delta, delta/dmax, winf, Phi, zeta1
      end if
-!!$     if(right.eq.0) then
-!!$        if (startyp(1).eq.1.or.startyp(1).eq.2) then
-!!$           if(Tstar(1).lt.Te_min) then
-!!$              call getfs(Tstar(1),0,1,Tstr)
-!!$              write(12,'(a50,a5,a5)') &
-!!$                   ' ** WARNING: the input spectrum is a black-body at ',Tstr,' K **'
-!!$              call getfs(Te_min,0,1,Tstr)
-!!$              write(12,'(a50,a5,a5)') &
-!!$                   ' *the point-source assumption requires min Teff of ',Tstr,' K **'
-!!$           end if
-!!$        end if
-!!$     end if
+!     if(right.eq.0) then
+!        if (startyp(1).eq.1.or.startyp(1).eq.2) then
+!           if(Tstar(1).lt.Te_min) then
+!              call getfs(Tstar(1),0,1,Tstr)
+!              write(12,'(a50,a5,a5)') &
+!                   ' ** WARNING: the input spectrum is a black-body at ',Tstr,' K **'
+!              call getfs(Te_min,0,1,Tstr)
+!              write(12,'(a50,a5,a5)') &
+!                   ' *the point-source assumption requires min Teff of ',Tstr,' K **'
+!           end if
+!        end if
+!     end if
      ! end if for geometry
   end if
   !--------------   spectrum to *.s##  file   ------------------------
@@ -1781,7 +1787,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
         write(hdsp1,'(A,E9.3,A,E9.3,A)')  '   -1.       ',FbolR,'                                   ',FbolIL,'      -1.         -1.'
      end if
      write(unt,'(A90)') hdsp1
-     call maketable(Elems,npL,8,unt)
+     call maketable(Elems,nL,8,unt)
      !  spectra from the left (illuminated) slab side (file *.z##)
      if (slb) then
         call getOmega(nY)
@@ -1846,7 +1852,6 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
         write(unt,'(a7,i3,a8,f8.3,a18)') '# model',model,' taufid=',taufid,'  radial profiles '
      end if
      call line(1,1,unt)
-
      !--------- for slab ---------
      if (slb) then
         do iY = 1, nY
@@ -1867,7 +1872,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
            tr = ETAzp(1,iY)/ETAzp(1,nY)
            Elems(iY,1) = Y(iY)
            Elems(iY,2) = Td(1,iY)
-           Elems(iY,3) = eta(Y(iY),nYprev,itereta)
+           Elems(iY,3) = eta(Y(iY),nY,nYprev,itereta)
            Elems(iY,4) = tr
            Elems(iY,5) = tauF(iY)
            Elems(iY,6) = eps(iY)
@@ -1908,89 +1913,90 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
      end if
      ! end if for the iB (radial) flag
   end if
-
-!--------------   intensities to *.inn (old *.cxx) file  --------------
-  if (abs(iC).ne.0) then
-     ! slab intensity (found at the end of subroutine slbradt)
-     ! theta(nmu) are the angles of output intensities
-     if (slb) then
-        if(allocated(Elems)) deallocate(Elems)
-        allocate(Elems(npL,nmu+2))
-        hdint = '   lambda'
-        unt = 17
-        call line(1,2,unt)
-        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' transmitted i(theta)*cos(theta)'
-        call line(1,1,unt)
-        do iL = 1, nL
-           Elems(iL,1) = lambda(iL)
-           do imu = 1, nmu
-              !if(iPhys.eq.1) SLBintm(imu,iL) = SLBintm(imu,iL)*Jext(nY)
-              !4pi comes from slbintp since it is divided by 4pi need to be changed!!
-              Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(1)*4*pi
-           end do
-           Elems(iL,nmu+2) = istR(iL)
-        end do
-        ! write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
-        ! printout angles in degrees
-        ! write(unt,'(a9,37f11.1,a9)') hdint,
-        ! &                    (theta(imu)*180.0d0/pi,imu=1,nmu),'     IstR'
-        write(unt,'(a9,100f11.1)') hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
-        call maketable(Elems,npL,nmu+1,unt)
-        ! adding the column with stellar ints at the end of the table
-        !  call maketable(Elems,nL,nmu+2,unt)
-        hdint = '   lambda'
-        unt = 17
-        call line(1,2,unt)
-        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' reflected cos(theta)*i(theta)'
-        call line(1,1,unt)
-        do iL = 1, nL
-           Elems(iL,1) = lambda(iL)
-           do imu = 1, nmu
-!              if(iPhys.eq.1) SLBintp(imu,iL) = SLBintp(imu,iL)*Jext(1)
-               !4pi comes from slbintp since it is divided by 4pi need to be changed!!
-
-              Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(nY)*4*pi !4pi comes from slbintp
-           end do
-        end do
-        !write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
-        !printout angles in degrees
-        write(unt,'(a9,99f11.1)')hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
-        call maketable(Elems,npL,nmu+1,unt)
-     !------  for spherical shell --------
-     elseif(sph) then
-        if(allocated(Elems)) deallocate(Elems)
-        allocate(Elems(np+2,nLambdaOut+2))
-        hdint = '#     b          t(b)'
-        hdcon = '#   offset '
-        hdvis = '#     q    '
-        unt = 17
-        call line(1,2,unt)
-        write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
-        call line(1,1,unt)
-        do i = 1, nP+2
-           Elems(i,1) = bOut(i)
-           Elems(i,2) = tauZout(i)
-           do j = 1, nLambdaOut
-              ! check values:
-              if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
-                 IntOut(j,i) = 0.0d0
-              end if
-              Elems(i,j+2) = IntOut(j,i)
-              ! we want intensity in Jy/arcsec^2
-              ! this was the bug in intensity output for sphere,
-              ! the missing 4piY^2 factor for intensity output [June 2006]
-              ! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
-              !IF (iPhys.eq.1) THEN <--- iphys allways 1
-              Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-              ! ELSE
-              !   Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-              ! END IF
-           end do
-        end do
-        write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
-        call maketable(Elems,nP+2,nLambdaOut+2,unt)
-     end if
-  end if
+!!$
+!!$  !--------------   intensities to *.inn (old *.cxx) file  --------------
+!!$  if (abs(iC).ne.0) then
+!!$     ! slab intensity (found at the end of subroutine slbradt)
+!!$     ! theta(nmu) are the angles of output intensities
+!!$     if (slb) then
+!!$        if(allocated(Elems)) deallocate(Elems)
+!!$        allocate(Elems(nL,nmu+2))
+!!$        hdint = '   lambda'
+!!$        unt = 17
+!!$        call line(1,2,unt)
+!!$        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' transmitted i(theta)*cos(theta)'
+!!$        call line(1,1,unt)
+!!$        do iL = 1, nL
+!!$           Elems(iL,1) = lambda(iL)
+!!$           do imu = 1, nmu
+!!$              !if(iPhys.eq.1) SLBintm(imu,iL) = SLBintm(imu,iL)*Jext(nY)
+!!$              !4pi comes from slbintp since it is divided by 4pi need to be changed!!
+!!$              Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(1)*4*pi
+!!$           end do
+!!$           Elems(iL,nmu+2) = istR(iL)
+!!$        end do
+!!$        ! write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
+!!$        ! printout angles in degrees
+!!$        ! write(unt,'(a9,37f11.1,a9)') hdint,
+!!$        ! &                    (theta(imu)*180.0d0/pi,imu=1,nmu),'     IstR'
+!!$        write(unt,'(a9,100f11.1)') hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
+!!$        call maketable(Elems,nL,nmu+1,unt)
+!!$        ! adding the column with stellar ints at the end of the table
+!!$        !  call maketable(Elems,nL,nmu+2,unt)
+!!$        hdint = '   lambda'
+!!$        unt = 17
+!!$        call line(1,2,unt)
+!!$        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' reflected cos(theta)*i(theta)'
+!!$        call line(1,1,unt)
+!!$        do iL = 1, nL
+!!$           Elems(iL,1) = lambda(iL)
+!!$           do imu = 1, nmu
+!!$!              if(iPhys.eq.1) SLBintp(imu,iL) = SLBintp(imu,iL)*Jext(1)
+!!$               !4pi comes from slbintp since it is divided by 4pi need to be changed!!
+!!$
+!!$              Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(nY)*4*pi !4pi comes from slbintp
+!!$           end do
+!!$        end do
+!!$        !write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
+!!$        !printout angles in degrees
+!!$        write(unt,'(a9,99f11.1)')hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
+!!$        call maketable(Elems,nL,nmu+1,unt)
+!!$     !------  for spherical shell --------
+!!$     elseif(sph) then
+!!$        if(allocated(Elems)) deallocate(Elems)
+!!$        allocate(Elems(np+2,nLambdaOut+2))
+!!$        hdint = '#     b          t(b)'
+!!$        hdcon = '#   offset '
+!!$        hdvis = '#     q    '
+!!$        unt = 17
+!!$        call line(1,2,unt)
+!!$        write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
+!!$        call line(1,1,unt)
+!!$        do i = 1, nP+2
+!!$           Elems(i,1) = bOut(i)
+!!$           Elems(i,2) = tauZout(i)
+!!$           do j = 1, nLambdaOut
+!!$              ! check values:
+!!$              if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
+!!$                 IntOut(j,i) = 0.0d0
+!!$              end if
+!!$              Elems(i,j+2) = IntOut(j,i)
+!!$              ! we want intensity in Jy/arcsec^2
+!!$              ! this was the bug in intensity output for sphere,
+!!$              ! the missing 4piY^2 factor for intensity output [June 2006]
+!!$              ! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
+!!$              !IF (iPhys.eq.1) THEN <--- iphys allways 1
+!!$              Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
+!!$              ! ELSE
+!!$              !   Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
+!!$              ! END IF
+!!$           end do
+!!$        end do
+!!$        write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
+!!$        call maketable(Elems,nP+2,nLambdaOut+2,unt)
+!!$     end if
+!!$  end if
+!!-------stoped here blubb
 !!$  if (iC.lt.0) then
 !!$     !---------  convolved images either add to .i## file or write in *.c## file --
 !!$     if(iC.eq.-3) unt = 21
@@ -2079,7 +2085,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
 !!$        if(JOut(iL,iOut).lt.limval) JOut(iL,iOut) = 0.0d0
 !!$        faux(iL) = JOut(iL,iOut) / lambda(iL)
 !!$      end do
-!!$      call Simpson(npL,1,nL,lambda,faux,res)
+!!$      call Simpson(nL,1,nL,lambda,faux,res)
 !!$      fnormR = res
 !!$      do iL = 1, nL
 !!$        Elems(iL,1) = lambda(iL)
@@ -2272,7 +2278,7 @@ end subroutine CLLOSE
 subroutine MakeTable(Elems,rows,cols,unt)
 ! =======================================================================
 !     This is an auxiliary subroutine for print out of tables
-!     of Elems(Nrows,Ncols) in output unit 'unt'. Nrows = max{npL,npY}.
+!     of Elems(Nrows,Ncols) in output unit 'unt'. Nrows = max{nL,npY}.
 !     The array size is defined in Subroutine PrOut.         [MN, Mar'98]
 ! =======================================================================
       IMPLICIT NONE

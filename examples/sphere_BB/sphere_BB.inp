@@ -64,7 +64,7 @@
            optical properties index = tabulated
                     ism-noscatt.dat                         
 
-    Tsub = 15000.                                 
+    Tsub = 15000.
 
      3) Density Distribution
 
@@ -82,7 +82,7 @@
 
         - grid type = logarithmic                  % log grid
         - lambda0 = 0.55 micron            % optical depth specified 
-        - tau(min) = 1.0e0; tau(max) = 1.0e0   % for the visual wavelength   
+        - tau(min) = 1.0e3; tau(max) = 1.0e3   % for the visual wavelength   
         - number of models = 1
   ----------------------------------------------------------------------
                                                                         

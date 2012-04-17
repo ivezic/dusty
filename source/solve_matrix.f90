@@ -343,10 +343,6 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
      call Init_Temp(nY,T4_ext,us)
      if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
   end if
-  do iY=1,nY
-     Td(1,:iY) = 1e3
-  end do
-  print*,Td(1,:nY)
   !IF (iVerb.EQ.2) write(*,*) 'Done with InitTemp'
   ! find radiative transfer matrices
   IF (iX.NE.0) write(18,*)' Calculating weight matrices'
@@ -375,13 +371,12 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   end if
   do iY = 1, nY
      Jext(iY) = sigma/pi * T4_ext(iY)
-     do iL=1,nL
-        u_old(iL,iY) = shpR(iL)
-        utot(iL,iY) = shpR(iL)
-     end do
+!!$     do iL=1,nL
+!!$        u_old(iL,iY) = shpR(iL)
+!!$        utot(iL,iY) = shpR(iL)
+!!$     end do
   end do
   CALL Bolom(Utot,Ubol,nY)
-  print*,ubol(:nY)
   ! === Iterations over dust temperature =========
   DO WHILE (Conv.EQ.0.AND.iter.LE.itlim)
      iter = iter + 1
@@ -392,21 +387,13 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
      call Emission(nY,T4_ext,emiss,emiss_total)
      CALL Bolom(emiss_total,Ubol,nY)
      ! solve for Utot
-     !CALL Invert(nY,mat0,Us,Emiss,U_old,omat)
-     print*,Td(1,:nY)
-     CALL LAMBDA_ITER(nY,mat0,Us,Emiss,U_old,omat)
+     CALL Invert(nY,mat0,Us,Emiss,U_old,omat)
+     !CALL LAMBDA_ITER(nY,mat0,Us,Emiss,U_old,omat)
      IF(error.NE.0) goto 999
      ! find new Td
      ! CALL FindTemp(1,Utot,nG,Td) --**--
      call Find_Temp(nY,T4_ext)
      CALL Bolom(Utot,Ubol,nY)
-     print*,'................'
-     print*,ubol(:nY)
-     print*,Td(1,:nY)
-     print*,Jext(:nY),T4_ext(:nY),sigma/pi*1e3**4.,Jo,Ji
-     print*,Y(:nY)
-     print*,'----------------'
-     pause
      ! --------------------------------------
      ! every itnum-th iteration check convergence:
      if (iter.gt.500) then
@@ -2063,7 +2050,7 @@ SUBROUTINE ChkFlux(nY,nYprev,flux,tolern,consfl,iterEta)
   !---local
   integer iY,k,kins,flag,istop,iDm
   integer,allocatable :: iYins(:)
-  DOUBLE PRECISION delTAUMax,devfac,devmax,ee,ff,ffold,fmax,Yloc,ETA
+  DOUBLE PRECISION delTAUMax,devfac,devmax,ee,ff,ffold,fmax,Yloc,ETA,fmed
   double precision,allocatable :: EtaTemp(:),Yins(:)
   !--------------------------------------------------------------------
   allocate(iYins(nY))

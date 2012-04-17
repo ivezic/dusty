@@ -21,7 +21,7 @@ Module common
   PARAMETER (npY = 1000)
   PARAMETER (npP = 20*npY+20)
   PARAMETER (npL = 125)
-  PARAMETER (npG = 1)
+  PARAMETER (npG = 16)
   PARAMETER (npR = 90)
 
   double precision,allocatable :: ETAdiscr(:)
@@ -71,7 +71,7 @@ Module common
   double precision,allocatable :: rg(:,:)
   double precision,allocatable :: Intens(:,:)
   double precision :: SmC(30,99)
-  double precision :: fmed
+  !double precision :: fmed
 
   character*4 :: version
   parameter (version='4.00')

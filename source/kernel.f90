@@ -1168,10 +1168,12 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
      if ((iter.gt.5).and.(mod(iter,5).eq.0)) then 
         call Find_Temp(nY,T4_ext)
      end if
-     print*,maxval(maxerrU),Td(1,1),Td(1,nY)
-     if ((maxval(maxerrT).le.accTemp).and.(maxval(maxerrU).le.(accFlux*1.e-1))) conv = 1
+     !print*,maxval(maxerrU),Td(1,1),Td(1,nY)
+      if(iVerb.eq.2) write(*,fmt='(a1)',advance='no') '.'
+     if ((maxval(maxerrT).le.accTemp).and.(maxval(maxerrU).lt.(accFlux*9.e-1))) conv = 1
      if (iter.eq.itlim) print'(A,I6,A)','  !!! Reached iteration limit of ',itlim,' !!!!'
   enddo
+   if(iVerb.eq.2) write(*,*) ' '
   !=== the end of iterations over Td ===
   if(iVerb.eq.2) write(*,*) &
        '  Done with finding dust temperature after ',iter,' iterations. errT:',maxval(maxerrT),'errU:',maxval(maxerrU)
@@ -2139,45 +2141,45 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,&
                  daux2 = exp(-tau2)
                  S_fun = (S_fun1+S_fun2)*0.5
                  wgth = abs(daux2-daux1)
-                 if (iZ.lt.nY-1) then 
-                    m = (S_fun3-S_fun1) / (exp(-tau3)-daux1)
-                    n = S_fun1 - m*daux1
-                    tmp = m*daux2+n
-                    daux1 = (S_fun2-tmp)/(S_fun2+tmp)/6.
-                    if (dabs(daux1).lt.0.1) then 
-                       S_fun = (S_fun1+S_fun2)*(0.5+daux1)
-                    end if
-                 end if
+!!$                 if (iZ.lt.nY-1) then 
+!!$                    m = (S_fun3-S_fun1) / (exp(-tau3)-daux1)
+!!$                    n = S_fun1 - m*daux1
+!!$                    tmp = m*daux2+n
+!!$                    daux1 = (S_fun2-tmp)/(S_fun2+tmp)/6.
+!!$                    if (dabs(daux1).lt.0.1) then 
+!!$                       S_fun = (S_fun1+S_fun2)*(0.5+daux1)
+!!$                    end if
+!!$                 end if
                  int1 = int1 + S_fun*wgth
                  ! add contribution to the integral
                  if ((iZ.lt.iZz).and.(iZz.gt.1)) then 
                     daux1 = exp(-abs(tauZz-tau1))
                     daux2 = exp(-abs(tauZz-tau2))
                     wgth = abs(daux2-daux1)
-                    if (iZ.lt.nY-1) then 
-                       m = (S_fun3-S_fun1) / (exp(-abs(tauZz-tau3))-daux1)
-                       n = S_fun1 - m*daux1
-                       tmp = m*daux2+n
-                       daux1 = (S_fun2-tmp)/(S_fun2+tmp)/6.
-                       if (dabs(daux1).lt.0.1) then 
-                          S_fun = (S_fun1+S_fun2)*(0.5+daux1)
-                       end if
-                    end if
+!!$                    if (iZ.lt.nY-1) then 
+!!$                       m = (S_fun3-S_fun1) / (exp(-abs(tauZz-tau3))-daux1)
+!!$                       n = S_fun1 - m*daux1
+!!$                       tmp = m*daux2+n
+!!$                       daux1 = (S_fun2-tmp)/(S_fun2+tmp)/6.
+!!$                       if (dabs(daux1).lt.0.1) then 
+!!$                          S_fun = (S_fun1+S_fun2)*(0.5+daux1)
+!!$                       end if
+!!$                    end if
                     int2 = int2 + S_fun*wgth
                  end if
                  if ((iZ.ge.iZz).and.(iZz.lt.nZ)) then 
                     daux1 = exp(-abs(tau1-tauZz))
                     daux2 = exp(-abs(tau2-tauZz))
                     wgth = abs(daux2-daux1)
-                    if (iZ.lt.nY-1) then 
-                       m = (S_fun3-S_fun1) / (exp(-abs(tau3-tauZz))-daux1)
-                       n = S_fun1 - m*daux1
-                       tmp = m*daux2+n
-                       daux1 = (S_fun2-tmp)/(S_fun2+tmp)/6.
-                       if (dabs(daux1).lt.0.1) then 
-                          S_fun = (S_fun1+S_fun2)*(0.5+daux1)
-                       end if
-                    end if
+!!$                    if (iZ.lt.nY-1) then 
+!!$                       m = (S_fun3-S_fun1) / (exp(-abs(tau3-tauZz))-daux1)
+!!$                       n = S_fun1 - m*daux1
+!!$                       tmp = m*daux2+n
+!!$                       daux1 = (S_fun2-tmp)/(S_fun2+tmp)/6.
+!!$                       if (dabs(daux1).lt.0.1) then 
+!!$                          S_fun = (S_fun1+S_fun2)*(0.5+daux1)
+!!$                       end if
+!!$                    end if
                     int3 = int3 + S_fun*wgth
                  end if
               end do
@@ -2212,11 +2214,10 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,&
            CALL NORDLUND(nY,nP,0,xN,yN,1,nPcav+1,0,result1)
            ! flag for analytic integration outside cavity
            !! IF (iY.GT.6) THEN ! this was in the old Dusty
-           IF (iY.GT.4) THEN  ! take it as 4 in case the grid has a few pts. only.
-              !flagN = 0
+           IF (iY.GT.6) THEN  ! take it as 4 in case the grid has a few pts. only.
               flagN = 1
            ELSE
-              flagN = 1
+              flagN = 0
            ENDIF
            ! angular integration outside cavity
            IF (iY.GT.1) THEN
@@ -2244,11 +2245,10 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,&
            CALL NORDLUND(nY,nP,0,xN,yN,1,nPcav+1,1,result1)
            ! flag for analytic integration outside cavity
            !!IF (iY.GT.6) THEN ! this was in the old Dusty
-           IF (iY.GT.4) THEN
-              !flagN = 0
+           IF (iY.GT.6) THEN
               flagN = 1
            ELSE
-              flagN = 1
+              flagN = 0
            ENDIF
            ! angular integration outside cavity
            IF (iY.GT.1) THEN
@@ -2417,9 +2417,9 @@ subroutine SPH_diff_u(nY,nP,initial,iter,iterfbol,&
            CALL NORDLUND(nY,nP,0,xN,yN,1,nPcav+1,0,result1)
            ! angular integration outside cavity
            IF (iY.GT.6) THEN
-              CALL NORDLUND(nY,nP,0,xN,yN,nPcav+1,Plast(iY),0,result2)
-           ELSE IF (iY.GT.1) THEN
               CALL NORDLUND(nY,nP,1,xN,yN,nPcav+1,Plast(iY),0,result2)
+           ELSE IF (iY.GT.1) THEN
+              CALL NORDLUND(nY,nP,0,xN,yN,nPcav+1,Plast(iY),0,result2)
               IF (error.NE.0) STOP
            ELSE
               result2 = 0.0
@@ -2652,7 +2652,7 @@ SUBROUTINE NORDLUND(nY,nP,flag,x,f,N1,N2,m,intfdx)
   ! number of points for analytic integration
   Nanal = 4
   ! do not include points for analytic integration
-  IF (flag.EQ.1.AND.N2.GT.N1+Nanal) THEN
+  IF ((flag.EQ.1).AND.(N2.GT.N1+Nanal)) THEN
      N2n = N2 - Nanal + 1
   ELSE
      N2n = N2
@@ -2662,7 +2662,7 @@ SUBROUTINE NORDLUND(nY,nP,flag,x,f,N1,N2,m,intfdx)
   ! generate weighting factors, w(i), and integrate in the same loop
   DO i = N1, N2n
      ! first usual Simpson factors (Nordlund, eq. III-14, first term)...
-     IF (i.NE.N1.AND.i.NE.N2n) THEN
+     IF ((i.NE.N1).AND.(i.NE.N2n)) THEN
         wSimp(i) = 0.5 * (x(i+1)-x(i-1))
      ELSE
         IF (i.eq.N1) wSimp(i) = 0.5 * (x(N1+1)-x(N1))
@@ -2695,7 +2695,7 @@ SUBROUTINE NORDLUND(nY,nP,flag,x,f,N1,N2,m,intfdx)
   ! change the sign (x [i.e. mu] array is in descending order!!!)
   intfdx = -intfdx
   ! if flag=1 use analytic approximation for the last Nanal points
-  IF (flag.EQ.1.AND.N2n.GT.N1+Nanal) THEN
+  IF ((flag.EQ.1).AND.(N2n.GT.N1+Nanal)) THEN
      ! generate auxiliary arrays for ANALINT
      DO i=1,Nanal
         xaux(i) = x(N2n+Nanal-i)
@@ -2993,9 +2993,10 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol, fbolom,fbol_em,fbol_sc,fb
   double precision :: maxrat
   double precision, allocatable :: fbolom(:),fbol_em(:),fbol_sc(:)
   !---local
-  integer :: iY,flag, kins, istop,i_ins,n_ins,iG,iL,idm,k,j,navg
+  integer :: iY,flag, kins, istop,i_ins,n_ins,iG,iL,idm,k,j
   integer,allocatable :: iYins(:)
-  double precision :: eta,deltaumax,temp_mean,ee,Yloc,tmp1,tmp2,avg_flux,fact
+  double precision :: eta,deltaumax,temp_mean,ee,Yloc,tmp1,tmp2,avg_flux,&
+       fact,ff,ffold,fmed,devfac,devmax
   double precision, allocatable :: ratio(:),tauaux(:),etatemp(:),Yins(:),tmp(:)
   real*8 :: median
   external eta
@@ -3008,7 +3009,6 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol, fbolom,fbol_em,fbol_sc,fb
   flag= 0
   error = 0.0d0
   kins = 0
-  istop = 0
   maxrat = 0.0d0
   if(sph) then
      ! save old grid and values of Eta (important for denstyp = 5 or 6)
@@ -3022,41 +3022,79 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol, fbolom,fbol_em,fbol_sc,fb
         tauaux(iY) = TAUtot(1)*ETAzp(1,iY)
      end do
      !!** I am not sure if deltaumax has to be found as below: [MN]
-     !  maximal deltau is no more than 2 times the average value
-     deltaumax = 2.0d0*tauaux(nY)/nY
+     !  maximal deltau is no more than 4 times the average value (2 refinements)
+     delTAUmax = 4.0d0*tauaux(nY)/nY
   elseif(slb) then
-     deltaumax = 2.0d0*tautot(1)/nY
+     delTAUmax = 4.0d0*tautot(1)/nY
   end if
   call FindErr(nY,fbolom,maxrat)
   IF (maxval(fbolom).lt.dynrange**2) maxrat = dynrange
-  kins = 0
+  fmed = MEDIAN(fbolom,nY)
+  devmax = 0.0D+00                                                                                  
+  ff = 0.0D+00                                                                                      
+  istop = 0                                                                                     
+  devfac = 0.1D+00                                                                                  
+  DO iY = 2, nY                                                                                 
+     IF (dabs(fbolom(iY)-fmed).GT.devmax) devmax = dabs(fbolom(iY)-fmed)
+  END DO
+!!$  if (maxrat.gt.accFlux) then 
+!!$     DO WHILE (istop.ne.1)
+!!$        DO iY = 2, nY                     
+!!$           !ffold = ff
+!!$          ffold = dabs(fbolom(iY-1) - fmed)                                                          
+!!$          ff = dabs(fbolom(iY) - fmed)
+!!$          flag = 0                                                                                  
+!!$          !if any of these criteria is satisfied insert a point:                                     
+!!$          !1) if error is increasing too fast
+!!$          if ((sph).and.(left.eq.1).and.(iY.eq.2).and.(iterfbol.le.5)) flag = 1
+!!$          IF (abs(ff-ffold).GT.devfac*devmax) flag = 1                                              
+!!$          !2) if delTAU is too large                                                                 
+!!$          IF (TAUtot(1)*(ETAzp(1,iY)-ETAzp(1,iY-1)).GT.delTAUmax) flag = 1
+!!$          IF(flag.EQ.1.AND.devmax.GE.accFlux) THEN                                                   
+!!$            kins = kins + 1                                                                         
+!!$            Yins(kins) = Y(iY-1)+0.5D+00*(Y(iY)-Y(iY-1))                                                
+!!$            iYins(kins) = iY-1                                                                      
+!!$          END IF                                                                                    
+!!$        END DO                                                                                      
+!!$        IF (devmax.LT.accFlux.OR.devfac.LT.0.01D+00) THEN                                                
+!!$          istop = 1                                                                                 
+!!$          ELSE                                                                                      
+!!$          IF (kins.GT.0) istop = 1                                                                  
+!!$        END IF                                                                                      
+!!$        devfac = devfac / 2.0D+00                                                                       
+!!$     END DO
+!!$  endif
+
+
   if (maxrat.gt.accFlux) then 
-     kins = kins + 1
-     Yins(kins) = 0.5*(Y(2)+Y(1))
-     iYins(kins) = 1
-     navg = 0
-     do iY = 3, nY
+!!$     kins = kins + 1
+!!$     Yins(kins) = 0.5*(Y(2)+Y(1))
+!!$     iYins(kins) = 1
+     do iY = 2, nY
         tmp1 = dabs(fbolom(iY-1)-fbolom(iY))
         tmp2 = tmp2 + tmp1
         !if (tmp1.gt.tmp2) tmp2 = tmp1
      end do
      fact = -0.0001
      n_ins = nY
-     do while (n_ins.gt.nY*0.2-kins)
+     do while (n_ins.gt.nY*0.1)
         fact = fact+0.0001
         n_ins = 0
-        do iY = 3, nY
+        do iY = 2, nY
            tmp1 = dabs(fbolom(iY-1)-fbolom(iY))
            if  (tmp1.ge.fact*tmp2) n_ins = n_ins + 1
         end do
      end do
-     do iY = 3, nY
+     if (n_ins.lt.1) fact = 0.0
+     do iY = 2, nY
         tmp1 = dabs(fbolom(iY-1)-fbolom(iY))
-        if  ((tmp1.ge.fact*tmp2).or.((iterfbol.lt.4).and.&
-             ((((fbol_em(iY)/fbolom(iY)).gt.0.001).and.&
-             ((fbol_em(iY)/fbolom(iY)).lt.0.999)).or. &
-             (((fbol_sc(iY)/fbolom(iY)).gt.0.001).and.&
-             ((fbol_sc(iY)/fbolom(iY)).lt.0.999))))) then
+        if  ((TAUtot(1)*(ETAzp(1,iY)-ETAzp(1,iY-1)).GT.delTAUmax).or.&
+             (tmp1.ge.fact*tmp2).or.&
+             ((iterfbol.lt.3).and.&
+             ((((fbol_em(iY)/fbolom(iY)).gt.0.01).and.&
+             ((fbol_em(iY)/fbolom(iY)).lt.0.99)).or. &
+             (((fbol_sc(iY)/fbolom(iY)).gt.0.01).and.&
+             ((fbol_sc(iY)/fbolom(iY)).lt.0.99))))) then
            n_ins = 1
            kins = kins + n_ins
            do i_ins = 1,n_ins
