@@ -51,8 +51,8 @@
 			  TBB = 1000
 
 %(available options: flux\lum_r1\energy_den\dilutn_fac\t1)
-                         type of entry = T1
-                                    T1 = 1000.
+                         type of entry = flux
+                                    flux = 5.70E+04
                   kind of illumination = ISOTROPIC
 
           Spectral shape:     Spectrum = black_body
@@ -66,18 +66,21 @@
 %(available options: common_grain\common_and_addl_grain\tabulated)
      
       2.1 Chemical composition                       
-           optical properties index = tabulated
+           optical properties index = tabulated_multi
+	   n =  2
+                    ism-noscatt.dat
                     ism-noscatt.dat
 %       		     ISM-OHM.dat
-Tsub = 2000
+frac = 1.0 , 1.0
+Tsub = 2000 , 2000
      3) Optical Depth     
 
 %(available options: linear\logarithmic\user_supplied)
 
         - grid type = LOGARITHMIC                % log grid
         - lambda0 = 0.55 micron            % optical depth specified 
-        - tau(min) = 1.0; tau(max) = 1000.0   % for the visual wavelength   
-        - number of models = 4
+        - tau(min) = 10.0; tau(max) = 10.0   % for the visual wavelength   
+        - number of models = 1
   ----------------------------------------------------------------------
                                                                         
  III. NUMERICS                                                           

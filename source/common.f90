@@ -12,9 +12,9 @@ Module common
   integer NREC
   PARAMETER (NREC = 1000)
   double precision :: dynrange          ! dynamical range (1d-20 .. 1d20)
-  PARAMETER (dynrange = 1.d-30)
+  PARAMETER (dynrange = 1.d-20)
   double precision :: accRomb
-  PARAMETER (accRomb = 1e-4)
+  PARAMETER (accRomb = 1e-3)
   integer nOutput                       ! number of output columns
   PARAMETER (nOutput=20)
   integer npY,npP,npL,npG,npR
@@ -29,8 +29,9 @@ Module common
   integer left,right
 
   integer :: Ntr,nYetaF,nPcav
-  integer :: taut, muobs, transmit,sfn !<----needed in slb intensity .... bad style!!!
-  integer :: startyp(2)
+  integer ::  transmit !<----needed in slb intensity .... bad style!!!
+  double precision :: muobs,taut,Sfn !<----needed in slb intensity .... bad style!!!
+  integer :: startyp(2) 
   double precision Pow
   double precision Yout
   double precision aveV,aveA,sigExfid
@@ -114,13 +115,15 @@ Module common
   double precision :: psi,psi0   ! psi as defined in IE97
   double precision :: ETAcoef(npY,4)
   ! output parameter - should be a structure and not in global ... search if it is used elseweher
-  double precision CMdot, CM, Cve, Cr1, G1, Ginf, Phi, Prdw, QV, Qstar, r1rs, Te_min, winf, &
+  double precision CMdot, CM, Cve, Cr1, G1, Ginf, Phi, Prdw, QV, Qstar, r1rs, winf, &
        zeta1, I1_dyn, I2_dyn, I3_dyn, PIrdw
   integer psftype, Npsf, iLambda
   integer :: iA,iB,iC,iX,iPSF,iV,NlambdaOut,Nconv,nMu,Nvisi,iD,iJ,nJOut
   double precision,allocatable :: theta(:)
   double precision :: lambdaOut(nOutput), FWHM1(nOutput), FWHM2(nOutput),kPSF(nOutput), &
        xpsf(1000), ypsf(1000), psfArea(nOutput), YJout(nOutput), theta1
+  double precision ConvInt(nOutput,1000), Visib(nOutput,1000),     &
+       Offset(1000), qtheta1(1000), Te_min, JOut(npL,nOutput)
 
 
 !!$  ! ===========================================================================

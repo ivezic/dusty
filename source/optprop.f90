@@ -199,7 +199,6 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
            end do
         end if
         ! interpolate to dusty's wavelength grid
-        print*,iG,xC(iG)
         do iL = 1, nL
            call powerinter(Nmax,nLin,lambdain,Qain,lambda(iL),iiLaux,aa)
            sigmaA(iG,iL) = xC(iG) * aa

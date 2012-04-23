@@ -239,7 +239,7 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,&
      end if
      if(iVerb.eq.2) write(*,'(A,F10.3,A)') '  Achieved error in bolometric Flux:',maxFerr*100,'%'
      call Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol,fbol,fDebol,fDsbol,fbolOK,maxrat)
-     if (iVerb.eq.2) write(*,'(a,i3,a,i3,a,i3)') ' After Flux_Cons nY=', nY,' nP=',nP,' Ncav=',Ncav
+     if (iVerb.eq.2) write(*,'(a,i3,a,i3,a,i3)') '  After Flux_Cons nY=', nY,' nP=',nP,' Ncav=',Ncav
      ! initialize flag, y_incr, which records whether there is an increase in
      ! y-grid points
      y_incr = 0
@@ -1172,8 +1172,10 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   enddo
    if(iVerb.eq.2) write(*,*) ' '
   !=== the end of iterations over Td ===
-  if(iVerb.eq.2) write(*,*) &
-       '  Done with finding dust temperature after ',iter,' iterations. errT:',maxval(maxerrT),'errU:',maxval(maxerrU)
+  if(iVerb.eq.2) then 
+     write(*,'(A,I3,A)') '  Done with finding dust temperature after ',iter,' iterations'
+     write(*,'(A,1PE9.3,A,1PE9.3)') '    errT: ',maxval(maxerrT),' errU: ',maxval(maxerrU)
+  end if
   ! find T_external for the converged dust temperature
   if (typentry(1).eq.5) call find_Text(nY,T4_ext)
   ! find Jext, needed in PrOut [MN]
@@ -3466,22 +3468,26 @@ end subroutine SPH_Int
         idifm = 0.0d0
         idifp = 0.0d0
         tau1(1) = 0.0d0
-        do iY = 2, nY
-           tau1(iY) = TAUslb(iL,iY)
-           Sfn = 0
-           do iG=1,nG
-              frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,il)+sigmaS(nG+1,il))
-              Sfn = Sfn + frac*(1.0d0-omega(iG,iL))*em(iG,iL,iY)
-              Sfn = Sfn + frac*omega(iG,iL)*utot(iL,iY)
+        if ((sigmaA(nG+1,iL)+sigmaS(nG+1,iL)).gt.0.0) then 
+           do iY = 2, nY
+              tau1(iY) = TAUslb(iL,iY)
+              Sfn = 0
+              do iG=1,nG
+                 frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
+                 Sfn = Sfn + frac*(1.0d0-omega(iG,iL))*em(iG,iL,iY)
+                 Sfn = Sfn + frac*omega(iG,iL)*utot(iL,iY)
+              end do
+              if (Sfn.gt.0.0) then 
+                 ! transmit=1 for tau < t, transmit=0 for tau > t
+                 transmit = 1
+                 call romby(Sexp,tau1(iY-1),tau1(iY),res)
+                 idifm = idifm + res
+                 transmit = 0
+                 call romby(Sexp,tau1(iY-1),tau1(iY),res)
+                 idifp = idifp + res
+              end if
            end do
-           ! transmit=1 for tau < t, transmit=0 for tau > t
-           transmit = 1
-           call romby(Sexp,tau1(iY-1),tau1(iY),res)
-           idifm = idifm + res
-           transmit = 0
-           call romby(Sexp,tau1(iY-1),tau1(iY),res)
-           idifp = idifp + res
-        end do
+        end if
         if(idifm.lt.1.d-20) idifm = 0.0d0
         if(idifp.lt.1.d-20) idifp = 0.0d0
         SLBintm(imu,iL) = idifm
@@ -3875,6 +3881,7 @@ double precision function Sexp(t)
 ! Here t = tau(iY); the flag 'transmit' is in 'SLBintens.inc'.
 !======================================================================
   use common
+  use interfaces
   implicit none
   double precision t, arg, efact
   !-----------------------------------------------------------------
@@ -4092,34 +4099,34 @@ end function Sexp
 !!$END SUBROUTINE Conv2D
 !!$! ***********************************************************************
 !!$
-!!$! ***********************************************************************
-!!$DOUBLE PRECISION FUNCTION PSFN(x)
-!!$! =======================================================================
-!!$! This function evaluates the point spread function. For psftype.EQ.1
-!!$! the function is evaluated as a sum of two Gaussians, for psftype.EQ.3
-!!$! it is provided by user in a file. psftype and all other relevant
-!!$! parameters come from COMMON /psf/ and are initialized in subroutine
-!!$! INPUT.                                               [Z.I., Jan. 1997]
-!!$! =======================================================================
-!!$  use common
-!!$  IMPLICIT none
-!!$  DOUBLE PRECISION x
-!!$  INTEGER idummy
-!!$  ! -----------------------------------------------------------------------
-!!$  IF (psftype.LT.3) THEN
-!!$     psfn = dexp(-(1.665d0*x/FWHM1(iLambda))**2.0d0)
-!!$     IF (psftype.EQ.2)  &
-!!$          psfn = (psfn + kPSF(iLambda) *  &
-!!$          dexp(-(1.665d0*x/FWHM2(iLambda))**2.0d0))/ &
-!!$          (1.0d0+kPSF(iLambda))
-!!$  ELSE
-!!$     CALL LinInter(1000,Npsf,xpsf,ypsf,x,idummy,psfn)
-!!$  ENDIF
-!!$  ! -----------------------------------------------------------------------
-!!$  RETURN
-!!$END FUNCTION PSFN
-!!$! ***********************************************************************
-!!$
+! ***********************************************************************
+DOUBLE PRECISION FUNCTION PSFN(x)
+! =======================================================================
+! This function evaluates the point spread function. For psftype.EQ.1
+! the function is evaluated as a sum of two Gaussians, for psftype.EQ.3
+! it is provided by user in a file. psftype and all other relevant
+! parameters come from COMMON /psf/ and are initialized in subroutine
+! INPUT.                                               [Z.I., Jan. 1997]
+! =======================================================================
+  use common
+  IMPLICIT none
+  DOUBLE PRECISION x
+  INTEGER idummy
+  ! -----------------------------------------------------------------------
+  IF (psftype.LT.3) THEN
+     psfn = dexp(-(1.665d0*x/FWHM1(iLambda))**2.0d0)
+     IF (psftype.EQ.2)  &
+          psfn = (psfn + kPSF(iLambda) *  &
+          dexp(-(1.665d0*x/FWHM2(iLambda))**2.0d0))/ &
+          (1.0d0+kPSF(iLambda))
+  ELSE
+     CALL LinInter(1000,Npsf,xpsf,ypsf,x,idummy,psfn)
+  ENDIF
+  ! -----------------------------------------------------------------------
+  RETURN
+END FUNCTION PSFN
+! ***********************************************************************
+
 !***********************************************************************
 SUBROUTINE GetbOut(nP,pstar,k)
 !=======================================================================

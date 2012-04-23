@@ -378,6 +378,8 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         do iG = 2, nG
            xC(iG) = RDINP(noEqual,1)
         end do
+     else 
+        xC(1) = 1.0
      end if
   end if
   ! 2.1 Grain size distribution
@@ -424,7 +426,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   end if
   if (typentry(1).eq.5) then 
      Tinner(ifidG) = Tinner_fidG
-     print'(a,i3,a,f8.2)','Inner Boundary Temperature of fiducial Grain(',ifidG,')=',Tinner(ifidG)
+     print'(a,i3,a,f8.2)',' Inner Boundary Temperature of fiducial Grain(',ifidG,')=',Tinner(ifidG)
   end if
   allocate(SigmaA(nG+1,nL))
   allocate(SigmaS(nG+1,nL))
@@ -1244,6 +1246,7 @@ subroutine input_slb_ang(ang_type)
      angstep = RDINP(Equal,1)
      ! create the grid:
      imu = 1
+     allocate(theta(int((th_max-th_min)/angstep)+1))
      theta(1)=th_min
      do while(theta(imu).lt.th_max)
         theta(imu+1) = theta(imu) + angstep
@@ -1499,26 +1502,18 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   integer :: model,nY,nP,nYprev,itereta
   double precision :: delta
   !---local variables
-  integer :: i, j, iLV, iG, iL, iY, unt, imu
+  integer :: i, j, iLV, iG, iL, iY, unt, imu, iOut, iNloc
   double precision, allocatable::Elems(:,:),ftotL(:),ftotR(:),faux(:),sigma_tmp(:)
-  double precision :: sigmaVs,sigmaVa,sigmaVe
+  double precision :: sigmaVs,sigmaVa,sigmaVe,Y_loc,J_loc,Jbol(10)
   double precision :: FbolL, FbolR, FbolIL,FbolIR,res, xAttTotL,&
        xAttTotR,xDsTotL,xDsTotR,xDeTotL,xDeTotR,temp1,temp2, &
        fnormL, fnormR, limval, tht1, dmax, GinfG1, xs, xde, xds, tr, &
-       eta
+       eta,psffunc(nOutput,1000),psfn
   character*120 STemp,Serr,hdint, hdcon,hdvis, s1, su1, s2, su2, tstr*10
   character*132 hdsp1,hdsp2,hdrslb1,hdrslb2,hdrsph1,hdrsph2,hdrdyn
   character*255 crossfilename
-  external eta
-  
-!!$  integer iG, iY, iL, i, model, j, unt, imu, nrows, ncols,nG, iOut, iNloc , iLV
-!!$!  parameter (nrows=200, ncols=25)
-!!$  double precision psfn, psffunc(20,1000),eta, faux(nL), omega(npG+1,nL),ftotL(nL),ftotR(nL),  &
-!!$       , xs, xds, xde, res, fnormL, fnormR, dmax, limval, GinfG1, delta, &
-!!$       y_loc, J_loc, Jbol(10), xAttTotL,xAttTotR,xDsTotL,xDsTotR,xDeTotL,xDeTotR,temp1,temp2
-!----------------------------------------------------------------------
-!!$
-
+  external eta,psfn
+  !---------------------------------------------------------------------
   allocate(ftotL(nL))
   allocate(ftotR(nL))
   allocate(faux(nL))
@@ -1933,193 +1928,184 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
      end if
      ! end if for the iB (radial) flag
   end if
-!!$
-!!$  !--------------   intensities to *.inn (old *.cxx) file  --------------
-!!$  if (abs(iC).ne.0) then
-!!$     ! slab intensity (found at the end of subroutine slbradt)
-!!$     ! theta(nmu) are the angles of output intensities
-!!$     if (slb) then
-!!$        if(allocated(Elems)) deallocate(Elems)
-!!$        allocate(Elems(nL,nmu+2))
-!!$        hdint = '   lambda'
-!!$        unt = 17
-!!$        call line(1,2,unt)
-!!$        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' transmitted i(theta)*cos(theta)'
-!!$        call line(1,1,unt)
-!!$        do iL = 1, nL
-!!$           Elems(iL,1) = lambda(iL)
-!!$           do imu = 1, nmu
-!!$              !if(iPhys.eq.1) SLBintm(imu,iL) = SLBintm(imu,iL)*Jext(nY)
-!!$              !4pi comes from slbintp since it is divided by 4pi need to be changed!!
-!!$              Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(1)*4*pi
-!!$           end do
-!!$           Elems(iL,nmu+2) = istR(iL)
-!!$        end do
-!!$        ! write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
-!!$        ! printout angles in degrees
-!!$        ! write(unt,'(a9,37f11.1,a9)') hdint,
-!!$        ! &                    (theta(imu)*180.0d0/pi,imu=1,nmu),'     IstR'
-!!$        write(unt,'(a9,100f11.1)') hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
-!!$        call maketable(Elems,nL,nmu+1,unt)
-!!$        ! adding the column with stellar ints at the end of the table
-!!$        !  call maketable(Elems,nL,nmu+2,unt)
-!!$        hdint = '   lambda'
-!!$        unt = 17
-!!$        call line(1,2,unt)
-!!$        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' reflected cos(theta)*i(theta)'
-!!$        call line(1,1,unt)
-!!$        do iL = 1, nL
-!!$           Elems(iL,1) = lambda(iL)
-!!$           do imu = 1, nmu
-!!$!              if(iPhys.eq.1) SLBintp(imu,iL) = SLBintp(imu,iL)*Jext(1)
-!!$               !4pi comes from slbintp since it is divided by 4pi need to be changed!!
-!!$
-!!$              Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(nY)*4*pi !4pi comes from slbintp
-!!$           end do
-!!$        end do
-!!$        !write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
-!!$        !printout angles in degrees
-!!$        write(unt,'(a9,99f11.1)')hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
-!!$        call maketable(Elems,nL,nmu+1,unt)
-!!$     !------  for spherical shell --------
-!!$     elseif(sph) then
-!!$        if(allocated(Elems)) deallocate(Elems)
-!!$        allocate(Elems(np+2,nLambdaOut+2))
-!!$        hdint = '#     b          t(b)'
-!!$        hdcon = '#   offset '
-!!$        hdvis = '#     q    '
-!!$        unt = 17
-!!$        call line(1,2,unt)
-!!$        write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
-!!$        call line(1,1,unt)
-!!$        do i = 1, nP+2
-!!$           Elems(i,1) = bOut(i)
-!!$           Elems(i,2) = tauZout(i)
-!!$           do j = 1, nLambdaOut
-!!$              ! check values:
-!!$              if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
-!!$                 IntOut(j,i) = 0.0d0
-!!$              end if
-!!$              Elems(i,j+2) = IntOut(j,i)
-!!$              ! we want intensity in Jy/arcsec^2
-!!$              ! this was the bug in intensity output for sphere,
-!!$              ! the missing 4piY^2 factor for intensity output [June 2006]
-!!$              ! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
-!!$              !IF (iPhys.eq.1) THEN <--- iphys allways 1
-!!$              Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-!!$              ! ELSE
-!!$              !   Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
-!!$              ! END IF
-!!$           end do
-!!$        end do
-!!$        write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
-!!$        call maketable(Elems,nP+2,nLambdaOut+2,unt)
-!!$     end if
-!!$  end if
-!!-------stoped here blubb
-!!$  if (iC.lt.0) then
-!!$     !---------  convolved images either add to .i## file or write in *.c## file --
-!!$     if(iC.eq.-3) unt = 21
-!!$     call line(1,2,unt)
-!!$     write(unt,'(a7,i3,a8,f8.3,a20)') '# model',model,' taufid=',taufid,'   convolved image  '
-!!$     call line(1,1,unt)
-!!$     if(allocated(Elems)) deallocate(Elems)
-!!$     allocate(Elems(nconv,nLambdaOut+1))
-!!$     do i = 1, nconv
-!!$        Elems(i,1) = offset(i)
-!!$        do j = 1, nLambdaOut
-!!$           if(convint(j,i).lt.limval) convint(j,i) = 0.0d0
-!!$           Elems(i,j+1) = convint(j,i)
-!!$        end do
-!!$     end do
-!!$     write(unt,'(a11,20f11.2)')hdcon,(LambdaOut(i),i=1,nLambdaOut)
-!!$     call maketable(Elems,nconv,nLambdaOut+1,unt)
-!!$     if (psftype.lt.3.and.model.eq.1) then
-!!$        ! wavelength dependent psfs, print them separately in *.psf
-!!$        ! first generate wavelength dependent psfs
-!!$        do j = 1, nLambdaOut
-!!$           iLambda = j
-!!$           ! added dec.04 [mn]
-!!$           do i = 1, nconv
-!!$              psffunc(j,i) = psfn(offset(i))
-!!$              ! norm.needs to be done here again (after call to psfn)
-!!$              psffunc(j,i) = psffunc(j,i)/psfarea(j)
-!!$              ! check dynamic range
-!!$              call chkrange(dynrange,psffunc(j,i))
-!!$           end do
-!!$        end do
-!!$        ! print them out
-!!$        do i = 1, nconv
-!!$           write(23,'(1p,e12.5,20e10.3)')offset(i),(psffunc(j,i),j=1,nLambdaOut)
-!!$        end do
-!!$     end if
-!!$  end if
-!!$  !--------------  visibility curves to *.vnn file    ------------------------
-!!$  if (sph) then
-!!$   if (iV.ne.0) then
-!!$    if(abs(iC).eq.3) unt = 22
-!!$    call line(1,2,unt)
-!!$    write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model, &
-!!$         ' taufid=',taufid,'  visibility  '
-!!$    call line(1,1,unt)
-!!$
-!!$    if(allocated(Elems)) deallocate(Elems)
-!!$    allocate(Elems(nvisi,nLambdaOut+1))
-!!$
-!!$    do i = 1, nvisi
-!!$     Elems(i,1) = qtheta1(i)
-!!$     do j = 1, nLambdaOut
-!!$      if(visib(j,i).lt.limval) visib(j,i) = 0.0d0
-!!$      Elems(i,j+1) = visib(j,i)
-!!$     end do
-!!$    end do
-!!$    write(unt,'(a11,20f11.2)')hdvis,(LambdaOut(i),i=1,nLambdaOut)
-!!$    call maketable(Elems,nvisi,nLambdaOut+1,unt)
-!!$   end if
-!!$  endif
+
+  !--------------   intensities to *.inn (old *.cxx) file  --------------
+  if (abs(iC).ne.0) then
+     ! slab intensity (found at the end of subroutine slbradt)
+     ! theta(nmu) are the angles of output intensities
+     if (slb) then
+        if(allocated(Elems)) deallocate(Elems)
+        allocate(Elems(nL,nmu+2))
+        hdint = '#  lambda'
+        unt = 17
+        call line(1,2,unt)
+        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' transmitted i(theta)*cos(theta)'
+        call line(1,1,unt)
+        do iL = 1, nL
+           Elems(iL,1) = lambda(iL)
+           do imu = 1, nmu
+              !if(iPhys.eq.1) SLBintm(imu,iL) = SLBintm(imu,iL)*Jext(nY)
+              !4pi comes from slbintp since it is divided by 4pi need to be changed!!
+              Elems(iL,imu+1) = SLBintm(imu,iL)*Jext(1)*4*pi
+           end do
+           Elems(iL,nmu+2) = istR(iL)
+        end do
+        ! write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
+        ! printout angles in degrees
+        ! write(unt,'(a9,37f11.1,a9)') hdint,
+        ! &                    (theta(imu)*180.0d0/pi,imu=1,nmu),'     IstR'
+        write(unt,'(a9,100f11.1)') hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
+        call maketable(Elems,nL,nmu+1,unt)
+        ! adding the column with stellar ints at the end of the table
+        !  call maketable(Elems,nL,nmu+2,unt)
+        hdint = '#  lambda'
+        unt = 17
+        call line(1,2,unt)
+        write(unt,'(a7,i3,a8,f8.3,a32)')'# model',model,' taufid=',taufid,' reflected cos(theta)*i(theta)'
+        call line(1,1,unt)
+        do iL = 1, nL
+           Elems(iL,1) = lambda(iL)
+           do imu = 1, nmu
+              !if(iPhys.eq.1) SLBintp(imu,iL) = SLBintp(imu,iL)*Jext(1)
+              !4pi comes from slbintp since it is divided by 4pi need to be changed!!
+              Elems(iL,imu+1) = SLBintp(imu,iL)*Jext(nY)*4*pi !4pi comes from slbintp
+           end do
+        end do
+        !write(unt,'(a9,21f11.3)')hdint,(theta(imu),imu=1,nmu)
+        !printout angles in degrees
+        write(unt,'(a9,99f11.1)')hdint,(theta(imu)*180.0d0/pi,imu=1,nmu)
+        call maketable(Elems,nL,nmu+1,unt)
+     !------  for spherical shell --------
+     elseif(sph) then
+        if(allocated(Elems)) deallocate(Elems)
+        allocate(Elems(np+2,nLambdaOut+2))
+        hdint = '#     b          t(b)'
+        hdcon = '#   offset '
+        hdvis = '#     q    '
+        unt = 17
+        call line(1,2,unt)
+        write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model,' taufid=',taufid,'   raw image  '
+        call line(1,1,unt)
+        do i = 1, nP+2
+           Elems(i,1) = bOut(i)
+           Elems(i,2) = tauZout(i)
+           do j = 1, nLambdaOut
+              ! check values:
+              if(IntOut(j,i).ne.IntOut(j,i).or.IntOut(j,i).lt.limval) then
+                 IntOut(j,i) = 0.0d0
+              end if
+              Elems(i,j+2) = IntOut(j,i)
+              ! we want intensity in Jy/arcsec^2
+              ! this was the bug in intensity output for sphere,
+              ! the missing 4piY^2 factor for intensity output [June 2006]
+              ! Elems(i,j+2) = 7.83 * LambdaOut(j) * Fi * Elems(i,j+2)
+              !IF (iPhys.eq.1) THEN <--- iphys allways 1
+              Elems(i,j+2) = 7.834d0*LambdaOut(j)*(Jext(nY)*4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
+              ! ELSE
+              !   Elems(i,j+2) = 7.834d0*LambdaOut(j)*(4.0d0*pi*Yout**2.0d0)*Elems(i,j+2)
+              ! END IF
+           end do
+        end do
+        write(unt,'(a21,20f11.2)')hdint,(LambdaOut(j),j=1,nLambdaOut)
+        call maketable(Elems,nP+2,nLambdaOut+2,unt)
+     end if
+  end if
+  if (iC.lt.0) then
+     !---------  convolved images either add to .i## file or write in *.c## file --
+     if(iC.eq.-3) unt = 21
+     call line(1,2,unt)
+     write(unt,'(a7,i3,a8,f8.3,a20)') '# model',model,' taufid=',taufid,'   convolved image  '
+     call line(1,1,unt)
+     if(allocated(Elems)) deallocate(Elems)
+     allocate(Elems(nconv,nLambdaOut+1))
+     do i = 1, nconv
+        Elems(i,1) = offset(i)
+        do j = 1, nLambdaOut
+           if(convint(j,i).lt.limval) convint(j,i) = 0.0d0
+           Elems(i,j+1) = convint(j,i)
+        end do
+     end do
+     write(unt,'(a11,20f11.2)')hdcon,(LambdaOut(i),i=1,nLambdaOut)
+     call maketable(Elems,nconv,nLambdaOut+1,unt)
+     if (psftype.lt.3.and.model.eq.1) then
+        ! wavelength dependent psfs, print them separately in *.psf
+        ! first generate wavelength dependent psfs
+        do j = 1, nLambdaOut
+           iLambda = j
+           ! added dec.04 [mn]
+           do i = 1, nconv
+              psffunc(j,i) = psfn(offset(i))
+              ! norm.needs to be done here again (after call to psfn)
+              psffunc(j,i) = psffunc(j,i)/psfarea(j)
+              ! check dynamic range
+              call chkrange(dynrange,psffunc(j,i))
+           end do
+        end do
+        ! print them out
+        do i = 1, nconv
+           write(23,'(1p,e12.5,20e10.3)')offset(i),(psffunc(j,i),j=1,nLambdaOut)
+        end do
+     end if
+  end if
+  !--------------  visibility curves to *.vnn file    ------------------------
+  if (sph) then
+     if (iV.ne.0) then
+        if(abs(iC).eq.3) unt = 22
+        call line(1,2,unt)
+        write(unt,'(a7,i3,a8,f8.3,a14)') '# model',model, &
+             ' taufid=',taufid,'  visibility  '
+        call line(1,1,unt)
+        if(allocated(Elems)) deallocate(Elems)
+        allocate(Elems(nvisi,nLambdaOut+1))
+        do i = 1, nvisi
+           Elems(i,1) = qtheta1(i)
+           do j = 1, nLambdaOut
+              if(visib(j,i).lt.limval) visib(j,i) = 0.0d0
+              Elems(i,j+1) = visib(j,i)
+           end do
+        end do
+        write(unt,'(a11,20f11.2)')hdvis,(LambdaOut(i),i=1,nLambdaOut)
+        call maketable(Elems,nvisi,nLambdaOut+1,unt)
+     end if
+  endif
 !!$!----------  energy density profiles to *jnn file  -------------------------
-!!$  if(sph) then
-!!$   if(allocated(Elems)) deallocate(Elems)
-!!$   allocate(Elems(nL,nJOut+1))
-!!$
-!!$   if(iJ.gt.0) then
-!!$    unt = 19
-!!$    call line(1,2,unt)
-!!$    write(unt,'(a7,i3,a8,f8.3,a20)') '# model',model,' taufid=',taufid,'   Energy density   '
-!!$    call line(1,1,unt)
-!!$!   Jext is found in the beginning of sub PrOut.
-!!$!   Find the scale of en. density in [W/m2] for the required YJout(iOut) [MN]
-!!$    do iOut = 1, nJOut
-!!$      y_loc = YJOut(iOut)
-!!$      call LININTER(npY,nY,Y,Jext,y_loc,iNloc,J_loc)
-!!$      Jbol(iOut) = J_loc
-!!$    end do
-!!$!   write the scale in the header
-!!$    write(unt,'(a11,1p,10e11.3)')'Jbol[W/m2]=',(Jbol(iOut),iOut=1,nJout)
-!!$    write(unt,'(a11,10f11.2)')'      Y =  ',(YJOut(iOut),iOut=1,nJout)
-!!$    write(unt,'(a11)')'   lambda  '
-!!$
-!!$!   normalize en. density profiles
-!!$    do iOut = 1, nJOut
-!!$      do iL = 1, nL
-!!$        if(JOut(iL,iOut).lt.limval) JOut(iL,iOut) = 0.0d0
-!!$        faux(iL) = JOut(iL,iOut) / lambda(iL)
-!!$      end do
-!!$      call Simpson(nL,1,nL,lambda,faux,res)
-!!$      fnormR = res
-!!$      do iL = 1, nL
-!!$        Elems(iL,1) = lambda(iL)
-!!$        Elems(iL,iOut+1) = JOut(iL,iOut) / fnormR
-!!$      end do
-!!$    end do
-!!$
-!!$    call maketable(Elems,nL,nJout+1,unt)
-!!$   end if
-!!$  end if
-!!$
-!!$ if(allocated(Elems)) deallocate(Elems)
-!!$!-----------------------------------------------------------------------
-!!$
+  if(sph) then
+     if(allocated(Elems)) deallocate(Elems)
+     allocate(Elems(nL,nJOut+1))
+     if(iJ.gt.0) then
+        unt = 19
+        call line(1,2,unt)
+        write(unt,'(a7,i3,a8,f8.3,a20)') '# model',model,' taufid=',taufid,'   Energy density   '
+        call line(1,1,unt)
+        !   Jext is found in the beginning of sub PrOut.
+        !   Find the scale of en. density in [W/m2] for the required YJout(iOut) [MN]
+        do iOut = 1, nJOut
+           y_loc = YJOut(iOut)
+           call LININTER(npY,nY,Y,Jext,y_loc,iNloc,J_loc)
+           Jbol(iOut) = J_loc
+        end do
+        !   write the scale in the header
+        write(unt,'(a11,1p,10e11.3)')'Jbol[W/m2]=',(Jbol(iOut),iOut=1,nJout)
+        write(unt,'(a11,10f11.2)')'      Y =  ',(YJOut(iOut),iOut=1,nJout)
+        write(unt,'(a11)')'   lambda  '
+        !   normalize en. density profiles
+        do iOut = 1, nJOut
+           do iL = 1, nL
+              if(JOut(iL,iOut).lt.limval) JOut(iL,iOut) = 0.0d0
+              faux(iL) = JOut(iL,iOut) / lambda(iL)
+           end do
+           call Simpson(nL,1,nL,lambda,faux,res)
+           fnormR = res
+           do iL = 1, nL
+              Elems(iL,1) = lambda(iL)
+              Elems(iL,iOut+1) = JOut(iL,iOut) / fnormR
+           end do
+        end do
+        call maketable(Elems,nL,nJout+1,unt)
+     end if
+  end if
+  if(allocated(Elems)) deallocate(Elems)
+  !--------------------------------------------------------------------
   deallocate(ftotL)
   deallocate(ftotR)
   deallocate(faux)

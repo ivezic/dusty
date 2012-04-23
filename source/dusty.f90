@@ -299,4 +299,5 @@ implicit none
   deallocate(fmbol)
   deallocate(Intens)
   deallocate(destroyed)
+  deallocate(theta)
 end subroutine dealloc_mem
