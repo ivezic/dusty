@@ -25,8 +25,7 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
        sigAbs(:,:), sigSca(:,:),n_int(:), k_int(:)
   double precision aa,bb,cc,lambdain(Nmax),Qain(Nmax),Qsin(Nmax), &
        amax, nsd(npA), a(npA), faux1(npA), faux2(npA), f(npA), int,&
-       ala(Nmax),  sizedist, aQa(Nmax), aQs(Nmax),  Cnorm, a3ave, a2ave,&
-       aveA
+       ala(Nmax),  sizedist, aQa(Nmax), aQs(Nmax),  Cnorm, a3ave, a2ave
   !-----------------------------------------------------------------
   ! this should never change
   Nprop = 7
@@ -200,12 +199,13 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
            end do
         end if
         ! interpolate to dusty's wavelength grid
+        print*,iG,xC(iG)
         do iL = 1, nL
            call powerinter(Nmax,nLin,lambdain,Qain,lambda(iL),iiLaux,aa)
-           sigmaA(iG,iL) = aa
+           sigmaA(iG,iL) = xC(iG) * aa
            ! call lininter(Nmax,nLin,lambdain,Qsin,lambda(iL),iiLaux,aa)
            call powerinter(Nmax,nLin,lambdain,Qsin,lambda(iL),iiLaux,aa)
-           sigmaS(iG,iL) = aa
+           sigmaS(iG,iL) = xC(iG) * aa
            sigmaA(nG+1,iL) = sigmaA(nG+1,iL) + sigmaA(iG,iL)
            sigmaS(nG+1,iL) = sigmaS(nG+1,iL) + sigmaS(iG,iL)
         end do

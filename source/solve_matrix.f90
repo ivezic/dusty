@@ -203,8 +203,8 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
 !!$       PRINT*,'Slab case is not implemented for the matrix method!'
 !!$       STOP
   END IF
-!!$    ! analyze the solution and calculate some auxiliary quantities
-  CALL analysis(nY,model,us,T4_ext,delta)
+  ! analyze the solution and calculate some auxiliary quantities
+  CALL analysis(nY,model,us,T4_ext,delta,deviat)
   IF (iVerb.EQ.2) write(*,*) 'Done with Analysis'
   IF (iX.NE.0) THEN
      write(18,*)' ==== SOLVE successfully completed ====='

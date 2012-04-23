@@ -1,9 +1,9 @@
 module interfaces
   INTERFACE
      subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
-     iterfbol,T4_ext)
+     iterfbol,initTemp,T4_ext)
        use common
-       logical, intent(in) :: initial
+       logical, intent(in) :: initial,initTemp
        integer, intent(in) :: y_incr,iterfbol
        integer :: nY,nP,nYprev,itereta
        double precision pstar
@@ -18,9 +18,9 @@ module interfaces
        double precision,allocatable :: us(:,:),u_old(:,:),fs(:,:),T4_ext(:),emiss(:,:,:)
        logical initial
      END SUBROUTINE RADTRANSF_matrix
-     subroutine Analysis(nY,model,us,T4_ext,delta)
+     subroutine Analysis(nY,model,us,T4_ext,delta,maxrat)
        integer nY,model
-       double precision :: delta
+       double precision :: delta,maxrat
        double precision, allocatable ::  us(:,:),T4_ext(:)
      end subroutine Analysis
      subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
@@ -56,16 +56,16 @@ module interfaces
        integer nY, nP
        double precision,allocatable ::  m0(:,:), m1(:,:),m1p(:,:),m1m(:,:)
      end subroutine SPH_ext_illum
-     subroutine SPH_DIFF(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,vec2)
+     subroutine SPH_DIFF_o(nY,nP,flag1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,vec2)
        integer nY,nP,flag1,moment_loc,iter,iterfbol
        double precision, allocatable :: T4_ext(:),emiss(:,:,:),us(:,:),vec2(:,:)
        logical initial
-     end subroutine SPH_DIFF
-     subroutine SPH_DIFF_u(nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,vec2)
-       integer nY,nP,iter,iterfbol
+     end subroutine SPH_DIFF_o
+     subroutine SPH_DIFF(flag,moment,nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,vec2)
+       integer nY,nP,iter,iterfbol,flag,moment
        double precision, allocatable :: T4_ext(:),emiss(:,:,:),us(:,:),vec2(:,:)
        logical initial
-     end subroutine SPH_DIFF_u
+     end subroutine SPH_DIFF
      subroutine Simpson(n,n1,n2,x,y,integral)
        integer n, n1, n2
        double precision integral
@@ -76,8 +76,8 @@ module interfaces
        DOUBLE PRECISION maxFerr
        double precision,allocatable :: flux(:)
      END SUBROUTINE FindErr
-     subroutine inp_rad(shp,spec_scale,startyp)
-       integer :: startyp
+     subroutine inp_rad(shp,spec_scale,styp)
+       integer :: styp
        double precision :: spec_scale
        double precision,allocatable :: shp(:)
      end subroutine inp_rad
@@ -164,6 +164,11 @@ module interfaces
        double precision :: intfdx
        double precision, allocatable :: x(:),f(:)
      END SUBROUTINE NORDLUND
+     SUBROUTINE NORDLUND_part(iP,nY,nP,flag,x,f,N1,N2,m,intfdx)
+       integer :: iP,nY, nP, flag, N1, N2, m
+       double precision :: intfdx,f
+       double precision, allocatable :: x(:)
+     end SUBROUTINE NORDLUND_part
      subroutine add2(nY,flxs,flxe,fbsum)
        integer :: nY
        double precision, allocatable :: flxs(:,:),flxe(:,:),fbsum(:)
@@ -203,6 +208,10 @@ module interfaces
        integer nP
        double precision :: pstar
      END SUBROUTINE GetbOut
+     subroutine SLBintensity(nY,em)
+       integer :: nY
+       double precision, allocatable :: em(:,:,:)
+     end subroutine SLBintensity
 !!$     subroutine gen_spline_tau(nY,nP,spline)
 !!$       integer nY,nP
 !!$       double precision,allocatable :: spline(:,:,:,:,:,:)

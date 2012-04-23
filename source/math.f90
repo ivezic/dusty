@@ -218,37 +218,35 @@ subroutine scaleto1(Nmax,n,y)
 end subroutine scaleto1
 !***********************************************************************
 
-
-
-!!$!***********************************************************************
-!!$subroutine ROMBY(fnc,a,b,ss)
-!!$!=======================================================================
-!!$! This subroutine performs Romberg integration of function func on
-!!$! interval [a,b]. The result is returned in ss. Desired accuracy is set
-!!$! to 0.002.                                            [Z.I., Feb. 1996]
-!!$! =======================================================================
-!!$  IMPLICIT NONE
-!!$  INTEGER JMAX,JMAXP,K,KM, J
-!!$  PARAMETER (JMAX=30, JMAXP=JMAX+1, K=3, KM=K-1)
-!!$  DOUBLE PRECISION a,b,fnc,ss,EPS_loc, aux, dss,h(JMAXP),s(JMAXP)
-!!$  EXTERNAL fnc
-!!$  ! ---------------------------------------------------------------------
-!!$  EPS_loc = 0.002d0
-!!$  h(1)=1.0d0
-!!$  do j=1,JMAX
-!!$     call trapzd(fnc,a,b,s(j),j)
-!!$     if (j.ge.K) then
-!!$        aux = 0.0d0
-!!$        call polint(h(j-KM),s(j-KM),K,aux,ss,dss)
-!!$        IF (dabs(dss).le.EPS_loc*dabs(ss)) RETURN
-!!$     endif
-!!$     s(j+1)=s(j)
-!!$     h(j+1)=0.25d0*h(j)
-!!$  end do
-!!$  ! --------------------------------------------------------------------
-!!$  RETURN
-!!$END subroutine ROMBY
-!!$!***********************************************************************
+!***********************************************************************
+subroutine ROMBY(fnc,a,b,ss)
+!=======================================================================
+! This subroutine performs Romberg integration of function func on
+! interval [a,b]. The result is returned in ss. Desired accuracy is set
+! to 0.002.                                            [Z.I., Feb. 1996]
+! =======================================================================
+  IMPLICIT NONE
+  INTEGER JMAX,JMAXP,K,KM, J
+  PARAMETER (JMAX=30, JMAXP=JMAX+1, K=3, KM=K-1)
+  DOUBLE PRECISION a,b,fnc,ss,EPS_loc, aux, dss,h(JMAXP),s(JMAXP)
+  EXTERNAL fnc
+  ! ---------------------------------------------------------------------
+  EPS_loc = 0.002d0
+  h(1)=1.0d0
+  do j=1,JMAX
+     call trapzd(fnc,a,b,s(j),j)
+     if (j.ge.K) then
+        aux = 0.0d0
+        call polint(h(j-KM),s(j-KM),K,aux,ss,dss)
+        IF (dabs(dss).le.EPS_loc*dabs(ss)) RETURN
+     endif
+     s(j+1)=s(j)
+     h(j+1)=0.25d0*h(j)
+  end do
+  ! --------------------------------------------------------------------
+  RETURN
+END subroutine ROMBY
+!***********************************************************************
 !!$
 !!$
 !!$!***********************************************************************
@@ -382,36 +380,36 @@ SUBROUTINE SPLINE2(x,fun,N,coef)
   RETURN
 END SUBROUTINE SPLINE2
 !***********************************************************************
-!!$
-!!$!***********************************************************************
-!!$SUBROUTINE trapzd(func,a,b,s,n)
-!!$! =======================================================================
-!!$  IMPLICIT NONE
-!!$  INTEGER n
-!!$  DOUBLE PRECISION a,b,s,func
-!!$  EXTERNAL func
-!!$  INTEGER it,j
-!!$  DOUBLE PRECISION del,sum,tnm,x
-!!$  ! ----------------------------------------------------------------------
-!!$  IF (n.eq.1) THEN
-!!$     s=0.5d0*(b-a)*(func(a)+func(b))
-!!$  ELSE
-!!$     it=2**(n-2)
-!!$     tnm=it
-!!$     del=(b-a)/tnm
-!!$     x=a+0.5d0*del
-!!$     sum=0.
-!!$     DO j = 1, it
-!!$        sum=sum+func(x)
-!!$        x=x+del
-!!$     END DO
-!!$     s=0.5d0*(s+(b-a)*sum/tnm)
-!!$  END IF
-!!$  ! -------------------------------------------------------------------------
-!!$  RETURN
-!!$END SUBROUTINE trapzd
-!!$!***********************************************************************
-!!$
+
+!***********************************************************************
+SUBROUTINE trapzd(func,a,b,s,n)
+! =======================================================================
+  IMPLICIT NONE
+  INTEGER n
+  DOUBLE PRECISION a,b,s,func
+  EXTERNAL func
+  INTEGER it,j
+  DOUBLE PRECISION del,sum,tnm,x
+  ! ----------------------------------------------------------------------
+  IF (n.eq.1) THEN
+     s=0.5d0*(b-a)*(func(a)+func(b))
+  ELSE
+     it=2**(n-2)
+     tnm=it
+     del=(b-a)/tnm
+     x=a+0.5d0*del
+     sum=0.
+     DO j = 1, it
+        sum=sum+func(x)
+        x=x+del
+     END DO
+     s=0.5d0*(s+(b-a)*sum/tnm)
+  END IF
+  ! -------------------------------------------------------------------------
+  RETURN
+END SUBROUTINE trapzd
+!***********************************************************************
+
 !***********************************************************************
 subroutine polint(xa,ya,n,x,y,dy)
   ! For polinomial interpolation, used in Subroutine Romby.

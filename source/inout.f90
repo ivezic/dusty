@@ -15,8 +15,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   character(len=72) :: strpow,lamstr(nOutput)
   character(len=235),allocatable :: nameNK(:),nameQ(:)
   integer :: i, istop, GridType,Nmodel,L,top,iG,iFiles, &
-       nFiles,szds, EtaOK, startyp(2), &
-       ang_type, imu, ioverflw
+       nFiles,szds, EtaOK, ang_type, imu, ioverflw
   double precision :: a,b,tau1,tau2,Lum,dist,RDINP,spec_scale, &
        dilutn,th1,th2,xC(10),xCuser(10),sum,qsd,a1,a2,&
        x1, ceta, Fi, Fo, psf1,Tinner_fidG
@@ -285,6 +284,9 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   elseif (str(1:L).eq.'TABULATED') then
      top = 3
      nG = 1
+  elseif (str(1:L).eq.'TABULATED_MULTI') then
+     top = 3
+     nG = RDINP(Equal,1)
   end if
   if (top.ne.1.and.top.ne.2.and.top.ne.3.and.top.ne.4) then
      call msg(9)
@@ -371,24 +373,14 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
      do iG = 1, nG
         call filemsg(nameQ(iG),'abs. and scatt. cross-sections:')
      end do
+     if (nG.gt.1) then
+        xC(1) = RDINP(Equal,1)
+        do iG = 2, nG
+           xC(iG) = RDINP(noEqual,1)
+        end do
+     end if
   end if
-  ! 2.1 Temperatures
-  allocate(Tsub(nG))
-  allocate(Tinner(nG))
-  Tsub(1) = RDINP(Equal,1)
-  print'(A,I3,A,F12.3)',' Grain:',1,' Sublimation Temperature:',Tsub(1)
-  if (nG.gt.1) then
-     do iG = 2, nG
-        Tsub(iG) = RDINP(noEqual,1)
-        if (Tsub(iG).gt.Tsub(ifidG)) ifidG = iG
-        print*,'Grain:',iG,'Sublimation Temperature:',Tsub(iG)
-     end do
-  end if
-  if (typentry(1).eq.5) then 
-     Tinner(ifidG) = Tinner_fidG
-     print'(a,i3,a,f8.2)','Inner Boundary Temperature of fiducial Grain(',ifidG,')=',Tinner(ifidG)
-  end if
-  ! 2.2 Grain size distribution
+  ! 2.1 Grain size distribution
   if (top.ne.3) then
      ! Type of size distribution
      call rdinps2(Equal,1,str,L,UCASE)
@@ -417,6 +409,22 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         a1 = 0.005d0
         a2 = 0.25d0
      end if
+  end if
+  ! 2.2 Temperatures
+  allocate(Tsub(nG))
+  allocate(Tinner(nG))
+  Tsub(1) = RDINP(Equal,1)
+  print'(A,I3,A,F12.3)',' Grain:',1,' Sublimation Temperature:',Tsub(1)
+  if (nG.gt.1) then
+     do iG = 2, nG
+        Tsub(iG) = RDINP(noEqual,1)
+        if (Tsub(iG).gt.Tsub(ifidG)) ifidG = iG
+        print'(A,I3,A,F12.3)',' Grain:',iG,' Sublimation Temperature:',Tsub(iG)
+     end do
+  end if
+  if (typentry(1).eq.5) then 
+     Tinner(ifidG) = Tinner_fidG
+     print'(a,i3,a,f8.2)','Inner Boundary Temperature of fiducial Grain(',ifidG,')=',Tinner(ifidG)
   end if
   allocate(SigmaA(nG+1,nL))
   allocate(SigmaS(nG+1,nL))
@@ -931,7 +939,7 @@ end subroutine Input
 !***********************************************************************
 
 !***********************************************************************
-subroutine inp_rad(shp,spec_scale,startyp)
+subroutine inp_rad(shp,spec_scale,styp)
 !=======================================================================
 ! This is the former SUBROUTINE InpStar(error,is,nameIn)
 ! This subroutine is for reading the input radiation parameters
@@ -941,7 +949,7 @@ subroutine inp_rad(shp,spec_scale,startyp)
   use interfaces
   implicit none
   !---parameter
-  integer :: startyp
+  integer :: styp
   double precision :: spec_scale
   double precision,allocatable :: shp(:)
   !---local
@@ -964,7 +972,7 @@ subroutine inp_rad(shp,spec_scale,startyp)
   filetype = 0
   if (str(1:L).eq.'BLACK_BODY') then 
      ! Number of black bodies
-     startyp=1
+     styp=1
      nBB = RDINP(Equal,1)
      ! Stellar temperature(s)
      allocate(Tbb(nBB))
@@ -1028,7 +1036,7 @@ subroutine inp_rad(shp,spec_scale,startyp)
      deallocate(Tbb)
      deallocate(rellum)
   else if (str(1:L).eq.'ENGELKE_MARENGO') then
-     startyp=2
+     styp=2
      ! Effective stellar temperature
      nBB = 1
      allocate(Tbb(nBB))
@@ -1047,7 +1055,7 @@ subroutine inp_rad(shp,spec_scale,startyp)
      deallocate(Tbb)
      deallocate(rellum)
   else if (str(1:L).eq.'POWER_LAW') then
-     startyp=3
+     styp=3
      ! Number of transitions
      nLamTr= RDINP(Equal,1)
      allocate(lamTr(nLamTr))
@@ -1122,15 +1130,15 @@ subroutine inp_rad(shp,spec_scale,startyp)
      deallocate(klam)
   else if (str(1:L).eq.'FILE_LAMBDA_F_LAMBDA') then 
      write(12,*)'    Spectrum supplied from file (lambda_F_lambda):'
-     startyp=4
+     styp=4
      filetype = 1
   else if (str(1:L).eq.'FILE_F_LAMBDA') then 
      write(12,*)'    Spectrum supplied from file (F_lambda):'
-     startyp=5
+     styp=5
      filetype = 2
   else if (str(1:L).eq.'FILE_F_NU') then 
      write(12,*)'    Spectrum supplied from file (F_nu):'
-     startyp=6
+     styp=6
      filetype = 3
   end if
 
@@ -1841,8 +1849,10 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
      do iG = 1,nG
         write(hdrslb2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)'), '    Td(',iG,') '
      end do
-     hdrsph1= '#     y         Td         eta         t '
-     hdrsph2= '     tauF      epsilon        RPr'
+     hdrsph1= '#     y         eta         t        tauF      epsilon      RPr'
+     do iG = 1,nG
+        write(hdrsph2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)'), '    Td(',iG,') '
+     end do
      hdrdyn= '         u        drift'
      unt = 16
      call line(1,2,unt)
@@ -1861,7 +1871,11 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
            Elems(iY,3) = tauF(iY)
            Elems(iY,4) = RPr(iY)/RPr(1)
            do iG=1,nG
-              Elems(iY,4+iG) = Td(iG,iY)
+              if (destroyed(iG,iY).gt.0) then 
+                 Elems(iY,4+iG) = Td(iG,iY)
+              else
+                 Elems(iY,4+iG) = 0.0
+              end if
            end do
         end do
         write(unt,'(a43,a)') hdrslb1,hdrslb2
@@ -1871,12 +1885,18 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
         do iY = 1, nY
            tr = ETAzp(1,iY)/ETAzp(1,nY)
            Elems(iY,1) = Y(iY)
-           Elems(iY,2) = Td(1,iY)
-           Elems(iY,3) = eta(Y(iY),nY,nYprev,itereta)
-           Elems(iY,4) = tr
-           Elems(iY,5) = tauF(iY)
-           Elems(iY,6) = eps(iY)
-           if (RPr(1).ne.0) Elems(iY,7) = RPr(iY)/RPr(1)
+           Elems(iY,2) = eta(Y(iY),nY,nYprev,itereta)
+           Elems(iY,3) = tr
+           Elems(iY,4) = tauF(iY)
+           Elems(iY,5) = eps(iY)
+           if (RPr(1).ne.0) Elems(iY,6) = RPr(iY)/RPr(1)
+           do iG=1,nG
+              if (destroyed(iG,iY).gt.0) then 
+                 Elems(iY,6+iG) = Td(iG,iY)
+              else
+                 Elems(iY,6+iG) = 0.0
+              end if
+           end do
            !     Elems(iY,8) = rg(1,iY)*Jext(iY)
            !     if (rdwpr) then
            ! redefine for private rdw (denstyp.eq.6) option
@@ -1903,11 +1923,11 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
                  if(Elems(iY,i).lt.limval) Elems(iY,i) = 0.0d0
               end do
            end do
-           write(unt,'(a42,a42,a23)') hdrsph1,hdrsph2,hdrdyn
-           call maketable(Elems,nY,9,unt)
+           write(unt,'(a65,a23,a)') hdrsph1,hdrdyn,hdrsph2
+           call maketable(Elems,nY,8+nG,unt)
         else
-           write(unt,'(a42,a42)') hdrsph1,hdrsph2
-           call maketable(Elems,nY,7,unt)
+           write(unt,'(a65,a)') hdrsph1,hdrsph2
+           call maketable(Elems,nY,6+nG,unt)
         end if
         ! end if for geometry
      end if

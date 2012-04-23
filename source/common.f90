@@ -21,7 +21,7 @@ Module common
   PARAMETER (npY = 1000)
   PARAMETER (npP = 20*npY+20)
   PARAMETER (npL = 125)
-  PARAMETER (npG = 1)
+  PARAMETER (npG = 16)
   PARAMETER (npR = 90)
 
   double precision,allocatable :: ETAdiscr(:)
@@ -29,9 +29,14 @@ Module common
   integer left,right
 
   integer :: Ntr,nYetaF,nPcav
+  integer :: taut, muobs, transmit,sfn !<----needed in slb intensity .... bad style!!!
+  integer :: startyp(2)
   double precision Pow
   double precision Yout
-  double precision aveV
+  double precision aveV,aveA,sigExfid
+
+  double precision,allocatable :: Gamma(:)
+  double precision,allocatable :: destroyed(:,:)
   double precision,allocatable :: ptr(:)
   double precision,allocatable :: Ytr(:)
   double precision,allocatable :: yetaf(:)
@@ -71,7 +76,7 @@ Module common
   double precision,allocatable :: rg(:,:)
   double precision,allocatable :: Intens(:,:)
   double precision :: SmC(30,99)
-  !double precision :: fmed
+  double precision :: gmax
 
   character*4 :: version
   parameter (version='4.00')
@@ -110,7 +115,7 @@ Module common
   double precision :: ETAcoef(npY,4)
   ! output parameter - should be a structure and not in global ... search if it is used elseweher
   double precision CMdot, CM, Cve, Cr1, G1, Ginf, Phi, Prdw, QV, Qstar, r1rs, Te_min, winf, &
-       zeta1
+       zeta1, I1_dyn, I2_dyn, I3_dyn, PIrdw
   integer psftype, Npsf, iLambda
   integer :: iA,iB,iC,iX,iPSF,iV,NlambdaOut,Nconv,nMu,Nvisi,iD,iJ,nJOut
   double precision,allocatable :: theta(:)

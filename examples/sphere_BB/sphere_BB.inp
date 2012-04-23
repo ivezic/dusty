@@ -88,7 +88,7 @@
                                                                         
   III. NUMERICS                                                           
       
-     - accuracy for flux conservation = 5e-2
+     - accuracy for flux conservation = 1e-2
   ----------------------------------------------------------------------
                                                                         
   IV. OUTPUT PARAMETERS                                                 

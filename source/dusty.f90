@@ -207,6 +207,7 @@ end subroutine alloc_mem_nL
 subroutine alloc_mem()
 use common
 implicit none 
+  integer :: iG, iY
   ! Memory allocation----------------------------------
   allocate(Y(npY))
   allocate(Yprev(npY))
@@ -216,27 +217,35 @@ implicit none
   allocate(Plast(npY))
   allocate(ETAdiscr(npY))
   allocate(ETAzp(npP,npY))
-  allocate(abund(npG,npY))
+  allocate(abund(npG+1,npY))
   allocate(fsLbol(npY))
   allocate(fsRbol(npY))
   allocate(fsbol(npY))
-  allocate(Td(npG,npY))
-  allocate(Td_old(npG,npY))
+  allocate(Td(npG+1,npY))
+  allocate(Td_old(npG+1,npY))
   allocate(Jext(npY))
   allocate(RPr(npY))
   allocate(tauF(npY))
   allocate(eps(npY))
   allocate(ugas(npY))
-  allocate(vrat(npG,npY))
+  allocate(Gamma(npY))
+  allocate(vrat(npG+1,npY))
   allocate(IntOut(20,npP+2))
   allocate(bOut(npP+2))
   allocate(tauZout(npP+2))
   allocate(fbol(npY))
   allocate(ubol(npY))
   allocate(qF(npY))
-  allocate(rg(npG,npY))
+  allocate(rg(npG+1,npY))
   allocate(fpbol(npY))
   allocate(fmbol(npY))
+  allocate(destroyed(npG,npY))
+  do iG = 1,npG
+     do iY = 1,npY
+        !all grains existent at the beginning of the simulation
+        destroyed(iG,iY) = 1.0
+     end do
+  end do
 end subroutine alloc_mem
 
 subroutine dealloc_mem()
@@ -274,6 +283,7 @@ implicit none
   deallocate(tauF)
   deallocate(eps)
   deallocate(ugas)
+  deallocate(Gamma)
   deallocate(vrat)
   deallocate(SLBIntm)
   deallocate(SLBIntp)
@@ -288,4 +298,5 @@ implicit none
   deallocate(fpbol)
   deallocate(fmbol)
   deallocate(Intens)
+  deallocate(destroyed)
 end subroutine dealloc_mem

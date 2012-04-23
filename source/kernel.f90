@@ -36,9 +36,9 @@ subroutine Kernel(path,lpath,tau,Nmodel)
      call OPPEN(model,path,lpath)
      if (iVerb.eq.2) write(*,*) ' going to Solve '
      ! solve radiative transfer for this particular optical depth
-     !call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! old dustys way
-     CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     !CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! if flux is conserved, the solution is obtained. So write out the values
      ! to output files for specified models
      if (fbolOK.eq.1) then
@@ -78,7 +78,7 @@ subroutine GetTauMax(tau0,taumax)
   double precision tau0,taumax
   !---local variables
   integer iL
-  double precision :: sigAfid, sigSfid,sigExfid!x-section fiduc. wavel.
+  double precision :: sigAfid, sigSfid !x-section fiduc. wavel.
   double precision :: tau_tmp
   double precision,allocatable :: faux1(:), faux2(:)
   !---------------------------------------------------------------------
@@ -127,11 +127,12 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,&
   double precision :: delta, taumax
   logical initial
   !--- local variables
-  integer etaOK, nY_old, iPstar, y_incr, iY
-  double precision taulim,pstar, maxFerr, maxrat
+  integer etaOK, nY_old, iPstar, y_incr, iY, iL, imu
+  double precision taulim,pstar, maxFerr, maxFerr_old, maxrat
   double precision, allocatable :: fs(:,:),us(:,:),T4_ext(:), &
        emiss(:,:,:),fDebol(:),fDsbol(:), &
        fdsm(:,:),fdsp(:,:),fdem(:,:),fdep(:,:)
+  logical initTemp
   !---------------------------------------------------------------------
   allocate(fs(nL,npY))
   allocate(us(nL,npY))
@@ -172,6 +173,8 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,&
   y_incr = 0
   nCav = 0
   nP = 0
+  maxFerr = 0.0
+  initTemp = .false.
   !------------ loop over bol.flux conservation ------------
   do while(fbolOK.eq.0)
      iterfbol = iterfbol + 1
@@ -199,7 +202,7 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,&
         end if
      end if
      ! solve the radiative transfer problem
-     call Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss,iterfbol,T4_ext)
+     call Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss,iterfbol,initTemp,T4_ext)
      if (iVerb.eq.2) write(*,*)' Done with radiative transfer. '
      ! calculate diffuse flux
      ! for slab
@@ -227,7 +230,13 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,&
         write(7777,*) Y(iY),fDebol(iY),fDsbol(iY),fsbol(iY),Td(1,iY)
      END DO
      close(7777)
+     maxFerr_old = maxFerr
      call Finderr(nY,fbol,maxFerr)
+     if ((maxFerr-maxFerr_old.gt.0.).and.(.not.initTemp)) then
+        initTemp=.true.
+     else 
+        initTemp=.false.
+     end if
      if(iVerb.eq.2) write(*,'(A,F10.3,A)') '  Achieved error in bolometric Flux:',maxFerr*100,'%'
      call Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol,fbol,fDebol,fDsbol,fbolOK,maxrat)
      if (iVerb.eq.2) write(*,'(a,i3,a,i3,a,i3)') ' After Flux_Cons nY=', nY,' nP=',nP,' Ncav=',Ncav
@@ -267,18 +276,6 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,&
         write(18,'(a20,1p,e12.3,a2)')'  Achieved accuracy:',maxrat*100., ' %'
         write(18,*)'  Trying again with finer grids'
      end if
-     ! if could not conserve fbol in 5 trials give it up
-!!$     if (fbolOK.eq.0 .and. iterfbol.gt.5) then
-!!$        if (iX.ge.1) then
-!!$           write(18,*)' **********  WARNING from Solve  **********'
-!!$           write(18,*)' Could not obtain the required accuracy '
-!!$           write(18,'(a4,i4,a8)')' in ',iterfbol,' trials.'
-!!$           write(18,'(a20,1p,e12.3,a2)')'  Achieved accuracy:',maxrat*100., ' %'
-!!$           write(18,*)' !!  Treat all results with caution  !!'
-!!$           write(18,*)' ******************************************'
-!!$        end if
-!!$        fbolOK = 2
-!!$     end if
   end do !  end of loop over flux conservion
 !!$  if (rdw.and.sph) then
 !!$     ! counter over eta (for radiatively driven winds only)
@@ -340,23 +337,23 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,&
 !!$        if (iVerb.eq.2) write(*,*) 'Done with Visibili.'
 !!$     end if
   else if(slb) then
-!!$     ! if emerging intensity is required (for left side ill.only):
-!!$     if(iC.gt.0) then
-!!$        if (iVerb.eq.2) write(*,*)' Calculating intensities. '
-!!$        call SLBintensity(nG,omega,em)
-!!$        do iL = 1, nL
-!!$           do imu = 1, nmu
-!!$              SLBintm(imu,iL) = SLBintm(imu,iL)/(4.0d0*pi) ! needed to change later [MD]
-!!$              SLBintp(imu,iL) = SLBintp(imu,iL)/(4.0d0*pi) ! needed to change later
-!!$              iauxr(iL) = SLBintm(imu,iL)/lambda(iL)
-!!$              iauxl(iL) = SLBintp(imu,iL)/lambda(iL)
-!!$           end do
-!!$        end do
-!!$        if (iVerb.eq.2) write(*,*) ' Done with finding intensity. '
-!!$     end if
+     ! if emerging intensity is required (for left side ill.only):
+     if(iC.gt.0) then
+        if (iVerb.eq.2) write(*,*)' Calculating intensities. '
+        call SLBintensity(nY,emiss)
+        do iL = 1, nL
+           do imu = 1, nmu
+              SLBintm(imu,iL) = SLBintm(imu,iL)/(4.0d0*pi) ! needed to change later [MD]
+              SLBintp(imu,iL) = SLBintp(imu,iL)/(4.0d0*pi) ! needed to change later
+              !iauxr(iL) = SLBintm(imu,iL)/lambda(iL)
+              !iauxl(iL) = SLBintp(imu,iL)/lambda(iL)
+           end do
+        end do
+        if (iVerb.eq.2) write(*,*) ' Done with finding intensity. '
+     end if
   end if       !end if for sphere or slab
   ! analyze the solution and calculate some auxiliary quantities
-  CALL analysis(nY,model,us,T4_ext,delta)
+  CALL analysis(nY,model,us,T4_ext,delta,maxrat)
   if (iVerb.eq.2) write(*,*) 'Done with Analysis.'
   if (iX.ne.0) then
      write(18,'(a36,F5.1,a2)') '  Accuracy of computed bolom. flux: ',maxFerr*100.0,' %'
@@ -739,11 +736,11 @@ subroutine Pgrid(pstar,iPstar,nY,nP,nCav,nIns)
   do i = 1, nY-1
      ! Nins = # of rays per radial step
      if((Y(i+1) - Y(i)).gt.20.0d0) then
-        Nins = 2 !20
+        Nins = 20 !2
      elseif((Y(i+1) - Y(i)).gt.10.0d0.and.(Y(i+1) - Y(i)).le.20.d0) then
-        Nins = 2 !15
+        Nins = 15 !2
      elseif ((Y(i+1) - Y(i)).gt.1.5d0.and.(Y(i+1) - Y(i)).le.10.d0) then
-        Nins = 2 !10
+        Nins = 10 !2
      elseif ((Y(i+1) - Y(i)).gt.1.0d0.and.(Y(i+1) - Y(i)).le.1.5d0) then
         Nins = 3
      elseif ((Y(i+1) - Y(i)).gt.0.5d0.and.(Y(i+1) - Y(i)).le.1.0d0) then
@@ -1040,13 +1037,13 @@ end subroutine Insert
 
 !********************************************************************
 subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
-     iterfbol,T4_ext)
+     iterfbol,initTemp,T4_ext)
 !======================================================================
   use omp_lib
   use common
   use interfaces
   implicit none
-  logical, intent(in) :: initial
+  logical, intent(in) :: initial,initTemp
   integer, intent(in) :: y_incr,iterfbol
   integer :: nY,nP,nYprev,itereta
   double precision pstar
@@ -1095,8 +1092,8 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   if (error.eq.3) goto 999
   ! in the case of first (lowest) optical depth,
   ! us is the intial approximation for utot(iL,iY) for the first iteration over Td
-  ! Find initial approximation of Td for the case of first (lowest) optical depth.
-  if (initial.and.iterfbol.eq.1) then
+  ! Find initial approximation of Td for the case of first iteration over Fbol or flux error to large.
+  if ((initial.and.(iterfbol.eq.1)).or.(initTemp.and.(iterfbol.gt.2))) then
      call Init_Temp(nY,T4_ext,us)
      if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
   end if
@@ -1165,9 +1162,9 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
         end do
      end do
      !$OMP END PARALLEL DO
-     if ((iter.gt.5).and.(mod(iter,5).eq.0)) then 
-        call Find_Temp(nY,T4_ext)
-     end if
+!!$     if ((iter.gt.5).and.(mod(iter,5).eq.0)) then 
+!!$        call Find_Temp(nY,T4_ext)
+!!$     end if
      !print*,maxval(maxerrU),Td(1,1),Td(1,nY)
       if(iVerb.eq.2) write(*,fmt='(a1)',advance='no') '.'
      if ((maxval(maxerrT).le.accTemp).and.(maxval(maxerrU).lt.(accFlux*9.e-1))) conv = 1
@@ -1745,14 +1742,18 @@ subroutine Emission(nY,T4_ext,emiss,emiss_total)
         ! loop over grains
         emiss_total(iL,iY) = 0.
         do iG = 1, nG
-           xP = 14400.0d0/(lambda(iL)*Td(iG,iY))
-           tt = (Td(iG,iY)**4.0d0) / T4_ext(iY)
-           emig = abund(iG,iY)*tt*Planck(xP)
-           if (emig.lt.dynrange) emig = 0.0d0
-           ! add contribution for current grains
-           emiss(iG,iL,iY) = emig
-           if (emiss(iG,iL,iY).lt.dynrange) emiss(iG,iL,iY) = 0.0d0
-           emiss_total(iL,iY)  = emiss(iG,iL,iY)
+           if (destroyed(iG,iY).gt.0.0) then 
+              xP = 14400.0d0/(lambda(iL)*Td(iG,iY))
+              tt = (Td(iG,iY)**4.0d0) / T4_ext(iY)
+              emig = abund(iG,iY)*tt*Planck(xP)
+              if (emig.lt.dynrange) emig = 0.0d0
+              ! add contribution for current grains
+              emiss(iG,iL,iY) = emig
+              if (emiss(iG,iL,iY).lt.dynrange) emiss(iG,iL,iY) = 0.0d0
+              emiss_total(iL,iY)  = emiss(iG,iL,iY)
+           else
+              emiss_total(iL,iY)  = 0.0
+           end if
         end do
      end do
   end do
@@ -1839,9 +1840,7 @@ subroutine Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
      do moment_loc = 1, moment
         if (moment_loc.eq.1) then
            ! Find diffuse en.density
-           !call SPH_diff(nY,nP,1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,sph_em)
-	   !call SPH_diff(nY,nP,2,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,sph_sc)
-           call SPH_diff_u(nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,sph_em)
+           call SPH_diff(0,0,nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,sph_em)
            ! find total energy density
            do iY = 1, nY
               do  iL = 1, nL
@@ -1853,8 +1852,8 @@ subroutine Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
            end do
         elseif (moment_loc.eq.2) then
            ! Find diffuse fluxes
-           call SPH_diff(nY,nP,1,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,fde)
-	   call SPH_diff(nY,nP,2,moment_loc,initial,iter,iterfbol,T4_ext,emiss,us,fds)
+           call SPH_diff(1,1,nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,fde)
+           call SPH_diff(2,1,nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,fds)
         end if
      end do
   end if
@@ -1927,6 +1926,11 @@ subroutine Find_Temp(nY,T4_ext)
         if (ISNAN(Td(iG,iY))) print*,'Td NAN',fnum1,T4_ext(iY),gg
         !Td(iG,iY) = (fnum1*T4_ext(iY)/gg)**(1.0d0/4.0d0)
         Td(iG,iY) = (fnum1/gg)**(1.0d0/4.0d0)*T4_ext(iY)**(1.0d0/4.0d0)
+        if (Td(iG,iY).gt.Tsub(iG)) then 
+           destroyed(iG,iY) = 0.0
+        else 
+           destroyed(iG,iY) = 1.0
+        end if
      end do
      !OMP END PRALLEL DO &
   end do
@@ -2047,12 +2051,12 @@ end subroutine Find_Text_multi
 !***********************************************************************
 
 !***********************************************************************
-subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,&
+subroutine SPH_diff(flag,moment,nY,nP,initial,iter,iterfbol,&
      T4_ext,emiss,us,vec2)
 !=======================================================================
 ! This subroutine finds the diffuse part for both emission and scattering
 ! for spherical shell                                        [Deka, 2008]
-!! If flag1=1 for vec1=Em; flag1=2 for vec1=Us
+!! If flag=0 vec=Em+Us If flag=1 for vec2=Em; flag=2 for vec2=Us
 !!** Introduced integration of diffuse radiation with Nordlund, as in old Dusty.
 !!** Restored ETAzp instead of the time-consuming GauLeg integration
 !!** New commments added.                                   [MN, July'10]
@@ -2062,262 +2066,58 @@ subroutine SPH_diff(nY,nP,flag1,moment_loc,initial,iter,iterfbol,&
   use interfaces
   implicit none
   ! --- parameter
-  integer nY,nP,flag1,moment_loc,iter,iterfbol,iZaux
+  integer nY,nP,iter,iterfbol,iZaux,flag,moment
   double precision, allocatable :: T4_ext(:),emiss(:,:,:),us(:,:),vec2(:,:)
   logical initial
   ! --- local variables 
-  integer iP,iL,iZ,iZz,nZ,iY,iYy,flagN,iG,thread_id,isum
-  double precision,allocatable ::  Iplus1(:,:),Iplus2(:,:), Iminus(:,:),&
-       xN(:), yN(:),diff(:)
-  double precision result1, result2, frac, S_loc, wgth, &
-       daux1,daux2,int1,int2,int3,tmp,eta,wgth1,tau1,tau2,tau3,tauZz,&
-       S_fun,S_fun1,S_fun2,S_fun3,m,n
+  integer iP,iL,iZ,iZz,nZ,iY,iYy,iG,isum,first
+  double precision, allocatable :: xN(:), yN(:),S_unscaled(:,:)
+  double precision  P_integ, frac, wgth, wcor1,wcor2,&
+       daux1,daux2,int1,int2,int3,tmp,eta,wgth1,tauZz,S_fun,&
+       S_fun1,S_fun2,m,n,sum_yN,tautot_iL,Wsimp,Wcorr,wC1,wC2
   REAL*8 CUBIC_SPLINT
   external eta
   !-----------------------------------------------------------------------
-  allocate(Iplus1(nP,nL))
-  allocate(Iplus2(nP,nL))
-  allocate(Iminus(nP,nL))       
-  allocate(diff(nY)) 
   allocate(xN(nP))
   allocate(yN(nP))
-
-  Iplus1 = 0.0d0
-  Iplus2 = 0.0d0
-  Iminus = 0.0d0
-  !!** for each radial grid point calculate the integrals from Sec.4.1 in Blueprint:
+  allocate(S_unscaled(nL,nY))
+  first = 1
+  !!** Prepcalcualte unscaled source function
+  !$OMP PARALLEL DO PRIVATE(iY,iL,iG)
   do iY = 1, nY
-     do iP = 1, Plast(iY)
-        iZz  = iY + 1 - iYfirst(iP)  !this is for z in eq.(4.1.5)
-        ! upper limit for the counter of z position
-        nZ  = nY + 1 - iYfirst(iP)   !nZ is index for zmax=sqrt(Y**2-p**2) [MN]
-        !$OMP PARALLEL DO FIRSTPRIVATE(frac,iYy,S_loc,iP,iZz,nZ) &
-        !$OMP PRIVATE(int1,int2,int3,wgth,daux1,daux2,iZ,iL,m,n) &
-        !$OMP PRIVATE(tmp,tau1,tau2,tau3,tauZz,S_fun,S_fun1,S_fun2,S_fun3) 
-        do iL = 1, nL
-           thread_id = omp_get_thread_num()+1
-           int1 = 0.
-           int2 = 0.
-           int3 = 0.
-           tauZz = tautot(iL)*ETAzp(iP,iZz)
-           if ((nZ.gt.1)) then 
-              do iZ = 1, nZ-1
-                 iYy = iYfirst(iP) + iZ - 1
-                 S_fun1 = 0.0D0
-                 S_fun2 = 0.0D0
-                 do iG =1, nG
-                    frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
-                    tmp = omega(iG,iL)
-                    if (flag1.eq.1) then
-                       ! find the diffuse emission term, vec1=em
-                       tmp = frac*(1.0d0-omega(iG,iL))
-                       S_fun1 = S_fun1 + tmp*emiss(iG,iL,iYy+0)*T4_ext(iYy+0)
-                       S_fun2 = S_fun2 + tmp*emiss(iG,iL,iYy+1)*T4_ext(iYy+1)
-                       if (iYy.lt.nY-1) S_fun3 = S_fun3 + tmp*emiss(iG,iL,iYy+2)*T4_ext(iYy+2)
-                    elseif (flag1.eq.2) then
-                       ! find the scattering term, vec1=Us initially, or Utot afterwards
-                       !if (initial.and.iter.eq.1.and.iterfbol.eq.1) then
-                       tmp = frac*omega(iG,iL)
-                       if (initial.and.iter.eq.1) then
-                          S_fun1 = S_fun1 + tmp*us(iL,iYy+0)*T4_ext(iYy+0)
-                          S_fun2 = S_fun2 + tmp*us(iL,iYy+1)*T4_ext(iYy+1)
-                          if (iYy.lt.nY-1) S_fun3 = S_fun3 + tmp*us(iL,iYy+2)*T4_ext(iYy+2)
-                       else
-                          S_fun1 = S_fun1 + tmp*utot(iL,iYy+0)*T4_ext(iYy+0)
-                          S_fun2 = S_fun2 + tmp*utot(iL,iYy+1)*T4_ext(iYy+1)
-                          if (iYy.lt.nY-1) S_fun3 = S_fun3 + tmp*utot(iL,iYy+2)*T4_ext(iYy+2)
-                       end if
-                    end if
-                 end do
-                 if((iZ.eq.1).and.(P(iP).gt.Y(iYy)).and.(P(iP).lt.Y(iYy+1))) then
-                    m = (S_fun2-S_fun1) / (Y(iYy+1)-Y(iYy))
-                    n = S_fun1 - m*(Y(iYy))
-                    S_fun1 = m*P(iP)+n
-                 end if
-                 tau1 = tautot(iL)*ETAzp(iP,iZ)
-                 tau2 = tautot(iL)*ETAzp(iP,iZ+1)
-                 if (iZ.lt.nY-1) tau3 = tautot(iL)*ETAzp(iP,iZ+2)
-                 daux1 = exp(-tau1)
-                 daux2 = exp(-tau2)
-                 S_fun = (S_fun1+S_fun2)*0.5
-                 wgth = abs(daux2-daux1)
-!!$                 if (iZ.lt.nY-1) then 
-!!$                    m = (S_fun3-S_fun1) / (exp(-tau3)-daux1)
-!!$                    n = S_fun1 - m*daux1
-!!$                    tmp = m*daux2+n
-!!$                    daux1 = (S_fun2-tmp)/(S_fun2+tmp)/6.
-!!$                    if (dabs(daux1).lt.0.1) then 
-!!$                       S_fun = (S_fun1+S_fun2)*(0.5+daux1)
-!!$                    end if
-!!$                 end if
-                 int1 = int1 + S_fun*wgth
-                 ! add contribution to the integral
-                 if ((iZ.lt.iZz).and.(iZz.gt.1)) then 
-                    daux1 = exp(-abs(tauZz-tau1))
-                    daux2 = exp(-abs(tauZz-tau2))
-                    wgth = abs(daux2-daux1)
-!!$                    if (iZ.lt.nY-1) then 
-!!$                       m = (S_fun3-S_fun1) / (exp(-abs(tauZz-tau3))-daux1)
-!!$                       n = S_fun1 - m*daux1
-!!$                       tmp = m*daux2+n
-!!$                       daux1 = (S_fun2-tmp)/(S_fun2+tmp)/6.
-!!$                       if (dabs(daux1).lt.0.1) then 
-!!$                          S_fun = (S_fun1+S_fun2)*(0.5+daux1)
-!!$                       end if
-!!$                    end if
-                    int2 = int2 + S_fun*wgth
-                 end if
-                 if ((iZ.ge.iZz).and.(iZz.lt.nZ)) then 
-                    daux1 = exp(-abs(tau1-tauZz))
-                    daux2 = exp(-abs(tau2-tauZz))
-                    wgth = abs(daux2-daux1)
-!!$                    if (iZ.lt.nY-1) then 
-!!$                       m = (S_fun3-S_fun1) / (exp(-abs(tau3-tauZz))-daux1)
-!!$                       n = S_fun1 - m*daux1
-!!$                       tmp = m*daux2+n
-!!$                       daux1 = (S_fun2-tmp)/(S_fun2+tmp)/6.
-!!$                       if (dabs(daux1).lt.0.1) then 
-!!$                          S_fun = (S_fun1+S_fun2)*(0.5+daux1)
-!!$                       end if
-!!$                    end if
-                    int3 = int3 + S_fun*wgth
-                 end if
-              end do
+     do iL=1,nL
+        S_unscaled(iL,iY) = 0.0D0
+        do iG = 1, nG
+           frac = destroyed(iG,iY)*(sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
+           if ((flag.eq.0).or.(flag.eq.1)) then 
+              tmp = frac*(1.0d0-omega(iG,iL))
+              S_unscaled(iL,iY) = S_unscaled(iL,iY) + tmp*emiss(iG,iL,iY)*T4_ext(iY)
            end if
-           ! 1st term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
-           !     from z0-midpoint to the outer edge of the shell (on the left side)  [MN]
-           Iplus1(iP,iL) = abs(int1)*exp(-tauZz)
-           ! 2nd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
-           !     from z0-midpoint to the running z-point
-           Iplus2(iP,iL) = abs(int2)
-           ! 3rd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
-           !     from the running z-point to the outer edge of the shell [MN]
-           Iminus(iP,iL) = abs(int3)
-        end do ! end loop over wavelengths
-        !$OMP END PARALLEL DO
-     end do ! end loop over impact parameters P=1..Plast(iY)
-     !  Find diffuse energy density (U)
-     if (moment_loc.eq.1) then
-        !!**   xN is mu,the integration variable.
-        !!**   U ~ Int[yN*dmu], while flux ~ Int[yN*mu*dmu]. Sub Nordlund takes care of this difference.
-        !!**   When calling NORDLUND(flagN,xN,yN,N1,N2,m,intfdx,error)
-        !!**   flagN=1 is for analytic integration; m=0 for U and m=1 for flux [MN]
-        !$OMP PARALLEL DO FIRSTPRIVATE(FlagN,error,result1,result2,iP,iY,thread_id) &
-        !$OMP PRIVATE(xN,yN)
-        do iL = 1, nL
-           thread_id = omp_get_thread_num()+1
-           DO iP = 1, Plast(iY)
-              xN(iP) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
-              ! generate intensity array for NORDLUND
-              yN(iP) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) + Iminus(iP,iL))
-           END DO
-           CALL NORDLUND(nY,nP,0,xN,yN,1,nPcav+1,0,result1)
-           ! flag for analytic integration outside cavity
-           !! IF (iY.GT.6) THEN ! this was in the old Dusty
-           IF (iY.GT.6) THEN  ! take it as 4 in case the grid has a few pts. only.
-              flagN = 1
-           ELSE
-              flagN = 0
-           ENDIF
-           ! angular integration outside cavity
-           IF (iY.GT.1) THEN
-              CALL NORDLUND(nY,nP,flagN,xN,yN,nPcav+1,Plast(iY),0,result2)
-              IF (error.NE.0) STOP
-           ELSE
-              result2 = 0.0
-           END IF
-           !!**result1 is for inside, result2 is for outside the cavity [MN]
-           vec2(iL,iY)= 0.5*(result1 + result2)/T4_ext(iY)
-        end do  !end do over lambda
-        !$OMP END PARALLEL DO
-        !  Find diffuse flux
-     elseif(moment_loc.eq.2) then
-        !$OMP PARALLEL DO FIRSTPRIVATE(FlagN,error,result1,result2,iP,iY,thread_id) &
-        !$OMP PRIVATE(xN,yN)
-        do iL = 1, nL
-           thread_id = omp_get_thread_num()+1
-           DO iP = 1, Plast(iY)
-              xN(iP) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
-              ! generate intensity array for NORDLUND
-              yN(iP) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) - Iminus(iP,iL))
-           END DO
-           ! integration inside the cavity
-           CALL NORDLUND(nY,nP,0,xN,yN,1,nPcav+1,1,result1)
-           ! flag for analytic integration outside cavity
-           !!IF (iY.GT.6) THEN ! this was in the old Dusty
-           IF (iY.GT.6) THEN
-              flagN = 1
-           ELSE
-              flagN = 0
-           ENDIF
-           ! angular integration outside cavity
-           IF (iY.GT.1) THEN
-              CALL NORDLUND(nY,nP,flagN,xN,yN,nPcav+1,Plast(iY),1,result2)
-              IF (error.NE.0) STOP
-           ELSE
-              result2 = 0.0
-           END IF
-           !!** result1 is for inside, result2 is for outside the cavity [MN]
-           vec2(iL,iY) = 2.0d0*pi*abs(result1+result2)/T4_ext(iY)
-        end do  !end do over lambda
-        !$OMP END PARALLEL DO
-     end if !end if for diffuse flux
-  end do !end do over radial grid Y(iY)  [MN]
-  !----------------------------------------------------------------------
-  deallocate(Iplus1)
-  deallocate(Iplus2)
-  deallocate(Iminus)
-  deallocate(diff) 
-  deallocate(xN)
-  deallocate(yN)
-
-999 return
-end subroutine SPH_diff
-!***********************************************************************
-
-
-
-!***********************************************************************
-subroutine SPH_diff_u(nY,nP,initial,iter,iterfbol,&
-     T4_ext,emiss,us,vec2)
-!=======================================================================
-! This subroutine finds the diffuse part for both emission and scattering
-! for spherical shell                                        [Deka, 2008]
-!! If flag1=1 for vec1=Em; flag1=2 for vec1=Us
-!!** Introduced integration of diffuse radiation with Nordlund, as in old Dusty.
-!!** Restored ETAzp instead of the time-consuming GauLeg integration
-!!** New commments added.                                   [MN, July'10]
-!=======================================================================
-  use omp_lib
-  use common
-  use interfaces
-  implicit none
-  ! --- parameter
-  integer nY,nP,iter,iterfbol,iZaux
-  double precision, allocatable :: T4_ext(:),emiss(:,:,:),us(:,:),vec2(:,:)
-  logical initial
-  ! --- local variables 
-  integer iP,iL,iZ,iZz,nZ,iY,iYy,iG,isum
-  double precision, allocatable :: xN(:), yN(:)
-  double precision result1, result2, frac, S_loc, wgth, &
-       daux1,daux2,int1,int2,int3,tmp,eta,wgth1,tau1,tau2,tau3,tauZz,S_fun,&
-       S_fun1,S_fun2,S_fun3,m,n,sum_yN
-  REAL*8 CUBIC_SPLINT
-  external eta
-  !-----------------------------------------------------------------------
-  allocate(xN(nP))
-  allocate(yN(nP))
+           if ((flag.eq.0).or.(flag.eq.2)) then 
+              tmp = frac*omega(iG,iL)
+              if (initial.and.iter.eq.1) then
+                 S_unscaled(iL,iY) = S_unscaled(iL,iY) + tmp*us(iL,iY)*T4_ext(iY)
+              else
+                 S_unscaled(iL,iY) = S_unscaled(iL,iY) + tmp*utot(iL,iY)*T4_ext(iY)
+              end if
+           end if
+        end do
+     end do
+  end do
   !!** for each radial grid point calculate the integrals from Sec.4.1 in Blueprint:
+  !$OMP END PARALLEL DO
   do iY = 1, nY
      do iP = 1, Plast(iY)
         xN(iP) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
      end do
-     !$OMP PARALLEL DO FIRSTPRIVATE(iY,xN) &
-     !$OMP PRIVATE(frac,iYy,S_loc,iP,iZz,nZ) &
-     !$OMP PRIVATE(int1,int2,int3,wgth,daux1,daux2,iZ,iL,m,n,sum_yN) &
-     !$OMP PRIVATE(tmp,tau1,tau2,tau3,tauZz,S_fun,S_fun1,S_fun2,S_fun3,result1,result2,yN) 
+     !$OMP PARALLEL DO FIRSTPRIVATE(iY) &
+     !$OMP PRIVATE(frac,iYy,iP,iZz,nZ) &
+     !$OMP PRIVATE(int1,int2,int3,wgth,wcor1,wcor2,daux1,daux2,iZ,iL,m,n,sum_yN,tautot_iL) &
+     !$OMP PRIVATE(tmp,tauZz,S_fun,S_fun1,S_fun2,P_integ,Wsimp,Wcorr,wC1,wC2) 
      do iL = 1, nL
         sum_yN = 0.0D0
+        tautot_iL = tautot(iL)
+        P_integ = 0.0D0
         do iP = 1, Plast(iY)
            iZz  = iY + 1 - iYfirst(iP)  !this is for z in eq.(4.1.5)
            ! upper limit for the counter of z position
@@ -2325,107 +2125,117 @@ subroutine SPH_diff_u(nY,nP,initial,iter,iterfbol,&
            int1 = 0.
            int2 = 0.
            int3 = 0.
-           tauZz = tautot(iL)*ETAzp(iP,iZz)
+           tauZz = tautot_iL*ETAzp(iP,iZz)
            if ((nZ.gt.1)) then 
-              do iZ = 1, nZ-1
+              do iZ = 1, nZ
                  iYy = iYfirst(iP) + iZ - 1
-                 S_fun1 = 0.0D0
-                 S_fun2 = 0.0D0
-                 do iG =1, nG
-                    frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
-                    ! find the diffuse emission term, vec1=em
-                    tmp = frac*(1.0d0-omega(iG,iL))
-                    S_fun1 = S_fun1 + tmp*emiss(iG,iL,iYy+0)*T4_ext(iYy+0)
-                    S_fun2 = S_fun2 + tmp*emiss(iG,iL,iYy+1)*T4_ext(iYy+1)
-!!$                    if (iYy.lt.nY-1) S_fun3 = S_fun3 + tmp*emiss(iG,iL,iYy+2)*T4_ext(iYy+2)
-                    ! find the scattering term, vec1=Us initially, or Utot afterwards
-                    !if (initial.and.iter.eq.1.and.iterfbol.eq.1) then
-                    tmp = frac*omega(iG,iL)
-                    if (initial.and.iter.eq.1) then
-                       S_fun1 = S_fun1 + tmp*us(iL,iYy+0)*T4_ext(iYy+0)
-                       S_fun2 = S_fun2 + tmp*us(iL,iYy+1)*T4_ext(iYy+1)
-!!$                       if (iYy.lt.nY-1) S_fun3 = S_fun3 + tmp*us(iL,iYy+2)*T4_ext(iYy+2)
-                    else
-                       S_fun1 = S_fun1 + tmp*utot(iL,iYy+0)*T4_ext(iYy+0)
-                       S_fun2 = S_fun2 + tmp*utot(iL,iYy+1)*T4_ext(iYy+1)
-!!$                       if (iYy.lt.nY-1) S_fun3 = S_fun3 + tmp*utot(iL,iYy+2)*T4_ext(iYy+2)
-                    end if
-                 end do
                  if((iZ.eq.1).and.(P(iP).gt.Y(iYy)).and.(P(iP).lt.Y(iYy+1))) then
+                    S_fun1 = S_unscaled(iL,iYy+0)
+                    S_fun2 = S_unscaled(iL,iYy+1)
                     m = (S_fun2-S_fun1) / (Y(iYy+1)-Y(iYy))
                     n = S_fun1 - m*(Y(iYy))
-                    S_fun1 = m*P(iP)+n
+                    S_fun = m*P(iP)+n
+                 else
+                    S_fun =  S_unscaled(iL,iYy)
                  end if
-                 S_fun = (S_fun1+S_fun2)*0.5
-                 if (abs(S_fun).gt.dynrange*dynrange) then 
-                    tau1 = tautot(iL)*ETAzp(iP,iZ)
-                    tau2 = tautot(iL)*ETAzp(iP,iZ+1)
-!!$                    if (iZ.lt.nY-1) tau3 = tautot(iL)*ETAzp(iP,iZ+2)
-                    daux1 = exp(-tau1)
-                    daux2 = exp(-tau2)
-                    wgth = abs(daux2-daux1)
-!!$                    if (iZ.lt.nY-1) then 
-!!$                       m = (S_fun3-S_fun1) / (exp(-tau3)-daux1)
-!!$                       n = S_fun1 - m*daux1
-!!$                       tmp = m*daux2+n
-!!$                       daux1 = (S_fun2-tmp)/(S_fun2+tmp)/6.
-!!$                       if (dabs(daux1).lt.0.1) then 
-!!$                          S_fun = (S_fun1+S_fun2)*(0.5+daux1)
-!!$                       end if
-!!$                    end if
+                 if (abs(S_fun).gt.dynrange*dynrange) then
+                    !call simpson_int(iP,iZ,iZz,nZ,tautot_iL,tauZz,S_fun,int1,int2,int3)
+                    !Simpson wgth
+                    if ((iZ.ne.1).and.(iZ.ne.nZ)) then 
+                       daux1 = exp(-tautot_iL*ETAzp(iP,iZ-1))
+                       daux2 = exp(-tautot_iL*ETAzp(iP,iZ+1))
+                    ELSE
+                       if (iZ.eq.1) then 
+                          daux1 = exp(-tautot_iL*ETAzp(iP,iZ))
+                          daux2 = exp(-tautot_iL*ETAzp(iP,iZ+1))
+                       end if
+                       if (iZ.eq.nZ) then 
+                          daux1 = exp(-tautot_iL*ETAzp(iP,iZ-1))
+                          daux2 = exp(-tautot_iL*ETAzp(iP,iZ))
+                       end if
+                    END IF
+                    wgth = 0.5*(daux2-daux1)
                     int1 = int1 + S_fun*wgth
                     ! add contribution to the integral
-                    if ((iZ.lt.iZz).and.(iZz.gt.1)) then 
-                       daux1 = exp(-abs(tauZz-tau1))
-                       daux2 = exp(-abs(tauZz-tau2))
-                       wgth = abs(daux2-daux1)
-!!$                       if (iZ.lt.nY-1) then 
-!!$                          m = (S_fun3-S_fun1) / (exp(-abs(tauZz-tau3))-daux1)
-!!$                          n = S_fun1 - m*daux1
-!!$                          tmp = m*daux2+n
-!!$                          daux1 = (S_fun2-tmp)/(S_fun2+tmp)/6.
-!!$                          if (dabs(daux1).lt.0.1) then 
-!!$                             S_fun = (S_fun1+S_fun2)*(0.5+daux1)
-!!$                          end if
-!!$                       end if
+                    if ((iZ.le.iZz).and.(iZz.gt.1)) then 
+                       if ((iZ.ne.1).and.(iZ.ne.iZz)) then 
+                          daux1 = exp(-abs(tauZz-tautot_iL*ETAzp(iP,iZ-1)))
+                          daux2 = exp(-abs(tauZz-tautot_iL*ETAzp(iP,iZ+1)))
+                       else
+                          IF (iZ.eq.1) THEN
+                             daux1 = exp(-abs(tauZz-tautot_iL*ETAzp(iP,iZ)))
+                             daux2 = exp(-abs(tauZz-tautot_iL*ETAzp(iP,iZ+1)))
+                          END IF
+                          IF (iZ.eq.iZz) THEN  
+                             daux1 = exp(-abs(tauZz-tautot_iL*ETAzp(iP,iZ-1)))
+                             daux2 = exp(-abs(tauZz-tautot_iL*ETAzp(iP,iZ)))
+                          END IF
+                       end if
+                       wgth = 0.5*(daux2-daux1)
                        int2 = int2 + S_fun*wgth
                     end if
                     if ((iZ.ge.iZz).and.(iZz.lt.nZ)) then 
-                       daux1 = exp(-abs(tau1-tauZz))
-                       daux2 = exp(-abs(tau2-tauZz))
-                       wgth = abs(daux2-daux1)
-!!$                       if (iZ.lt.nY-1) then 
-!!$                          m = (S_fun3-S_fun1) / (exp(-abs(tau3-tauZz))-daux1)
-!!$                          n = S_fun1 - m*daux1
-!!$                          tmp = m*daux2+n
-!!$                          daux1 = (S_fun2-tmp)/(S_fun2+tmp)/6.
-!!$                          if (dabs(daux1).lt.0.1) then 
-!!$                             S_fun = (S_fun1+S_fun2)*(0.5+daux1)
-!!$                          end if
-!!$                       end if
+                       if ((iZ.ne.iZz).and.(iZ.ne.nZ)) then 
+                          daux1 = exp(-abs(tautot_iL*ETAzp(iP,iZ-1)-tauZz))
+                          daux2 = exp(-abs(tautot_iL*ETAzp(iP,iZ+1)-tauZz))
+                       else
+                          if (iZ.eq.iZz) then 
+                             daux1 = exp(-abs(tautot_iL*ETAzp(iP,iZ)-tauZz))
+                             daux2 = exp(-abs(tautot_iL*ETAzp(iP,iZ+1)-tauZz))
+                          end if
+                          if (iZ.eq.nZ) then 
+                             daux1 = exp(-abs(tautot_iL*ETAzp(iP,iZ-1)-tauZz))
+                             daux2 = exp(-abs(tautot_iL*ETAzp(iP,iZ)-tauZz))
+                          end if
+                       end if
+                       wgth = 0.5*(daux2-daux1)
                        int3 = int3 + S_fun*wgth
                     end if
+                    !spline_simpson_int is not better than normal simpson
+                    !call spline_simpson_int(iP,iZ,iZz,nZ,tautot_iL,tauZz,S_fun,int1,int2,int3)
                  end if
               end do
            end if
            ! generate intensity array for NORDLUND
-           tmp = abs(int1)*exp(-tauZz) + abs(int2) + abs(int3)
-           yN(iP) = tmp
+           if (moment.eq.0) tmp = abs(int1)*exp(-tauZz) + abs(int2) + abs(int3)
+           if (moment.eq.1) tmp = abs(abs(int1)*exp(-tauZz) + abs(int2) - abs(int3))
+           !yN(iP) = tmp
            sum_yN = sum_yN + tmp
+           ! Begin former Nordlund
+           wSimp = 0.0
+           wCorr = 0.0
+           wC1 = 0.0
+           wC2 = 0.0
+           IF ((iP.GT.1).AND.(iP.LT.Plast(iY))) THEN
+              wSimp = 0.5 * (xN(iP+1)-xN(iP-1))
+           ELSE
+              IF (iP.eq.1) wSimp = 0.5 * (xN(1+1)-xN(1))
+              IF (iP.eq.Plast(iY)) wSimp = 0.5 * (xN(Plast(iY))-xN(Plast(iY)-1))
+           END IF
+           ! ... and then correction term for cubic spline (Nordlund, eq. III-14,
+           ! second term and eq. III-16) (wC1 and wC2 are auxiliary quantities)
+           IF (iP.GT.1+1) THEN
+              wC1 = xN(iP) - 2.0*xN(iP-1) + xN(iP-2)
+           ELSE
+              IF (iP.EQ.1) wC1 =  first * (xN(1+1) - xN(1))
+              IF (iP.EQ.1+1) wC1 = first * (xN(1) - xN(1+1))
+           ENDIF
+           IF (iP.LE.(Plast(iY)-2)) THEN
+              wC2 = xN(iP+2) - 2.0*xN(ip+1) + xN(iP)
+           ELSE
+              IF (iP.EQ.(Plast(iY)-1)) wC2 = first * (xN(Plast(iY)-1) - xN(Plast(iY)))
+              IF (iP.EQ.Plast(iY)) wC2 = first * (xN(Plast(iY)) - xN(Plast(iY)-1))
+           ENDIF
+           wCorr = (wC1 - wC2) / 12.
+           ! add contribution to the integral
+           if (moment.eq.0) P_integ = P_integ - tmp * (wSimp + wCorr)
+           if (moment.eq.1) P_integ = P_integ - xN(iP) * tmp * (wSimp + wCorr)
+           ! End Norlund
         end do
         if (sum_yN.gt.dynrange*dynrange) then
-           CALL NORDLUND(nY,nP,0,xN,yN,1,nPcav+1,0,result1)
-           ! angular integration outside cavity
-           IF (iY.GT.6) THEN
-              CALL NORDLUND(nY,nP,1,xN,yN,nPcav+1,Plast(iY),0,result2)
-           ELSE IF (iY.GT.1) THEN
-              CALL NORDLUND(nY,nP,0,xN,yN,nPcav+1,Plast(iY),0,result2)
-              IF (error.NE.0) STOP
-           ELSE
-              result2 = 0.0
-           END IF
-           !!**result1 is for inside, result2 is for outside the cavity [MN]
-           vec2(iL,iY) = 0.5*(result1 + result2)/T4_ext(iY)
+           !CALL NORDLUND(nY,nP,0,xN,yN,1,Plast(iY),0,P_integ)
+           if (moment.eq.0) vec2(iL,iY) = 0.5*(P_integ)/T4_ext(iY)
+           if (moment.eq.1) vec2(iL,iY) = 2*pi*(P_integ)/T4_ext(iY)
         else
            vec2(iL,iY) = 0.0
         end if
@@ -2436,181 +2246,161 @@ subroutine SPH_diff_u(nY,nP,initial,iter,iterfbol,&
   deallocate(xN)
   deallocate(yN)
 999 return
-end subroutine SPH_diff_u
+end subroutine SPH_diff
 !***********************************************************************
 
+subroutine simpson_int(iP,iZ,iZz,nZ,tautot_iL,tauZz,S_fun,int1,int2,int3)
+  use common
+  use interfaces
+  implicit none
+  !---parameter
+  integer :: iP,iZ,nZ,iZz
+  double precision :: tautot_iL,int1,int2,int3,S_fun,tauZz
+  !--- local
+  double precision ::  daux1,daux2,wgth
+  !Simpson wgth
+  if ((iZ.ne.1).and.(iZ.ne.nZ)) then 
+     daux1 = exp(-tautot_iL*ETAzp(iP,iZ-1))
+     daux2 = exp(-tautot_iL*ETAzp(iP,iZ+1))
+  ELSE
+     if (iZ.eq.1) then 
+        daux1 = exp(-tautot_iL*ETAzp(iP,iZ))
+        daux2 = exp(-tautot_iL*ETAzp(iP,iZ+1))
+     end if
+     if (iZ.eq.nZ) then 
+        daux1 = exp(-tautot_iL*ETAzp(iP,iZ-1))
+        daux2 = exp(-tautot_iL*ETAzp(iP,iZ))
+     end if
+  END IF
+  wgth = 0.5*(daux2-daux1)
+  int1 = int1 + S_fun*wgth
+  ! add contribution to the integral
+  if ((iZ.le.iZz).and.(iZz.gt.1)) then 
+     if ((iZ.ne.1).and.(iZ.ne.iZz)) then 
+        daux1 = exp(-abs(tauZz-tautot_iL*ETAzp(iP,iZ-1)))
+        daux2 = exp(-abs(tauZz-tautot_iL*ETAzp(iP,iZ+1)))
+     else
+        IF (iZ.eq.1) THEN
+           daux1 = exp(-abs(tauZz-tautot_iL*ETAzp(iP,iZ)))
+           daux2 = exp(-abs(tauZz-tautot_iL*ETAzp(iP,iZ+1)))
+        END IF
+        IF (iZ.eq.iZz) THEN  
+           daux1 = exp(-abs(tauZz-tautot_iL*ETAzp(iP,iZ-1)))
+           daux2 = exp(-abs(tauZz-tautot_iL*ETAzp(iP,iZ)))
+        END IF
+     end if
+     wgth = 0.5*(daux2-daux1)
+     int2 = int2 + S_fun*wgth
+  end if
+  if ((iZ.ge.iZz).and.(iZz.lt.nZ)) then 
+     if ((iZ.ne.iZz).and.(iZ.ne.nZ)) then 
+        daux1 = exp(-abs(tautot_iL*ETAzp(iP,iZ-1)-tauZz))
+        daux2 = exp(-abs(tautot_iL*ETAzp(iP,iZ+1)-tauZz))
+     else
+        if (iZ.eq.iZz) then 
+           daux1 = exp(-abs(tautot_iL*ETAzp(iP,iZ)-tauZz))
+           daux2 = exp(-abs(tautot_iL*ETAzp(iP,iZ+1)-tauZz))
+        end if
+        if (iZ.eq.nZ) then 
+           daux1 = exp(-abs(tautot_iL*ETAzp(iP,iZ-1)-tauZz))
+           daux2 = exp(-abs(tautot_iL*ETAzp(iP,iZ)-tauZz))
+        end if
+     end if
+     wgth = 0.5*(daux2-daux1)
+     int3 = int3 + S_fun*wgth
+  end if
+end subroutine simpson_int
+
+subroutine spline_simpson_int(iP,iZ,iZz,nZ,tautot_iL,tauZz,S_fun,int1,int2,int3)
+  use common
+  use interfaces
+  implicit none
+  !---parameter
+  integer :: iP,iZ,nZ,iZz
+  double precision :: tautot_iL,int1,int2,int3,S_fun,tauZz
+  !--- local
+  double precision ::  wcor1,wcor2,&
+       wgth,first,tau1,tau2,tau3,tau4,tau5
+  first = 0.
+  if (iZ.gt.2)    tau1 = tautot_iL*ETAzp(iP,iZ-2)
+  if (iZ.gt.1)    tau2 = tautot_iL*ETAzp(iP,iZ-1)
+  if (iZ.gt.0)    tau3 = tautot_iL*ETAzp(iP,iZ)
+  if (iZ.lt.nZ)   tau4 = tautot_iL*ETAzp(iP,iZ+1)
+  if (iZ.lt.nZ-1) tau5 = tautot_iL*ETAzp(iP,iZ+2)
+  !---first integral
+  if ((iZ.ne.1).and.(iZ.ne.nZ)) then 
+     wgth = 0.5*(exp(-tau4)-exp(-tau2))
+  ELSE
+     IF (iZ.eq.1)  wgth = 0.5*(exp(-tau4)-exp(-tau3))
+     IF (iZ.eq.nZ) wgth = 0.5*(exp(-tau3)-exp(-tau2))
+  END IF
+  ! spline correction
+  if (iZ.gt.2) then 
+     wcor1 = exp(-tau3)-2.0D0*exp(-tau2)+exp(-tau1)
+  else
+     if (iZ.eq.1) wcor1 = first*(exp(-tau4)-exp(-tau3))
+     if (iZ.eq.2) wcor1 = first*(exp(-tau3)-exp(-tau4))
+  end if
+  if (iZ.le.nZ-2) then 
+     wcor2 = exp(-tau5)-2.0D0*exp(-tau4)+exp(-tau3)
+  else
+     if (iZ.eq.nZ-1) wcor2 = first*(exp(-tau4)-exp(-tau5))
+     if (iZ.eq.nZ)   wcor2 = first*(exp(-tau5)-exp(-tau4))
+  end if
+  wgth = wgth + (wcor1-wcor2)/12.
+  int1 = int1 + S_fun*(wgth+(wcor1-wcor2)/12.)
+  !----second integral
+  if ((iZ.le.iZz).and.(iZz.gt.1)) then 
+     if ((iZ.ne.1).and.(iZ.ne.iZz)) then 
+        wgth = 0.5*(exp(-abs(tau4-tauZz))-exp(-abs(tau2-tauZz)))
+     ELSE
+        IF (iZ.eq.1)   wgth = 0.5*(exp(-abs(tau4-tauZz))-exp(-abs(tau3-tauZz)))
+        IF (iZ.eq.iZz) wgth = 0.5*(exp(-abs(tau3-tauZz))-exp(-abs(tau2-tauZz)))
+     END IF
+     !spline correction 
+     if (iZ.gt.2) then 
+        wcor1 = exp(-abs(tau3-tauZz))-2.0D0*exp(-abs(tau2-tauZz))+exp(-abs(tau1-tauZz))
+     else
+        if (iZ.eq.1) wcor1 = first*(exp(-abs(tau4-tauZz))-exp(-abs(tau3-tauZz)))
+        if (iZ.eq.2) wcor1 = first*(exp(-abs(tau3-tauZz))-exp(-abs(tau4-tauZz)))
+     end if
+     if (iZ.le.iZz-2) then 
+        wcor2 = exp(-abs(tau5-tauZz))-2.0D0*exp(-abs(tau4-tauZz))+exp(-abs(tau3-tauZz))
+     else
+        if (iZ.eq.iZz-1) wcor2 = first*(exp(-abs(tau4-tauZz))-exp(-abs(tau5-tauZz)))
+        if (iZ.eq.iZz)   wcor2 = first*(exp(-abs(tau5-tauZz))-exp(-abs(tau4-tauZz)))
+     end if
+     wgth = wgth + (wcor1-wcor2)/12.
+     int2 = int2 + S_fun*wgth
+  end if
+  if ((iZ.ge.iZz).and.(iZz.lt.nZ)) then 
+     if ((iZ.ne.1).and.(iZ.ne.iZz)) then 
+        wgth = 0.5*(exp(-abs(tauZz-tau4))-exp(-abs(tauZz-tau2)))
+     ELSE
+        IF (iZ.eq.1)   wgth = 0.5*(exp(-abs(tauZz-tau4))-exp(-abs(tauZz-tau3)))
+        IF (iZ.eq.iZz) wgth = 0.5*(exp(-abs(tauZz-tau3))-exp(-abs(tauZz-tau2)))
+     END IF
+     !spline correction
+     if (iZ.gt.2) then 
+        wcor1 = exp(-abs(tauZz-tau3))-2.0D0*exp(-abs(tauZz-tau2))+exp(-abs(tauZz-tau1))
+     else
+        if (iZ.eq.1) wcor1 = first*(exp(-abs(tauZz-tau4))-exp(-abs(tauZz-tau3)))
+        if (iZ.eq.2) wcor1 = first*(exp(-abs(tauZz-tau3))-exp(-abs(tauZz-tau4)))
+     end if
+     if (iZ.le.iZz-2) then 
+        wcor2 = exp(-abs(tau5-tauZz))-2.0D0*exp(-abs(tauZz-tau4))+exp(-abs(tauZz-tau3))
+     else
+        if (iZ.eq.iZz-1) wcor2 = first*(exp(-abs(tauZz-tau4))-exp(-abs(tauZz-tau5)))
+        if (iZ.eq.iZz)   wcor2 = first*(exp(-abs(tauZz-tau5))-exp(-abs(tauZz-tau4)))
+     end if
+     wgth = wgth + (wcor1-wcor2)/12.
+     int3 = int3 + S_fun*wgth
+  end if
 
 
+  return 
+end subroutine spline_simpson_int
 
-!!$
-!!$
-!!$
-!!$!***********************************************************************
-!!$subroutine SPH_diff_old(nG,flag1,initial,iter,iterfbol,T4_ext,em,us,omega,vec2)
-!!$!=======================================================================
-!!$! This subroutine finds the diffuse part for both emission and scattering
-!!$! for spherical shell                                        [Deka, 2008]
-!!$!! If flag1=1 for vec1=Em; flag1=2 for vec1=Us
-!!$!!** Introduced integration of diffuse radiation with Nordlund, as in old Dusty.
-!!$!!** Restored ETAzp instead of the time-consuming GauLeg integration
-!!$!!** New commments added.                                   [MN, July'10]
-!!$!=======================================================================
-!!$  use common
-!!$  implicit none
-!!$  integer iP,iL,iZ,iZz,nZ,iY,iYy,iter,iterfbol, iNloc, flag1,flagN, error,iG,nG
-!!$  double precision vec2(npL,npY), omega(npG+1,npL), Iplus1(npP,npL), &
-!!$       Iplus2(npP,npL), Iminus(npP,npL), T4_ext(npY), aux2(npY), diff(npY),&
-!!$       S_fun(npY), func(npY), faux3(npY), xN(npP), yN(npP), S_loc, p_loc, expow1, &
-!!$       result1, result2, res1, frac, us(npL,npY),em(npG,npL,npY)
-!!$  logical initial
-!!$!-----------------------------------------------------------------------
-!!$  Iplus1 = 0.0d0
-!!$  Iplus2 = 0.0d0
-!!$  Iminus = 0.0d0
-!!$  !!** for each radial grid point calculate the integrals from Sec.4.1 in Blueprint:
-!!$  do iY = 1, nY
-!!$     do iP = 1, Plast(iY)
-!!$        iZz  = iY + 1 - iYfirst(iP)  !this is for z in eq.(4.1.5)
-!!$        ! upper limit for the counter of z position
-!!$        nZ  = nY + 1 - iYfirst(iP)   !nZ is index for zmax=sqrt(Y**2-p**2) [MN]
-!!$        do iL = 1, nL
-!!$           do iYy = 1, nY
-!!$              S_fun(iYy) = 0
-!!$              do iG =1, nG
-!!$                 frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
-!!$                 if (flag1.eq.1) then
-!!$                    ! find the diffuse emission term, vec1=em
-!!$                    S_fun(iYy) = S_fun(iYy) + frac*(1.0d0-omega(iG,iL))*em(iG,iL,iYy)*T4_ext(iYy)
-!!$                 elseif (flag1.eq.2) then
-!!$                    ! find the scattering term, vec1=Us initially, or Utot afterwards
-!!$                    if (initial.and.iter.eq.1.and.iterfbol.eq.1) then
-!!$                       S_fun(iYy) = S_fun(iYy) + frac*omega(iG,iL)*us(iL,iYy)*T4_ext(iYy)
-!!$                    else
-!!$                       S_fun(iYy) = S_fun(iYy) + frac*omega(ig,iL)*utot(iL,iYy)*T4_ext(iYy)
-!!$                    end if
-!!$                 end if
-!!$              end do
-!!$           end do ! end do over dummy iYy
-!!$           if (P(iP).le.1.0d0) then
-!!$              ! inside the cavity
-!!$              do iZ = 1, nZ
-!!$                 iYy = iYfirst(iP) + iZ - 1
-!!$                 diff(iZ) = S_fun(iYy)
-!!$              end do
-!!$           else
-!!$              ! in the shell
-!!$              do iZ = 1, nZ-1
-!!$                 iYy = iYfirst(iP) + iZ - 1
-!!$                 if(iZ.eq.1.and.P(iP).gt.Y(iYy).and.P(iP).lt.Y(iYy+1)) then
-!!$                    p_loc = P(iP)
-!!$                    call LININTER(npY,nY,Y,S_fun,p_loc,iNloc,S_loc)
-!!$                    diff(iZ) = abs(S_loc)
-!!$                 else
-!!$                    diff(iZ) = S_fun(iYy)
-!!$                 end if
-!!$              end do
-!!$              diff(nZ) = S_fun(nY)
-!!$           end if
-!!$           do iZ = 1, nZ
-!!$              aux2(iZ) = tautot(iL)*ETAzp(iP,iZ)
-!!$           end do
-!!$           ! 1st term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
-!!$           !     from z0-midpoint to the outer edge of the shell (on the left side)  [MN]
-!!$           DO iZ = 1, nZ
-!!$              faux3(iZ) = exp(-aux2(iZ))
-!!$              func(iZ) =  diff(iZ)
-!!$           END DO
-!!$           CALL Simpson(npY,1,nZ,faux3,func,res1)
-!!$           Iplus1(iP,iL) = abs(res1)*exp(-aux2(iZz))
-!!$           ! 2nd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
-!!$           !     from z0-midpoint to the running z-point
-!!$           DO iZ = 1, iZz
-!!$              expow1 = tautot(iL)*abs(ETAzp(iP,iZz) - ETAzp(iP,iZ)) !this is tau(z',z;p)
-!!$              faux3(iZ) = exp(-expow1)
-!!$              func(iZ) =  diff(iZ)
-!!$           END DO
-!!$           CALL Simpson(npY,1,iZz,faux3,func,res1)
-!!$           Iplus2(iP,iL) = abs(res1)
-!!$           ! 3rd term in the energy density or flux. See blueprint, Table 4.1, or eq.(4.1.5)
-!!$           !     from the running z-point to the outer edge of the shell [MN]
-!!$           DO iZ = iZz, nZ
-!!$              expow1 = tautot(iL)*abs(ETAzp(iP,iZ) - ETAzp(iP,iZz)) !this is tau(z,z';p)
-!!$              faux3(iZ) = exp(-expow1)
-!!$              func(iZ) =  diff(iZ)
-!!$           END DO
-!!$           CALL Simpson(npY,iZz,nZ,faux3,func,res1)
-!!$           Iminus(iP,iL) = abs(res1)
-!!$        end do ! end loop over wavelengths
-!!$     end do ! end loop over impact parameters P=1..Plast(iY)
-!!$     !  Find diffuse energy density (U)
-!!$     if (moment_loc.eq.1) then
-!!$        !!**   xN is mu,the integration variable.
-!!$        !!**   U ~ Int[yN*dmu], while flux ~ Int[yN*mu*dmu]. Sub Nordlund takes care of this difference.
-!!$        !!**   When calling NORDLUND(flagN,xN,yN,N1,N2,m,intfdx,error)
-!!$        !!**    flagN=1 is for analytic integration; m=0 for U and m=1 for flux [MN]
-!!$        do iL = 1, nL
-!!$           DO iP = 1, Plast(iY)
-!!$              xN(iP) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
-!!$           END DO
-!!$           ! generate intensity array for NORDLUND
-!!$           DO iP = 1, Plast(iY)
-!!$              yN(iP) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) + Iminus(iP,iL))
-!!$           END DO
-!!$           CALL NORDLUND(nY,0,xN,yN,1,nPcav+1,0,result1,error)
-!!$           ! flag for analytic integration outside cavity
-!!$           !! IF (iY.GT.6) THEN ! this was in the old Dusty
-!!$           IF (iY.GT.4) THEN  ! take it as 4 in case the grid has a few pts. only.
-!!$              flagN = 1
-!!$           ELSE
-!!$              flagN = 0
-!!$           ENDIF
-!!$           ! angular integration outside cavity
-!!$           IF (iY.GT.1) THEN
-!!$              CALL NORDLUND(nY,flagN,xN,yN,nPcav+1,Plast(iY),0,result2,error)
-!!$              IF (error.NE.0) GOTO 999
-!!$           ELSE
-!!$              result2 = 0.0
-!!$           END IF
-!!$           !!**result1 is for inside, result2 is for outside the cavity [MN]
-!!$           vec2(iL,iY)= 0.5*(result1 + result2)/T4_ext(iY)
-!!$        end do  !end do over lambda
-!!$        ! ------------end of U integration ------------------
-!!$        !  Find diffuse flux
-!!$     elseif(moment_loc.eq.2) then
-!!$        do iL = 1, nL
-!!$           DO iP = 1, Plast(iY)
-!!$              xN(iP) = sqrt(1.0-(P(iP)/Y(iY)*P(iP)/Y(iY)))
-!!$           END DO
-!!$           ! generate intensity array for NORDLUND
-!!$           DO iP = 1, Plast(iY)
-!!$              yN(iP) = abs(Iplus1(iP,iL) + Iplus2(iP,iL) - Iminus(iP,iL))
-!!$           END DO
-!!$           ! integration inside the cavity
-!!$           CALL NORDLUND(nY,0,xN,yN,1,nPcav+1,1,result1,error)
-!!$           ! flag for analytic integration outside cavity
-!!$           !!IF (iY.GT.6) THEN ! this was in the old Dusty
-!!$           IF (iY.GT.4) THEN
-!!$              flagN = 1
-!!$           ELSE
-!!$              flagN = 0
-!!$           ENDIF
-!!$           ! angular integration outside cavity
-!!$           IF (iY.GT.1) THEN
-!!$              CALL NORDLUND(nY,flagN,xN,yN,nPcav+1,Plast(iY),1,result2,error)
-!!$              IF (error.NE.0) GOTO 999
-!!$           ELSE
-!!$              result2 = 0.0
-!!$           END IF
-!!$           !!** result1 is for inside, result2 is for outside the cavity [MN]
-!!$           vec2(iL,iY) = 2.0d0*pi*abs(result1+result2)/T4_ext(iY)
-!!$        end do  !end do over lambda
-!!$     end if !end if for diffuse flux
-!!$  end do !end do over radial grid Y(iY)  [MN]
-!!$  !----------------------------------------------------------------------
-!!$999 return
-!!$end subroutine SPH_diff_old
-!!$!***********************************************************************
-!!$
 !***********************************************************************
 SUBROUTINE NORDLUND(nY,nP,flag,x,f,N1,N2,m,intfdx)
 !=======================================================================
@@ -3209,7 +2999,7 @@ subroutine SLBdiff(nY,flag,grid,T4_ext,em,fp,fm)
         tau(iY) = grid(iL,iY)
         faux(iY) = 0
         do iG=1,nG
-           frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
+           frac = destroyed(iG,iY)*(sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,iL)+sigmaS(nG+1,iL))
            if (flag.eq.1) then
               faux(iY) = faux(iY) + frac*omega(iG,iL)*utot(iL,iY)
            else
@@ -3357,7 +3147,7 @@ SUBROUTINE SPH_Int(nY,nP,fs)
   allocate(Sstem(nP))
   allocate(Sstsc(nP))
   IF (nG.GT.1.AND.iX.GE.1) THEN
-     print*, ' FindInt should be fixed, nG>1 ! LINE 3386'
+     print*, ' FindInt should be fixed, nG>1 ! kernel.f90 LINE 3141'
      stop
   END IF
   ! find impact parameter tangential to the stellar disk
@@ -3411,8 +3201,6 @@ SUBROUTINE SPH_Int(nY,nP,fs)
      END IF
      pst = 0.5
   END IF
-!  print*,'!!!!!!!!!!! --Intensities not done yet-- !!!!!!'
-!  stop
   stelfact = 1.0 / pst / pst / Pi
   ! generate bOut, i.e. insert two points such that
   ! bOut(k)=0.999*pst and bOut(k+1)=1.001*pst
@@ -3646,63 +3434,70 @@ SUBROUTINE SPH_Int(nY,nP,fs)
   RETURN
 end subroutine SPH_Int
 ! ***********************************************************************
-!!$
-!!$! ***********************************************************************
-!!$  subroutine SLBintensity(nG,omega,em)
-!!$! =======================================================================
-!!$  use common
-!!$  implicit none
-!!$  integer  iL, iY, imu,iG,nG
-!!$  double precision em(npG,npL,npY),omega(npG+1,npL),tau1(npY),&
-!!$       idifp, idifm,res, Sexp, Kron, frac
-!!$  external Sexp
-!!$! -----------------------------------------------------------------------
-!!$  ! Loop over wavelengths
-!!$  do iL = 1, nL
-!!$     taut = TAUslb(iL,nY)
-!!$     ! loop over angles (i.e. muobs), read in input from 'slb_mugrid.dat'
-!!$     do imu = 1, nmu
-!!$        muobs = dcos(theta(imu))
-!!$        if(dabs(mu1-muobs).lt.1.0d-4) then
-!!$           kron = 1.0d0
-!!$        else
-!!$           kron = 0.0d0
-!!$        end if
-!!$        ! scaled diffuse intensity:
-!!$        idifm = 0.0d0
-!!$        idifp = 0.0d0
-!!$        tau1(1) = 0.0d0
-!!$        do iY = 2, nY
-!!$           tau1(iY) = TAUslb(iL,iY)
-!!$           Sfn = 0
-!!$           do iG=1,nG
-!!$              frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,il)+sigmaS(nG+1,il))
-!!$              Sfn = Sfn + frac*(1.0d0-omega(iG,iL))*em(iG,iL,iY)
-!!$              Sfn = Sfn + frac*omega(iG,iL)*utot(iL,iY)
-!!$           end do
-!!$           ! transmit=1 for tau < t, transmit=0 for tau > t
-!!$           transmit = 1
-!!$           call romby(Sexp,tau1(iY-1),tau1(iY),res)
-!!$           idifm = idifm + res
-!!$           transmit = 0
-!!$           call romby(Sexp,tau1(iY-1),tau1(iY),res)
-!!$           idifp = idifp + res
-!!$        end do
-!!$        if(idifm.lt.1.d-20) idifm = 0.0d0
-!!$        if(idifp.lt.1.d-20) idifp = 0.0d0
-!!$        SLBintm(imu,iL) = idifm
-!!$        SLBintp(imu,iL) = idifp
-!!$        ! enddo over angles
-!!$     end do
-!!$     ! enddo over lambda
-!!$  end do
-!!$! -----------------------------------------------------------------
-!!$  return
-!!$  end subroutine SLBintensity
-!!$! ***********************************************************************
-!!$
+
+! ***********************************************************************
+  subroutine SLBintensity(nY,em)
+! =======================================================================
+  use common
+  use interfaces
+  implicit none
+  !--- parameter
+  integer :: nY
+  double precision, allocatable :: em(:,:,:)
+  !--- local
+  integer :: iL, iY, iG, imu
+  double precision :: kron, idifp, idifm,res, Sexp, frac
+  double precision, allocatable :: tau1(:)
+  external Sexp
+  ! --------------------------------------------------------------------
+  allocate(tau1(nY))
+  ! Loop over wavelengths
+  do iL = 1, nL
+     taut = TAUslb(iL,nY)
+     ! loop over angles (i.e. muobs), read in input from 'slb_mugrid.dat'
+     do imu = 1, nmu
+        muobs = dcos(theta(imu))
+        if(dabs(mu1-muobs).lt.1.0d-4) then
+           kron = 1.0d0
+        else
+           kron = 0.0d0
+        end if
+        ! scaled diffuse intensity:
+        idifm = 0.0d0
+        idifp = 0.0d0
+        tau1(1) = 0.0d0
+        do iY = 2, nY
+           tau1(iY) = TAUslb(iL,iY)
+           Sfn = 0
+           do iG=1,nG
+              frac = (sigmaA(iG,iL)+sigmaS(iG,iL))/(sigmaA(nG+1,il)+sigmaS(nG+1,il))
+              Sfn = Sfn + frac*(1.0d0-omega(iG,iL))*em(iG,iL,iY)
+              Sfn = Sfn + frac*omega(iG,iL)*utot(iL,iY)
+           end do
+           ! transmit=1 for tau < t, transmit=0 for tau > t
+           transmit = 1
+           call romby(Sexp,tau1(iY-1),tau1(iY),res)
+           idifm = idifm + res
+           transmit = 0
+           call romby(Sexp,tau1(iY-1),tau1(iY),res)
+           idifp = idifp + res
+        end do
+        if(idifm.lt.1.d-20) idifm = 0.0d0
+        if(idifp.lt.1.d-20) idifp = 0.0d0
+        SLBintm(imu,iL) = idifm
+        SLBintp(imu,iL) = idifp
+        ! enddo over angles
+     end do
+     ! enddo over lambda
+  end do
+  deallocate(tau1)
+! -----------------------------------------------------------------
+  return
+  end subroutine SLBintensity
+! ***********************************************************************
+
 !***********************************************************************
- subroutine Analysis(nY,model,us,T4_ext,delta)
+ subroutine Analysis(nY,model,us,T4_ext,delta,maxrat)
 !=======================================================================
 ! This subroutine analyzes the solution. It finds the flux conservation
 ! accuracy and evaluates many output quantites (e.g. QF(y), TAUF(y),Psi, F1
@@ -3714,11 +3509,12 @@ end subroutine SPH_Int
   implicit none
   !---parameter
   integer nY,model
-  double precision :: delta
+  double precision :: delta,maxrat
   double precision, allocatable ::  us(:,:),T4_ext(:)
   !---local
   integer :: i,iL,iY,iG
-  double precision eta, maxFerr, resaux, aux, s4, Planck, xp, qutot1
+  double precision eta, maxFerr, resaux, aux, s4, Planck, xp, qutot1, Eps1, &
+       mx, theta1_loc, sig_22, tauV, Tc3, C1, C2, C3, ugas_out, Gie2000
   double precision, allocatable :: spectrum(:),qaux(:), K1(:), K2(:),&
        qpTd(:,:), qpstar(:), qaux2(:)
   external eta,Planck
@@ -3797,18 +3593,19 @@ end subroutine SPH_Int
   IF(sph) THEN
      s4 = 1.925 / (4.0*Pi*Gconst*3.0d08*3000.0*1.0D-06)
      ! in case of sigma's from a file aveV=1 (initialized in GetOptPr)
-     print*,' !!fix multi grain line 2961 RDW'
      DO iY = 1, nY
-        DO iL = 1, nL
-           qaux(iL)=(SigmaA(nG+1,iL)+SigmaS(nG+1,iL))/aveV*dabs(ftot(iL,iY))/lambda(iL)
+        do iG = 1,nG+1
+           DO iL = 1, nL
+              qaux(iL)=(SigmaA(iG,iL)+SigmaS(iG,iL))/aveV*dabs(ftot(iL,iY))/lambda(iL)
+           END DO
+           CALL Simpson(nL,1,nL,lambda,qaux,resaux)
+           rg(iG,iY) = s4 * resaux / r_gd
+           ! If dust drift (dynamics case):
+           IF (denstyp.eq.3) rg(iG,iY) = rg(iG,iY)*vrat(1,iY) !3(RDW)
+           IF ((iY.EQ.1).AND.(iG.eq.nG+1)) THEN
+              Phi = resaux
+           END IF
         END DO
-        CALL Simpson(nL,1,nL,lambda,qaux,resaux)
-        rg(1,iY) = s4 * resaux / r_gd
-        ! If dust drift (dynamics case):
-        IF (denstyp.eq.3) rg(1,iY) = rg(1,iY)*vrat(1,iY) !3(RDW)
-        IF (iY.EQ.1) THEN
-           Phi = resaux
-        END IF
      END DO
      ! the terminal value of the reddening profile, normalized to y=1
      Phi = resaux / Phi
@@ -3833,7 +3630,6 @@ end subroutine SPH_Int
   ! find parameter Psi (see Ivezic & Elitzur, 1996)
   ! generate auxiliary function for integration:
   ! loop over iL (wavelength)
-  print*,'!!!!!!PSI still single grain L2989'
   DO iL = 1, nL
      qaux(iL) = SigmaA(nG+1,iL) * Utot(iL,1) / lambda (iL)
   END DO
@@ -3843,111 +3639,111 @@ end subroutine SPH_Int
   !!**  added Psi0 from eq.(41) of IE'01 [MN]
   Psi0 = QpStar(1) / QpTd(1,1)
   ! for slab Psi is defined by the flux at normal ill.
-!!$  IF (SLB) Psi = dabs(mu1)*QUtot1 / QpTd(1,1)
-!!$  ! -------------
-!!$  IF(sph) THEN
-!!$     ! ratio r1/r* (see Ivezic & Elitzur, 1996, eq. 27)
-!!$     r1rs = 0.5 * dsqrt(Psi) * (Tstar(1) / Td(1,1))**2.0
-!!$     IF(Left.eq.0) r1rs = 1.0
-!!$  END IF
-!!$  ! -------------
-!!$  ! Find epsilon - the relative contribution of the diffuse radiation
-!!$  DO iY = 1, nY
-!!$     aux = QpStar(iY)/QpTd(1,iY)/Psi*(Td(1,1)/Td(1,iY))**4.
-!!$     IF (SLB) THEN
-!!$        aux = aux*dabs(mu1)
-!!$     ELSE
-!!$        aux = aux/ Y(iY)/Y(iY)
-!!$     END IF
-!!$     Eps(iY) = 1. - aux
-!!$  END DO
-!!$  Eps1 = 1.0 - QpStar(1) / QUtot1
-!!$  ! store these parameters in the storage array
-!!$  SmC(1,model) = Psi
-!!$  SmC(2,model) = Eps1
-!!$  SmC(3,model) = QpStar(1)
-!!$  SmC(4,model) = QpTd(1,1)
-!!$  !maxrat is the max err of calculated diffuse flux as in Blueprint.
-!!$  SmC(5,model) = maxrat
-!!$  ! inner radius (in cm) in case it is not an input
-!!$  ! 5.53e16 = sqrt(10^4*Lo/4/pi)
-!!$  if (typentry(1).ne.2) then
-!!$     if(slb) then
-!!$        Cr1 =  5.53d+16 / dsqrt(Ji*4*pi/abs(mu1))
-!!$     else
-!!$        Cr1 = 5.53d+16 / dsqrt(Ji*4*pi)
-!!$     end if
-!!$  end if
-!!$  if (sph) then
-!!$     ! angular diameter of inner cavity if Fbol=1d-6 W/m2
-!!$     theta1_loc = 412.6d0 / dsqrt(Ji*4*pi)
-!!$     ! check if the pt.source assumption is still obeyed
-!!$     ! (This is only for BB-type spectrum including Engelke-Marengo function)
-!!$     if(startyp(1).eq.1.or.startyp(1).eq.2) then
-!!$        mx = sqrt(sqrt(Ji*4*pi/sigma))
-!!$        Te_min = 2.0d0 * dmax1(Td(1,1), mx)
-!!$     end if
-!!$  end if
-!!$  ! calculate conversion constants for dynamics
-!!$  Tc3 = Td(1,1)/1000.0
-!!$  ! from eq.(5): 10^(-22)*sig_22 = 10^(-8)*aveA*nd/ng = aveA/r_gd; aveA is in micron^2
-!!$  ! Dusty uses SI units, so convert to m^2;
-!!$  ! rho_s = 3000 kg/m3, aveA/aveV = 1/a, where grain radius a is in microns
-!!$  sig_22 = 1.67d04 /r_gd/3000.0d00 * aveA/aveV   ! eq.(86) in IE'01
-!!$  QV = SigExfid / aveA
-!!$  tauV = TAUfid
-!!$  if (rdw) then
-!!$     ! ---- printout in fname.out according to IE2001 -------
-!!$     ! from eq.(43)
-!!$     CMdot = 1.0d-06 * 1.98*dsqrt(Qstar/sig_22) * Prdw*(Psi**0.25)/Tc3
-!!$     ! from eq.(44) where ugas(iY) = Qstar*w(iY) found in Winds
-!!$     Cve = (2.0d-05/3.) * ugas(nY)/CMdot
-!!$     ! from eq.(15) with Gamma = gmax
-!!$     CM = 45.8*Qstar*sig_22 / gmax
-!!$     write(39,*) '    '
-!!$     write(39,'(a7,1p,e12.3)') ' tauV/QV=', tauV/QV
-!!$     write(39,'(a7,1p,e12.3)') '    QV=', QV
-!!$     write(39,'(a7,1p,e12.3)') ' Qstar=', Qstar
-!!$  end if
-!!$  ! for analytical approximation ---------------
-!!$  if (rdwa) then
-!!$     I1 = 2.0d0 * (1.0d0-pow)/(1.0d0+pow)/tauF(nY)
-!!$     I2 = I1
-!!$     I3 = I1 * tauF(nY) / taufid
-!!$     Gamma(nY) = 0.5d0
-!!$     ! terminal expansion velocity, full formula:
-!!$     ugas_out = tauF(nY) * (1.-Gamma(nY)) / (1.-pow)
-!!$     ! The coefficients come from the units conversion
-!!$     C1 = 0.2845*TAUfid*sqrt(Psi)/I2/(SigExfid/aveV)/ Tc3
-!!$     C2 = 2.040*ugas_out
-!!$     C3 = 6.628*I3*SigExfid/aveV*Gamma(nY)/I1
-!!$     ! from version 2.0 stellar mass is defined as the maximal stellar
-!!$     ! mass which does not quench the wind; the calculation is done
-!!$     ! with half that mass since any smaller mass will have no effect
-!!$     ! on the radial velocity and density profile (see IE2001)
-!!$     CM = 6.628*I3*SigExfid/aveV/I1
-!!$     ! mass-loss rate in Msol/yr
-!!$     CMdot = 1.0E-05 * sqrt(C1)
-!!$     ! terminal expansion velocity in km/s
-!!$     Cve = 10.* C2 / sqrt(C1)
-!!$  end if
-!!$  ! *** this is conversion to the nomenclature as in IE2001
-!!$  IF (RDWPR) THEN
-!!$     ! size averaged extinction efficiency
-!!$      Qstar = qF(1)
-!!$      zeta1 = vrat(1,1)
-!!$      G1 = Gamma(1)
-!!$      Ginf = Gamma(nY)
-!!$      IF (G1.GT.0) THEN
-!!$          Gie2000 = 1 / zeta1 / G1
-!!$          delta = 1 / (Gie2000 - 1)
-!!$      ELSE
-!!$          delta = 0.0
-!!$      END IF
-!!$      PIrdw = tauV / QV
-!!$      Prdw = sqrt(2*PIrdw/I2/QV/Qstar)
-!!$      winf = ugas_out / QV / Qstar
-!!$  END IF
+  IF (SLB) Psi = dabs(mu1)*QUtot1 / QpTd(1,1)
+  ! -------------
+  IF(sph) THEN
+     ! ratio r1/r* (see Ivezic & Elitzur, 1996, eq. 27)
+     r1rs = 0.5 * dsqrt(Psi) * (Tstar(1) / Td(1,1))**2.0
+     IF(Left.eq.0) r1rs = 1.0
+  END IF
+  ! -------------
+  ! Find epsilon - the relative contribution of the diffuse radiation
+  DO iY = 1, nY
+     aux = QpStar(iY)/QpTd(1,iY)/Psi*(Td(1,1)/Td(1,iY))**4.
+     IF (SLB) THEN
+        aux = aux*dabs(mu1)
+     ELSE
+        aux = aux/ Y(iY)/Y(iY)
+     END IF
+     Eps(iY) = 1. - aux
+  END DO
+  Eps1 = 1.0 - QpStar(1) / QUtot1
+  ! store these parameters in the storage array
+  SmC(1,model) = Psi
+  SmC(2,model) = Eps1
+  SmC(3,model) = QpStar(1)
+  SmC(4,model) = QpTd(1,1)
+  !maxrat is the max err of calculated diffuse flux as in Blueprint.
+  SmC(5,model) = maxrat
+  ! inner radius (in cm) in case it is not an input
+  ! 5.53e16 = sqrt(10^4*Lo/4/pi)
+  if (typentry(1).ne.2) then
+     if(slb) then
+        Cr1 =  5.53d+16 / dsqrt(Ji*4*pi/abs(mu1))
+     else
+        Cr1 = 5.53d+16 / dsqrt(Ji*4*pi)
+     end if
+  end if
+  if (sph) then
+     ! angular diameter of inner cavity if Fbol=1d-6 W/m2
+     theta1_loc = 412.6d0 / dsqrt(Ji*4*pi)
+     ! check if the pt.source assumption is still obeyed
+     ! (This is only for BB-type spectrum including Engelke-Marengo function)
+     if(startyp(1).eq.1.or.startyp(1).eq.2) then
+        mx = sqrt(sqrt(Ji*4*pi/sigma))
+        Te_min = 2.0d0 * dmax1(Td(1,1), mx)
+     end if
+  end if
+  ! calculate conversion constants for dynamics
+  Tc3 = Td(1,1)/1000.0
+  ! from eq.(5): 10^(-22)*sig_22 = 10^(-8)*aveA*nd/ng = aveA/r_gd; aveA is in micron^2
+  ! Dusty uses SI units, so convert to m^2;
+  ! rho_s = 3000 kg/m3, aveA/aveV = 1/a, where grain radius a is in microns
+  sig_22 = 1.67d04 /r_gd/3000.0d00 * aveA/aveV   ! eq.(86) in IE'01
+  QV = SigExfid / aveA
+  tauV = TAUfid
+  if (denstyp.eq.3) then !RDW
+     ! ---- printout in fname.out according to IE2001 -------
+     ! from eq.(43)
+     CMdot = 1.0d-06 * 1.98*dsqrt(Qstar/sig_22) * Prdw*(Psi**0.25)/Tc3
+     ! from eq.(44) where ugas(iY) = Qstar*w(iY) found in Winds
+     Cve = (2.0d-05/3.) * ugas(nY)/CMdot
+     ! from eq.(15) with Gamma = gmax
+     CM = 45.8*Qstar*sig_22 / gmax
+     write(39,*) '    '
+     write(39,'(a7,1p,e12.3)') ' tauV/QV=', tauV/QV
+     write(39,'(a7,1p,e12.3)') '    QV=', QV
+     write(39,'(a7,1p,e12.3)') ' Qstar=', Qstar
+  end if
+  ! for analytical approximation ---------------
+  if (denstyp.eq.4) then !(RDWA)
+     I1_dyn = 2.0d0 * (1.0d0-pow)/(1.0d0+pow)/tauF(nY)
+     I2_dyn = I1_dyn
+     I3_dyn = I1_dyn * tauF(nY) / taufid
+     Gamma(nY) = 0.5d0
+     ! terminal expansion velocity, full formula:
+     ugas_out = tauF(nY) * (1.-Gamma(nY)) / (1.-pow)
+     ! The coefficients come from the units conversion
+     C1 = 0.2845*TAUfid*sqrt(Psi)/I2_dyn/(SigExfid/aveV)/ Tc3
+     C2 = 2.040*ugas_out
+     C3 = 6.628*I3_dyn*SigExfid/aveV*Gamma(nY)/I1_dyn
+     ! from version 2.0 stellar mass is defined as the maximal stellar
+     ! mass which does not quench the wind; the calculation is done
+     ! with half that mass since any smaller mass will have no effect
+     ! on the radial velocity and density profile (see IE2001)
+     CM = 6.628*I3_dyn*SigExfid/aveV/I1_dyn
+     ! mass-loss rate in Msol/yr
+     CMdot = 1.0E-05 * sqrt(C1)
+     ! terminal expansion velocity in km/s
+     Cve = 10.* C2 / sqrt(C1)
+  end if
+  ! *** this is conversion to the nomenclature as in IE2001
+  IF (denstyp.eq.5) THEN !(RDWPR)
+     ! size averaged extinction efficiency
+      Qstar = qF(1)
+      zeta1 = vrat(1,1)
+      G1 = Gamma(1)
+      Ginf = Gamma(nY)
+      IF (G1.GT.0) THEN
+          Gie2000 = 1 / zeta1 / G1
+          delta = 1 / (Gie2000 - 1)
+      ELSE
+          delta = 0.0
+      END IF
+      PIrdw = tauV / QV
+      Prdw = sqrt(2*PIrdw/I2_dyn/QV/Qstar)
+      winf = ugas_out / QV / Qstar
+  END IF
   deallocate(qpTd)
   deallocate(qpstar)
   deallocate(spectrum)
@@ -4072,36 +3868,36 @@ end subroutine Analysis
 !!$END SUBROUTINE Visi2D
 !!$! ***********************************************************************
 !!$
-!!$!**********************************************************************
-!!$double precision function Sexp(t)
-!!$!=======================================================================
-!!$! This is the function under the tau-integral; it is called from Romby.
-!!$! Here t = tau(iY); the flag 'transmit' is in 'SLBintens.inc'.
-!!$!======================================================================
-!!$  use common
-!!$  implicit none
-!!$  double precision t, arg, efact
-!!$!-----------------------------------------------------------------
-!!$  if(transmit.eq.1) then
-!!$     ! for transmitted intensity
-!!$     arg = (taut-t)/muobs
-!!$  else
-!!$     ! for reflected intensity
-!!$     arg = t/muobs
-!!$  end if
-!!$  ! limits (in case of exp over/under flow)
-!!$  if(arg.gt.50.0d0) then
-!!$     efact = 0.0d0
-!!$  else
-!!$     efact = dexp(-arg)
-!!$  end if
-!!$  if(arg.lt.1.0d-6) efact = 1.0d0
-!!$  ! and finally the function under the integral:
-!!$  Sexp = Sfn * efact
-!!$  return
-!!$  !-----------------------------------------------------------------
-!!$end function Sexp
-!!$!***********************************************************************
+!**********************************************************************
+double precision function Sexp(t)
+!=======================================================================
+! This is the function under the tau-integral; it is called from Romby.
+! Here t = tau(iY); the flag 'transmit' is in 'SLBintens.inc'.
+!======================================================================
+  use common
+  implicit none
+  double precision t, arg, efact
+  !-----------------------------------------------------------------
+  if(transmit.eq.1) then
+     ! for transmitted intensity
+     arg = (taut-t)/muobs
+  else
+     ! for reflected intensity
+     arg = t/muobs
+  end if
+  ! limits (in case of exp over/under flow)
+  if(arg.gt.50.0d0) then
+     efact = 0.0d0
+  else
+     efact = dexp(-arg)
+  end if
+  if(arg.lt.1.0d-6) efact = 1.0d0
+  ! and finally the function under the integral:
+  Sexp = Sfn * efact
+  return
+  !-----------------------------------------------------------------
+end function Sexp
+!***********************************************************************
 !!$
 !!$! ***********************************************************************
 !!$DOUBLE PRECISION FUNCTION IMAGFN(Yy)
