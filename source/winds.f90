@@ -1,5 +1,5 @@
 ! ***********************************************************************
-      SUBROUTINE WINDS(nG,EtaOK)
+SUBROUTINE WINDS(nG,EtaOK)
 ! =======================================================================
 ! This subroutine takes care of the interface between radiatively driven
 ! winds and radiative transfer.  It is entered
@@ -11,8 +11,8 @@
 !
 ! Notations follow EI01 (MNRAS 327, 403)
 ! =======================================================================
-
   use common
+  use interfaces
   implicit none
 
   integer nG, EtaOK, iY, iL, err

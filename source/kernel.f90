@@ -36,9 +36,12 @@ subroutine Kernel(path,lpath,tau,Nmodel)
      call OPPEN(model,path,lpath)
      if (iVerb.eq.2) write(*,*) ' going to Solve '
      ! solve radiative transfer for this particular optical depth
-     call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     if (sph_matrix) then 
+        CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     else
+        call Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
+     end if
      ! old dustys way
-     !CALL Solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,delta,iterfbol,fbolOK)
      ! if flux is conserved, the solution is obtained. So write out the values
      ! to output files for specified models
      if (fbolOK.eq.1) then
@@ -1052,8 +1055,8 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   double precision,allocatable :: emiss(:,:,:),emiss_total(:,:)
   !---- local variable
   double precision,allocatable :: utot_old2(:,:)
-  integer :: itlim,conv,iter,iG,iL,iY,iY1, moment, thread_id
-  double precision aux1,maxerrT(max_threads),maxerrU(max_threads),m,n
+  integer :: itlim,conv,iter,iG,iL,iY,iY1, moment, thread_id,i,istop,iOut
+  double precision aux1,maxerrT(max_threads),maxerrU(max_threads),m,n,JL,JR,xx
   external eta
 
   allocate(emiss_total(nL,npY))
@@ -1110,11 +1113,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
      iter = iter + 1
      !print*,iter
      ! find T_external for the new y-grid if T(1) given in input
-     if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
-        call find_Text(nY,T4_ext)
-     elseif (.not.initial.and.typentry(1).eq.5) then
-        call find_Text(nY,T4_ext)
-     end if
+     if (typentry(1).eq.5) call find_Text(nY,T4_ext)
      ! find emission term
      call Emission(nY,T4_ext,emiss,emiss_total)
      ! moment = 1 is for finding total energy density only
@@ -1189,49 +1188,34 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   call Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
   if(iVerb.eq.2) write(*,*) ' Done with finding energy density and diffuse flux.'
   !-----------------------------------------------------------------
-!!$  !!** additional printout [MN] vvvvvv
-!!$  IF(iInn.eq.1) THEN
-!!$     write(18,'(a9,f5.0)') ' taufid0=',taufid0
-!!$     write(18,'(2(a9,i4))') 'iterfbol=',iterfbol,'     nY =', nY
-!!$     call Bolom(Utot,Ubol)
-!!$     call Bolom(Us,Usbol)
-!!$     call Bolom(Ude,Udebol)
-!!$     call Bolom(Uds,Udsbol)
-!!$     ! fbols are printed from Solve (because slab fluxes are found there)
-!!$     IF (SLB) THEN
-!!$        write(18,*)'      tr       Ubol      Usbol      Udsbol     Udebol'
-!!$        DO iY = 1, nY
-!!$           write(18,'(1p,5E11.3)') tr(iY),Ubol(iY),Usbol(iY),Udsbol(iY),Udebol(iY)
-!!$        END DO
-!!$     ELSE
-!!$        write(18,*)'      Y       Ubol      Usbol      Udsbol     Udebol'
-!!$        DO iY = 1, nY
-!!$           write(18,'(1p,5E11.3)') Y(iY),Ubol(iY),Usbol(iY),Udsbol(iY),Udebol(iY)
-!!$        END DO
-!!$     END IF
-!!$  END IF
-!!$  ! Find the energy density profiles if required.
-!!$  ! They are normalized in PrOut [MN,11]
-!!$  IF (iJ.gt.0) THEN
-!!$     ! interpolate J-output(iOut) to Y(iOut)
-!!$      DO iOut = 1, nJOut
-!!$         ! bracket the needed wavelength
-!!$        istop = 0
-!!$        i = 0
-!!$        DO WHILE (istop.EQ.0)
-!!$          i = i + 1
-!!$          IF (Y(i).GT.YJOut(iOut)) istop = 1
-!!$          IF (i.EQ.nJout) istop = 1
-!!$        END DO
-!!$        ! interpolate intensity
-!!$        xx = (YJOut(iOut)-Y(i-1))/(Y(i)-Y(i-1))
-!!$        DO iL = 1, nL
-!!$          JL = Ude(iL,i-1) + Uds(iL,i-1)
-!!$          JR = Ude(iL,i) + Uds(iL,i)
-!!$          JOut(iL,iOut) = JL + xx*(JR - JL)
-!!$        END DO
-!!$      END DO
-!!$   END IF
+  ! Find the energy density profiles if required.
+  ! They are normalized in PrOut [MN,11]
+  IF (iJ.gt.0) THEN
+     if (sph_matrix) then 
+        print*,'  J output not available for matrix method!!!'
+     else
+        call SPH_diff(1,0,nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,Ude)
+        call SPH_diff(2,0,nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,Uds)
+     end if
+     ! interpolate J-output(iOut) to Y(iOut)
+      DO iOut = 1, nJOut
+         ! bracket the needed wavelength
+        istop = 0
+        i = 0
+        DO WHILE (istop.EQ.0)
+          i = i + 1
+          IF (Y(i).GT.YJOut(iOut)) istop = 1
+          IF (i.EQ.nJout) istop = 1
+        END DO
+        ! interpolate intensity
+        xx = (YJOut(iOut)-Y(i-1))/(Y(i)-Y(i-1))
+        DO iL = 1, nL
+          JL = Ude(iL,i-1) + Uds(iL,i-1)
+          JR = Ude(iL,i) + Uds(iL,i)
+          JOut(iL,iOut) = JL + xx*(JR - JL)
+        END DO
+      END DO
+   END IF
 999 deallocate(emiss_total)
   deallocate(ubol_old)
   deallocate(utot_old2)

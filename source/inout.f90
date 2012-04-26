@@ -57,9 +57,15 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   if(str(1:L).eq.'SPHERE') then
    slb = .false.
    sph = .true.
+   sph_matrix = .false.
+  elseif(str(1:L).eq.'SPHERE_MATRIX') then
+   slb = .false.
+   sph = .true.
+   sph_matrix = .true.
   elseif(str(1:L).eq.'SLAB') then
    slb = .true.
    sph = .false.
+   sph_matrix = .false.
   end if
   !********************************************
   !** II. Physical parameters **
@@ -1031,6 +1037,7 @@ subroutine inp_rad(shp,spec_scale,styp)
         end do
         shp(iL) = bb
      end do
+     call Simpson(nL,1,nL,lambda,shp,spec_scale)
      spec_scale = 0.0D0
      do k = 1, nbb
         spec_scale = spec_scale + rellum(k)*sigma*(Tbb(k)**4.0D0)
@@ -1199,7 +1206,11 @@ subroutine inp_rad(shp,spec_scale,styp)
      end if
      ! interpolate to dusty grid
      do iL=1,nL
-        call powerinter(nLs,nLs,lambda_s,shp_s,lambda(iL),iL,shp(iL))
+        call powerinter(nL,nL,lambda_s,shp_s,lambda(iL),iL,shp(iL))
+     end do
+     call Simpson(nL,1,nL,lambda,shp,spec_scale)
+     do iL=1,nL
+        shp(iL) = shp(iL)/spec_scale*lambda(iL)
      end do
      error = 0
      deallocate(lambda_s)
@@ -1208,7 +1219,6 @@ subroutine inp_rad(shp,spec_scale,styp)
      deallocate(tmp_sort2)
   end if
   ! get total scale
-  if (str(1:L).ne.'BLACK_BODY') call Simpson(nL,1,nL,lambda,shp,spec_scale)
   return
 end subroutine inp_rad
 
@@ -1512,6 +1522,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   character*120 STemp,Serr,hdint, hdcon,hdvis, s1, su1, s2, su2, tstr*10
   character*132 hdsp1,hdsp2,hdrslb1,hdrslb2,hdrsph1,hdrsph2,hdrdyn
   character*255 crossfilename
+  CHARACTER*30 FMT
   external eta,psfn
   !---------------------------------------------------------------------
   allocate(ftotL(nL))
@@ -1723,18 +1734,18 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
              model, taufid, tauF(nY), CMdot, CVe, CM, &
              GinfG1, Prdw, delta, delta/dmax, winf, Phi, zeta1
      end if
-!     if(right.eq.0) then
-!        if (startyp(1).eq.1.or.startyp(1).eq.2) then
-!           if(Tstar(1).lt.Te_min) then
-!              call getfs(Tstar(1),0,1,Tstr)
-!              write(12,'(a50,a5,a5)') &
-!                   ' ** WARNING: the input spectrum is a black-body at ',Tstr,' K **'
-!              call getfs(Te_min,0,1,Tstr)
-!              write(12,'(a50,a5,a5)') &
-!                   ' *the point-source assumption requires min Teff of ',Tstr,' K **'
-!           end if
-!        end if
-!     end if
+     if(right.eq.0) then
+        if (startyp(1).eq.1.or.startyp(1).eq.2) then
+           if(Tstar(1).lt.Te_min) then
+              call getfs(Tstar(1),0,1,Tstr)
+              write(12,'(a50,a5,a5)') &
+                   ' ** WARNING: the input spectrum is a black-body at ',Tstr,' K **'
+              call getfs(Te_min,0,1,Tstr)
+              write(12,'(a50,a5,a5)') &
+                   ' *the point-source assumption requires min Teff of ',Tstr,' K **'
+           end if
+        end if
+     end if
      ! end if for geometry
   end if
   !--------------   spectrum to *.s##  file   ------------------------
@@ -1918,10 +1929,12 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
                  if(Elems(iY,i).lt.limval) Elems(iY,i) = 0.0d0
               end do
            end do
-           write(unt,'(a65,a23,a)') hdrsph1,hdrdyn,hdrsph2
+           WRITE(FMT,'("(a65,a23,a", I0, ")")') nG*11
+           write(unt,FMT) hdrsph1,hdrdyn,hdrsph2
            call maketable(Elems,nY,8+nG,unt)
         else
-           write(unt,'(a65,a)') hdrsph1,hdrsph2
+           WRITE(FMT,'("(a65,a", I0, ")")') nG*11
+           write(unt,FMT) hdrsph1,hdrsph2
            call maketable(Elems,nY,6+nG,unt)
         end if
         ! end if for geometry
@@ -2068,7 +2081,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
         call maketable(Elems,nvisi,nLambdaOut+1,unt)
      end if
   endif
-!!$!----------  energy density profiles to *jnn file  -------------------------
+  !----------  energy density profiles to *jnn file  -------------------------
   if(sph) then
      if(allocated(Elems)) deallocate(Elems)
      allocate(Elems(nL,nJOut+1))
@@ -2081,11 +2094,11 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
         !   Find the scale of en. density in [W/m2] for the required YJout(iOut) [MN]
         do iOut = 1, nJOut
            y_loc = YJOut(iOut)
-           call LININTER(npY,nY,Y,Jext,y_loc,iNloc,J_loc)
+           call LININTER(nY,nY,Y,Jext,y_loc,iNloc,J_loc)
            Jbol(iOut) = J_loc
         end do
         !   write the scale in the header
-        write(unt,'(a11,1p,10e11.3)')'Jbol[W/m2]=',(Jbol(iOut),iOut=1,nJout)
+        write(unt,'(a11,1p,10e11.3)') 'Jbol[W/m2]=',(Jbol(iOut),iOut=1,nJout)
         write(unt,'(a11,10f11.2)')'      Y =  ',(YJOut(iOut),iOut=1,nJout)
         write(unt,'(a11)')'   lambda  '
         !   normalize en. density profiles

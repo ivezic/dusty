@@ -3,7 +3,7 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
 ! =======================================================================
 ! This subroutine solves the continuum radiative transfer problem for a
 ! spherically symmetric envelope.                      [Z.I., Nov. 1995]
-! =======================================================================
+  ! =====================================================================
   use common
   use interfaces
   IMPLICIT none
@@ -16,23 +16,7 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
   double precision pstar,TAUlim, delta
   double precision, allocatable :: fs(:,:),u_old(:,:),us(:,:),T4_ext(:)
   double precision, allocatable :: emiss(:,:,:)
-!!$
-!!$  integer model, error, nG, iterfbol, fbolOK,grid,iY,iL,nY_old,y_incr,imu, &
-!!$       iPstar,EtaOK , iP, iZ, nZ, iOut
-!!$  double precision pstar,taulim, us(npL,npY),comp_fdiff_bol(npY), &
-!!$       comp_fdiff_bol1(npY),calc_fdiff(npY), &
-!!$       delta, em(npG,npL,npY), omega(npG+1,npL), iauxl(npL),iauxr(npL), &
-!!$       fdsp(npL,npY),fdsm(npL,npY), fdep(npL,npY),fdem(npL,npY),fs(npL,npY), &
-!!$       T4_ext(npY), accfbol, fbol_max, fbol_min, aux, &
-!!$       Udbol(npY), Usbol(npY), fDebol(npY),fDsbol(npY), maxFerr, deviat
-!!$  logical initial
-!!$
-  ! ----------------------------------------------------------------------
- !!$  IF(iInn.eq.1) THEN
- !!$     write(38,*)'============================================='
- !!$     write(38,'(a7,i5)') ' model= ',model
- !!$     write(38,*)'============================================='
- !!$  END IF
+  !----------------------------------------------------------------------
   allocate(fs(nL,npY))
   allocate(us(nL,npY))
   allocate(T4_ext(npY))
@@ -49,7 +33,6 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
   fbolOK = 0
   itereta = 0
   EtaOK = 0
-  !call SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol+1,itereta+1)
   IF(sph) THEN
      ! Solve for spherical envelope:
      ! temporarily the star is approximated by a point source
@@ -192,16 +175,9 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
         ! end of loop over ETA
      END DO
   ELSE
-       ! solve for slab case
-!!$       CALL SLBsolve(model,nG,error)
-!!$       ! error=4 means npY not large enough for oblique illumination grid
-!!$       IF (error.eq.4) THEN
-!!$          CALL MSG(15)
-!!$          PRINT*,'stop MSG(15)'
-!!$          goto 999
-!!$       END IF
-!!$       PRINT*,'Slab case is not implemented for the matrix method!'
-!!$       STOP
+     ! solve for slab case
+     PRINT*,'Slab case is not implemented for the matrix method!'
+     STOP
   END IF
   ! analyze the solution and calculate some auxiliary quantities
   CALL analysis(nY,model,us,T4_ext,delta,deviat)
@@ -224,10 +200,10 @@ END SUBROUTINE solve_matrix
 !***********************************************************************
 SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
      FbolOK,initial,deviat,iterFbol,iterEta,model,us,u_old,fs,T4_ext,emiss)
-!=======================================================================
-! This subroutine solves the continuum radiative transfer problem for a
-! spherically symmetric envelope.                      [Z.I., Nov. 1995]
-!=======================================================================
+  !=======================================================================
+  ! This subroutine solves the continuum radiative transfer problem for a
+  ! spherically symmetric envelope.                      [Z.I., Nov. 1995]
+  !=======================================================================
   use common
   use interfaces
   IMPLICIT none
@@ -360,31 +336,10 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   itlim = 10000
   IF (iX.NE.0) write(18,*)' Weight matrices OK, calculating Tdust'
   IF (iVerb.EQ.2) write(*,*)' Weight matrices OK, calculating Tdust'
- !!$  IF (iInn.eq.1) THEN
- !!$     write(38,'(a8,i5)') '    nY= ',nY
- !!$     write(38,*) '    iter   maxFerr     dmaxU       dmaxF        T1         Fe1'
- !!$  END IF
-  if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
-     call find_Text(nY,T4_ext)
-  elseif (.not.initial.and.typentry(1).eq.5) then
-     call find_Text(nY,T4_ext)
-  end if
-  do iY = 1, nY
-     Jext(iY) = sigma/pi * T4_ext(iY)
-!!$     do iL=1,nL
-!!$        u_old(iL,iY) = shpR(iL)
-!!$        utot(iL,iY) = shpR(iL)
-!!$     end do
-  end do
-  CALL Bolom(Utot,Ubol,nY)
   ! === Iterations over dust temperature =========
   DO WHILE (Conv.EQ.0.AND.iter.LE.itlim)
      iter = iter + 1
-     if (initial.and.iterfbol.ne.1.and.typentry(1).eq.5) then
-        call find_Text(nY,T4_ext)
-     elseif (.not.initial.and.typentry(1).eq.5) then
-        call find_Text(nY,T4_ext)
-     end if
+     if (typentry(1).eq.5) call find_Text(nY,T4_ext)
      ! find emission term
      call Emission(nY,T4_ext,emiss,emiss_total)
      ! solve for Utot
@@ -467,17 +422,11 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
         CALL Converg2(nY,U_old,Utot,Uconv,dmaxU)
         ! find maximal fbol error
         CALL FindErr(nY,fbol,maxFerr)
-        !------  printout of errors and convergence with iter.(inner flag): -------
-!!$        IF(iInn.EQ.1) THEN
-!!$           write(38,'(i7,1p,5e12.4)') iter,maxFerr,dmaxU,dmaxF,Td(1,1),sigma*Tei**4.0D+00
-!!$        END IF
-        !--------------------------------------------------------------
         IF (abs(maxFerr).LE.accFlux) THEN
            BolConv = 1
         ELSE
            BolConv = 0
         END IF
-        !print*,Fconv,Uconv,BolConv,dmaxF,accFlux
         ! total criterion for convergence: Utot must converge, and ftot
         ! must either converge or have the required accuracy
         IF (Uconv*(Fconv+BolConv).GT.0) Conv = 1
@@ -485,6 +434,10 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
      ! --------------------------------------
   END DO
   !    === The End of Iterations over Td ===
+  if (typentry(1).eq.5) call find_Text(nY,T4_ext)
+  do iY = 1, nY
+     Jext(iY) = sigma/pi * T4_ext(iY)
+  end do
   IF (iX.NE.0) THEN
      IF (iter.LT.itlim) write(18,*) ' Convergence achieved, number of'
      write(18,'(a34,i4)') ' iterations over energy density: ',iter
@@ -496,7 +449,6 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   END IF
   ! calculate the emission term for the converged Td
   call Emission(nY,T4_ext,emiss,emiss_total)
-!!$  CALL Emission_matrix(1,0,nG,Us,Em)
   ! calculate flux
   CALL Multiply(1,nY,nY,nL,nL,mat1,Utot,omat,0,fs,fds)
   CALL Multiply(0,nY,nY,nL,nL,mat1,emiss_total,omat,0,fs,fde)
@@ -526,10 +478,7 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
      write(7777,*) Y(iY),fDebol(iY),fDsbol(iY),fsbol(iY),Td(1,iY)
   END DO
   close(7777)
-  !CALL Add(nY,nY,nL,nL,fs,fds,fde,ftot)
-  ! CALL Bolom(ftot,fbol,nY)
   ! check whether, and how well, is bolometric flux conserved
-  ! CALL ChkBolom(nY,fbol,accFlux,deviat,FbolOK)
   CALL FindErr(nY,fbol,maxFerr)
   ! added in ver.2.06
   IF (maxFerr.LT.accFlux) FbolOK = 1
@@ -552,12 +501,12 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
 !!$     tr(iY) = ETAzp(1,iY) / ETAzp(1,nY)
 !!$  END DO
   ! 3) calculate intensity (at the outer edge) if required
-!!$  IF(iC.NE.0) THEN
-!!$     IF (iX.NE.0) write(18,*) 'Calculating intensities'
-!!$     !CALL FindInt(nG,ETAzp)  --**--
-!!$     call sph_int(nG,omega,fs)
-!!$     IF (iVerb.EQ.2) write(*,*) 'Done with SPH_INT(FindInt)'
-!!$  END IF
+  IF(iC.NE.0) THEN
+     IF (iX.NE.0) write(18,*) 'Calculating intensities'
+     !CALL FindInt(nG,ETAzp)  --**--
+     call sph_int(nY,nP,fs)
+     IF (iVerb.EQ.2) write(*,*) 'Done with SPH_INT(FindInt)'
+  END IF
 !!$  ! if needed convolve intensity with the PSF
 !!$  IF (iPSF.NE.0) THEN
 !!$     CALL Convolve(IntOut)
@@ -568,28 +517,6 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
 !!$     CALL Visibili(IntOut)
 !!$     IF (iVerb.EQ.2) write(*,*) 'Done with Visibili'
 !!$  END IF
-!!$  !============ if the inner flag iInn=1:  =========
-!!$  IF(iX.GE.1 .AND. iInn.EQ.1) THEN
-!!$     ! if additional output needed in message files when iInn = 1
-!!$     CALL Bolom(fs,fsbol,nY)
-!!$     CALL Bolom(fs,fsbol,nY)
-!!$     CALL ADD2(fds,fde,fdbol,nY)
-!!$     write(18,'(a11,1p,E11.3)')'   TAUfid =',TAUfid
-!!$     write(18,'(a11,1p,E11.3)')'  MaxFerr =',maxFerr
-!!$     write(18,*) '     tr      fbol       fsbol      fdbol       Ubol  '
-!!$     !    &'     tr      fbol       fsbol      fdbol     Usbol      Udbol'
-!!$     CALL Bolom(Us,Usbol,nY)
-!!$     DO iY = 1, nY
-!!$        write(18,'(1p,6E11.3)') tr(iY), fbol(iY), fsbol(iY), fdbol(iY), Ubol(iY)
-!!$     END DO
-!!$  END IF
-!!$  !=====================
-!!$  !    if needed solve for disk quantities
-!!$  !     corr = 0.0
-!!$  IF (iD.GE.1) THEN
-!!$     IF (iVerb.GE.1) write(*,*) 'No disk option in this version'
-!!$  END IF
-!!$  !---------------------------------------------------------------------
 999 deallocate(mat0)
   deallocate(mat1)
   deallocate(mifront)
@@ -628,12 +555,6 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold,omat)
   allocate(A(nY,nY))
   allocate(X(nY))
   error = 0
-  ! first copy Utot to Uold
-  !  DO iL = 1, nL
-  !     DO iY = 1, nY
-  !        Uold(iL,iY) = Utot(iL,iY)
-  !     END DO
-  !  END DO
   ! calculate new energy density
   ! loop over wavelengths
   !$OMP PARALLEL DO PRIVATE(iL,Kronecker,iY,iYaux,iG,B,A,X) 

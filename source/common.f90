@@ -94,7 +94,7 @@ Module common
   double precision :: TAUin(Nrec) ! user specified input tau grid
   integer :: nL                 ! size of lambda grid
   integer :: nG                 ! number of grain types
-  logical :: slb,sph            ! geometry
+  logical :: slb,sph,sph_matrix     ! geometry
   ! remove TypEntry ???? --- not necessary ??? 
   integer :: TypEntry(2)        ! type of ilumination for (0-left and 1-right)
   integer :: denstyp            ! density type  1(POWD) 2(EXPD) 3(RDW) 4(RDWA) 5(USER_SUPPLIED) 6(RDWPR)

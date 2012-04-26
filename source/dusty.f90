@@ -299,5 +299,5 @@ implicit none
   deallocate(fmbol)
   deallocate(Intens)
   deallocate(destroyed)
-  deallocate(theta)
+  if (allocated(theta)) deallocate(theta)
 end subroutine dealloc_mem
