@@ -1,0 +1,70 @@
+% ------- Master Input File for DUSTY -------------------------------      
+% The flag 'verbose' controlls printout of messages to screen.                
+% If set to 0, there will be no screen output; if set to 1 - only minimal     
+% messages are printed out; if set to 2 - more detailed screen output          
+% -------------------------------                                             
+   verbose =  2
+% -------------------------------
+
+% The Iveciz 97 Benchmark
+% Heating source is a 2500K Black Body
+% sphercical symmetry
+% constant density 
+% for 4 optical depth (1,10,100,1000)
+
+ examples/ivezic97/ivezic97.inp
+
+% dust distriubtuion 1/r^2 profile
+% for 4 optical depth (1,10,100,1000)
+
+ examples/ivezic97/ivezic97_2.inp
+
+% Spherical dust distribution with 
+% 1/r density profile 
+% heated by external raditition with a temperature of 1000K
+% no scattering 
+
+ examples/sphere_BB/sphere_BB.inp
+
+
+% Slab in a Black Body radiation field 
+% with temperature of 1000K 
+% for 4 optical depth (1,10,100,1000)
+
+ examples/slab_BB/slab_BB.inp
+
+% Spherical dust distribution with 
+% constant density profile 
+% heated by external radiation with a temperature of 5000K
+% for composite dust grain 70% silicates 30% carbon
+% for 2 optical depth (10,100)
+
+ examples/external/external.inp
+
+% Spherical dust distribution with 
+% constant density profile 
+% heated by external radiation with a Black Body of 5000K
+% for composite dust grain 70% silicates 30% carbon
+% for 3 optical depth (30,40,50)
+
+ examples/sphere1/sphere1.inp
+
+% Example slab geometry
+% directional input of power law spectrum
+% left side temperature of 800 K
+
+ examples/slab1/slab1.inp
+
+% Example slab geometry
+% isotropic input on both sides
+% ISM-OHM dust grain properties
+
+ examples/slab2/slab2.inp
+
+% Example slab geometry
+% only left side illumination (flux input)
+% ISM-OHM dust grain properties
+
+ examples/slab3/slab3.inp
+
+% -------------------------------

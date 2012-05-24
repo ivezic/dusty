@@ -1,0 +1,12 @@
+------------------------------
+This is the angular grid (in degrees) for slab 
+intensity output (if selected). The header is arbitrary.
+Reading is flagged by the equal sign.
+------------------------------
+>
+Nang = 4
+   0.0
+  30.0
+  60.0
+  85.0
+

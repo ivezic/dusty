@@ -1,0 +1,44 @@
+ ==================================================
+ model   4  RUN-TIME MESSAGES 
+ --------------------------------------------------
+ ===========  starting to solve  ===========
+              1  iteration over fbol
+  Ncav increased to: 22
+ y grid generated, nY =  34
+                   nP =  90
+                 Nins =  68
+                 Ncav =  22
+  Calculating with  34 grid points
+   ******** MESSAGE from Solve ********
+  Achieved accuracy:   2.103E+01 %
+   Trying again with finer grids
+              2  iteration over fbol
+  Ncav increased to: 32
+ y grid generated, nY =  48
+                   nP = 128
+                 Nins =  96
+                 Ncav =  32
+  Calculating with  48 grid points
+   ******** MESSAGE from Solve ********
+  Achieved accuracy:   5.437E+00 %
+   Trying again with finer grids
+              3  iteration over fbol
+  Ncav increased to: 49
+ y grid generated, nY =  74
+                   nP = 197
+                 Nins = 148
+                 Ncav =  49
+  Calculating with  74 grid points
+   ******** MESSAGE from Solve ********
+  Achieved accuracy:   6.369E+00 %
+   Trying again with finer grids
+              4  iteration over fbol
+  Ncav increased to: 64
+ y grid generated, nY =  96
+                   nP = 256
+                 Nins = 192
+                 Ncav =  64
+  Calculating with  96 grid points
+  Accuracy of computed bolom. flux:   5.0 %
+   ==== SOLVE successfully completed =====
+   =======================================

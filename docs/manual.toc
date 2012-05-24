@@ -1,0 +1,43 @@
+\contentsline {section}{\numberline {1}Introduction}{2}{section.1}
+\contentsline {subsection}{\numberline {1.1}Major Changes}{2}{subsection.1.1}
+\contentsline {section}{\numberline {2}Installation}{3}{section.2}
+\contentsline {subsection}{\numberline {2.1}Numerical Test}{4}{subsection.2.1}
+\contentsline {section}{\numberline {3}Input}{5}{section.3}
+\contentsline {subsection}{\numberline {3.1}Geometry}{6}{subsection.3.1}
+\contentsline {subsection}{\numberline {3.2}External Radiation}{6}{subsection.3.2}
+\contentsline {subsubsection}{\numberline {3.2.1}Sources}{6}{subsubsection.3.2.1}
+\contentsline {subsubsection}{\numberline {3.2.2}Types of External Radiation}{6}{subsubsection.3.2.2}
+\contentsline {subsubsection}{\numberline {3.2.3}Scaling Options}{9}{subsubsection.3.2.3}
+\contentsline {subsection}{\numberline {3.3}Dust Properties}{12}{subsection.3.3}
+\contentsline {subsubsection}{\numberline {3.3.1}Chemical Composition}{12}{subsubsection.3.3.1}
+\contentsline {subsubsection}{\numberline {3.3.2}Grain Size Distribution}{13}{subsubsection.3.3.2}
+\contentsline {subsection}{\numberline {3.4}Density Distribution}{14}{subsection.3.4}
+\contentsline {subsubsection}{\numberline {3.4.1}Analytical Profiles}{15}{subsubsection.3.4.1}
+\contentsline {subsubsection}{\numberline {3.4.2}Radiatively Driven Winds}{16}{subsubsection.3.4.2}
+\contentsline {subsubsection}{\numberline {3.4.3}Tabulated Profiles}{17}{subsubsection.3.4.3}
+\contentsline {subsection}{\numberline {3.5}Optical Depth}{17}{subsection.3.5}
+\contentsline {subsection}{\numberline {3.6}Numerical Accuracy and Internal Bounds}{18}{subsection.3.6}
+\contentsline {subsection}{\numberline {3.7}Starting Optical Depth and Increment in Optical Depth}{19}{subsection.3.7}
+\contentsline {subsection}{\numberline {3.8}Output Control}{19}{subsection.3.8}
+\contentsline {section}{\numberline {4}Output}{19}{section.4}
+\contentsline {subsection}{\numberline {4.1}Default Output for Sphere}{19}{subsection.4.1}
+\contentsline {subsection}{\numberline {4.2}Default Output for Slab}{21}{subsection.4.2}
+\contentsline {subsection}{\numberline {4.3}Optional Output for Sphere}{22}{subsection.4.3}
+\contentsline {subsubsection}{\numberline {4.3.1}Properties of Emerging Spectra}{22}{subsubsection.4.3.1}
+\contentsline {subsubsection}{\numberline {4.3.2}Detailed spectra for each model}{23}{subsubsection.4.3.2}
+\contentsline {subsubsection}{\numberline {4.3.3}Images at specified wavelengths}{24}{subsubsection.4.3.3}
+\contentsline {subsubsection}{\numberline {4.3.4}Visibilities}{25}{subsubsection.4.3.4}
+\contentsline {subsubsection}{\numberline {4.3.5}Radial profiles for each model}{25}{subsubsection.4.3.5}
+\contentsline {subsection}{\numberline {4.4}Optional Output for Slab}{26}{subsection.4.4}
+\contentsline {subsubsection}{\numberline {4.4.1}Spectral Profiles}{26}{subsubsection.4.4.1}
+\contentsline {subsubsection}{\numberline {4.4.2}Spatial Profiles}{27}{subsubsection.4.4.2}
+\contentsline {subsubsection}{\numberline {4.4.3}Detailed Run-time messages}{27}{subsubsection.4.4.3}
+\contentsline {section}{\numberline {5}User Control of {\sf DUSTY}}{27}{section.5}
+\contentsline {subsection}{\numberline {5.1}Array Sizes for Spatial Grid}{27}{subsection.5.1}
+\contentsline {subsection}{\numberline {5.2}Wavelength Grid}{28}{subsection.5.2}
+\contentsline {section}{\bf Appendices}{29}{Item.30}
+\contentsline {section}{\numberline {A}Output Summary}{29}{appendix.A}
+\contentsline {section}{\numberline {B}Pitfalls, Real and Imaginary}{29}{appendix.B}
+\contentsline {section}{\numberline {C}Sample Output File: {\tt sphere1.out}}{30}{appendix.C}
+\contentsline {section}{\numberline {D}Sample Output File: \tt slab1.out}{31}{appendix.D}
+\contentsline {section}{\numberline {E}Library of Optical Constants}{33}{appendix.E}

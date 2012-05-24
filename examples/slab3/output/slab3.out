@@ -1,0 +1,63 @@
+ ===========================
+  Output from program dusty 
+  version: 4.00
+ ===========================
+  
+  Input parameters from file: 
+ examples/slab3/slab3.inp                                                                                                                                                                                                                   
+* ----------------------------------------------------------------------                                                                                                                                                                                       
+* NOTES:                                                                                                                                                                                                                                                       
+* Sample input file (slab2.inp)                                                                                                                                                                                                                                
+* directional input of power law spectrum                                                                                                                                                                                                                      
+* Flux as input                                                                                                                                                                                                                                                
+* ----------------------------------------------------------------------                                                                                                                                                                                       
+  Left-side source spectrum described by
+    Power law with:
+     lambda      k
+  1.000E-02
+            0.000E+00
+  1.000E-01
+            5.000E-01
+  1.000E+00
+            3.000E+00
+  1.000E+03
+  Flux at the slab left boundary:   28800.000000000000       W/m^2
+  Calculation in planar geometry:
+  Directional illumination from the left.
+  --------------------------------------------
+  Optical depth at 5.5E-01 microns: 1.00E+01
+   Required Flux accuracy:        5.00%
+   Required Temp accuracy:        0.12%
+  --------------------------------------------
+  Intensity requested for these theta_out(deg):
+     0.0    5.0   10.0   15.0   20.0   25.0   30.0   35.0
+    40.0   45.0   50.0   55.0   60.0   65.0   70.0   75.0
+    80.0
+   equidistant in theta_out, step= 5.0
+  --------------------------------------------
+          
+  RESULTS:
+  --------
+ ###    Tau0    Psi/Psi0     FiL      FiR       FbolL    FbolR     r1(cm)    TdL(K)    TdR(K)    RPr(1)   e(%)          
+ ###      1        2          3        4          5        6         7          8         9       10      11            
+ =============================================================================================================
+   1  1.00E+01  1.38E+00  2.84E+04  0.00E+00 -2.13E+04  7.73E+03  3.23E+14  1.40E+03  5.96E+02  1.64E+07  5
+ =====================================
+  (1) optical depth at 5.5E-01 microns
+  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0= 2.18E+01
+  (3) input bol.flux (in W/m2) of the left-side source at the left slab boundary
+  (4) input bol.flux (in W/m2) of the right-side source at the right slab boundary
+  (5) bolometric flux (in W/m2) at the left slab boundary
+  (6) bolometric flux (in W/m2) at the right slab boundary
+  (7) position of the left slab boundary for L = 1e4 Lo
+  (8) dust temperature at the left slab boundary
+  (9) dust temperature at the right slab boundary
+  (10) radiation pressure on left boundary; see manual for units
+  (11) maximum error in flux conservation (Fmax-Fmin)/(Fmax+Fmin)
+  ================================================
+  Everything is ok for all models.
+  All spectra are in file *.stb
+  Intensities are in files *.i##
+  Radial profiles are in files *.r##
+  Run-time messages are in files *.m##
+ ========== the end ==============================

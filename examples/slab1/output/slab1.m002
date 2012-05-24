@@ -1,0 +1,34 @@
+ ==================================================
+ model   2  RUN-TIME MESSAGES 
+ --------------------------------------------------
+ ===========  starting to solve  ===========
+              1  iteration over fbol
+  Tau grid generated, nY=  28
+  Calculating with  28 grid points
+   ******** MESSAGE from Solve ********
+  Achieved accuracy:   8.112E+01 %
+   Trying again with finer grids
+              2  iteration over fbol
+  Tau grid generated, nY=  46
+  Calculating with  46 grid points
+   ******** MESSAGE from Solve ********
+  Achieved accuracy:   4.744E+01 %
+   Trying again with finer grids
+              3  iteration over fbol
+  Tau grid generated, nY=  90
+  Calculating with  90 grid points
+   ******** MESSAGE from Solve ********
+  Achieved accuracy:   2.640E+01 %
+   Trying again with finer grids
+              4  iteration over fbol
+  Tau grid generated, nY= 115
+  Calculating with 115 grid points
+   ******** MESSAGE from Solve ********
+  Achieved accuracy:   2.229E+01 %
+   Trying again with finer grids
+              5  iteration over fbol
+  Tau grid generated, nY= 149
+  Calculating with 149 grid points
+  Accuracy of computed bolom. flux: 100.0 %
+   ==== SOLVE successfully completed =====
+   =======================================

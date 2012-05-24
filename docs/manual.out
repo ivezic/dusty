@@ -1,0 +1,43 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}
+\BOOKMARK [2][-]{subsection.1.1}{Major Changes}{section.1}
+\BOOKMARK [1][-]{section.2}{Installation}{}
+\BOOKMARK [2][-]{subsection.2.1}{Numerical Test}{section.2}
+\BOOKMARK [1][-]{section.3}{Input}{}
+\BOOKMARK [2][-]{subsection.3.1}{Geometry}{section.3}
+\BOOKMARK [2][-]{subsection.3.2}{External Radiation}{section.3}
+\BOOKMARK [3][-]{subsubsection.3.2.1}{Sources}{subsection.3.2}
+\BOOKMARK [3][-]{subsubsection.3.2.2}{Types of External Radiation}{subsection.3.2}
+\BOOKMARK [3][-]{subsubsection.3.2.3}{Scaling Options}{subsection.3.2}
+\BOOKMARK [2][-]{subsection.3.3}{Dust Properties}{section.3}
+\BOOKMARK [3][-]{subsubsection.3.3.1}{Chemical Composition}{subsection.3.3}
+\BOOKMARK [3][-]{subsubsection.3.3.2}{Grain Size Distribution}{subsection.3.3}
+\BOOKMARK [2][-]{subsection.3.4}{Density Distribution}{section.3}
+\BOOKMARK [3][-]{subsubsection.3.4.1}{Analytical Profiles}{subsection.3.4}
+\BOOKMARK [3][-]{subsubsection.3.4.2}{Radiatively Driven Winds}{subsection.3.4}
+\BOOKMARK [3][-]{subsubsection.3.4.3}{Tabulated Profiles}{subsection.3.4}
+\BOOKMARK [2][-]{subsection.3.5}{Optical Depth}{section.3}
+\BOOKMARK [2][-]{subsection.3.6}{Numerical Accuracy and Internal Bounds}{section.3}
+\BOOKMARK [2][-]{subsection.3.7}{Starting Optical Depth and Increment in Optical Depth}{section.3}
+\BOOKMARK [2][-]{subsection.3.8}{Output Control}{section.3}
+\BOOKMARK [1][-]{section.4}{Output}{}
+\BOOKMARK [2][-]{subsection.4.1}{Default Output for Sphere}{section.4}
+\BOOKMARK [2][-]{subsection.4.2}{Default Output for Slab}{section.4}
+\BOOKMARK [2][-]{subsection.4.3}{Optional Output for Sphere}{section.4}
+\BOOKMARK [3][-]{subsubsection.4.3.1}{Properties of Emerging Spectra}{subsection.4.3}
+\BOOKMARK [3][-]{subsubsection.4.3.2}{Detailed spectra for each model}{subsection.4.3}
+\BOOKMARK [3][-]{subsubsection.4.3.3}{Images at specified wavelengths}{subsection.4.3}
+\BOOKMARK [3][-]{subsubsection.4.3.4}{Visibilities}{subsection.4.3}
+\BOOKMARK [3][-]{subsubsection.4.3.5}{Radial profiles for each model}{subsection.4.3}
+\BOOKMARK [2][-]{subsection.4.4}{Optional Output for Slab}{section.4}
+\BOOKMARK [3][-]{subsubsection.4.4.1}{Spectral Profiles}{subsection.4.4}
+\BOOKMARK [3][-]{subsubsection.4.4.2}{Spatial Profiles}{subsection.4.4}
+\BOOKMARK [3][-]{subsubsection.4.4.3}{Detailed Run-time messages}{subsection.4.4}
+\BOOKMARK [1][-]{section.5}{User Control of DUSTY}{}
+\BOOKMARK [2][-]{subsection.5.1}{Array Sizes for Spatial Grid}{section.5}
+\BOOKMARK [2][-]{subsection.5.2}{Wavelength Grid}{section.5}
+\BOOKMARK [1][-]{Item.30}{Appendices}{}
+\BOOKMARK [1][-]{appendix.A}{Output Summary}{}
+\BOOKMARK [1][-]{appendix.B}{Pitfalls, Real and Imaginary}{}
+\BOOKMARK [1][-]{appendix.C}{Sample Output File: sphere1.out}{}
+\BOOKMARK [1][-]{appendix.D}{Sample Output File: slab1.out}{}
+\BOOKMARK [1][-]{appendix.E}{Library of Optical Constants}{}
