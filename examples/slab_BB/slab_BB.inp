@@ -40,7 +40,7 @@
      
 %(available options: on\off)
 
-         Left = on                Right = on
+         Left = on                Right = off
 
       1.1 Left-side source radiation:    
 
@@ -55,11 +55,11 @@
                                     flux = 5.70E+04
                   kind of illumination = ISOTROPIC
 
-          Spectral shape:     Spectrum = black_body
-                          NBB = 1
-			  TBB = 1000
-                  kind of illumination = ISOTROPIC
-	  scale =1.
+%          Spectral shape:     Spectrum = black_body
+%                          NBB = 1
+%			  TBB = 1000
+%                  kind of illumination = ISOTROPIC
+%	  scale =1.
 
      2) Dust Properties 
 
