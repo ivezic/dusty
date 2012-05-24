@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=latex 2011.9.29)  23 MAY 2012 17:17
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=latex 2011.9.29)  24 MAY 2012 14:08
 entering extended mode
  %&-line parsing enabled.
 **\input manual.05.2012.tex
@@ -263,146 +263,97 @@ File: umsb.fd 2009/06/22 v3.00 AMS symbols B
 \tf@toc=\write4
 \openout4 = `manual.05.2012.toc'.
 
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 160.
 
-
-LaTeX Warning: Reference `sec:output' on page 2 undefined on input line 160.
-
-LaTeX Font Info:    Try loading font information for OMS+cmr on input line 174.
-
-(/usr/share/texmf-texlive/tex/latex/base/omscmr.fd
+ (/usr/share/texmf-texlive/tex/latex/base/omscmr.fd
 File: omscmr.fd 1999/05/25 v2.5h Standard LaTeX font definitions
 )
 LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10.95> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 174.
- [2]
-Overfull \hbox (2.64566pt too wide) in paragraph at lines 242--251
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 160.
+
+[2]
+Overfull \hbox (2.64566pt too wide) in paragraph at lines 247--256
 \OT1/cmr/m/n/10.95 The op-tions listed here en-sure high-optimization (\OT1/cmt
 t/m/n/10.95 -O3\OT1/cmr/m/n/10.95 ) and par-al-lel com-pu-ta-tion (\OT1/cmtt/m/
 n/10.95 -lgomp -fopenmp\OT1/cmr/m/n/10.95 )
  []
 
-[3] [4] [5]
-
-LaTeX Warning: Reference `default_sph' on page 6 undefined on input line 438.
-
-[6] [7] [8] [9]
+[3] [4] [5] [6] [7] [8] [9]
 File: slab_dir.eps Graphic file (type eps)
  <slab_dir.eps>
 File: slab_iso.eps Graphic file (type eps)
- <slab_iso.eps> [10] [11] [12] [13] [14] [15]
-[16] [17] [18]
-
-LaTeX Warning: Reference `sec:output' on page 19 undefined on input line 1230.
-
-[19] [20]
-
-LaTeX Warning: Reference `default_sph' on page 21 undefined on input line 1419.
-
-
-[21]
+ <slab_iso.eps> [10] [11] [12]
+[13] [14] [15] [16] [17] [18] [19] [20] [21]
 File: sphere.eps Graphic file (type eps)
- <sphere.eps>
-
-LaTeX Warning: Reference `default_sph' on page 22 undefined on input line 1458.
-
-
-[22]
-
-LaTeX Warning: Reference `fname.s' on page 23 undefined on input line 1493.
-
-
-LaTeX Warning: Reference `fname.s' on page 23 undefined on input line 1530.
-
-[23]
-
-LaTeX Warning: Reference `default_sph' on page 24 undefined on input line 1579.
-
-
-[24]
-
-LaTeX Warning: Reference `default_slb' on page 25 undefined on input line 1648.
-
-
-
-LaTeX Warning: Reference `default_slb' on page 25 undefined on input line 1683.
-
-
-[25]
-
-LaTeX Warning: Reference `fname.r' on page 26 undefined on input line 1703.
-
-[26] [27] [28] [29]
-Overfull \hbox (47.6269pt too wide) in paragraph at lines 1960--1960
+ <sphere.eps> [22] [23] [24]
+[25] [26] [27] [28] [29]
+Overfull \hbox (47.6269pt too wide) in paragraph at lines 1925--1925
 [] \OT1/cmtt/m/n/10.95 ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1
    T1(K)    Td(K)    RPr(1)  e(%)[] 
  []
 
 
-Overfull \hbox (41.87822pt too wide) in paragraph at lines 1960--1960
+Overfull \hbox (41.87822pt too wide) in paragraph at lines 1925--1925
 [] \OT1/cmtt/m/n/10.95 ###     1       2        3        4        5        6   
      7        8        9      10[] 
  []
 
 
-Overfull \hbox (41.87822pt too wide) in paragraph at lines 1960--1960
+Overfull \hbox (41.87822pt too wide) in paragraph at lines 1925--1925
 [] \OT1/cmtt/m/n/10.95 ========================================================
 ================================[] 
  []
 
-[30]
-Overfull \hbox (41.87822pt too wide) in paragraph at lines 1960--1960
+
+Overfull \hbox (41.87822pt too wide) in paragraph at lines 1925--1925
 []   \OT1/cmtt/m/n/10.95 1 1.00E+01 1.01E+00 7.70E+04 1.99E+14 2.89E+01 1.49E+0
 0 1.20E+03 4.81E+01 1.39E+07   2[] 
  []
 
-[31]
-Overfull \hbox (162.60066pt too wide) in paragraph at lines 2035--2035
+[30] [31]
+Overfull \hbox (162.60066pt too wide) in paragraph at lines 2000--2000
 [] \OT1/cmtt/m/n/10.95 ###    Tau0    Psi/Psi0     FiL      FiR       FbolL    
 FbolR     r1(cm)    TdL(K)    TdR(K)    RPr(1)   e(%)[] 
  []
 
 
-Overfull \hbox (151.10329pt too wide) in paragraph at lines 2035--2035
+Overfull \hbox (151.10329pt too wide) in paragraph at lines 2000--2000
 [] \OT1/cmtt/m/n/10.95 ###      1        2          3        4          5      
   6         7          8         9       10      11[] 
  []
 
 
-Overfull \hbox (162.60066pt too wide) in paragraph at lines 2035--2035
+Overfull \hbox (162.60066pt too wide) in paragraph at lines 2000--2000
 [] \OT1/cmtt/m/n/10.95 ========================================================
 =====================================================[] 
  []
 
 
-Overfull \hbox (145.3546pt too wide) in paragraph at lines 2035--2035
+Overfull \hbox (145.3546pt too wide) in paragraph at lines 2000--2000
 []   \OT1/cmtt/m/n/10.95 1  1.00E+01  1.53E+00  6.97E+02  0.00E+00 -7.04E+03  7
 .01E+03  2.09E+15  8.00E+02  7.04E+02  3.53E+05  4[] 
  []
 
 
-Overfull \hbox (145.3546pt too wide) in paragraph at lines 2035--2035
+Overfull \hbox (145.3546pt too wide) in paragraph at lines 2000--2000
 []   \OT1/cmtt/m/n/10.95 2  2.00E+01       NaN       NaN       NaN       NaN   
     NaN       NaN       NaN       NaN       NaN  0[] 
  []
 
 
-Overfull \hbox (1.6374pt too wide) in paragraph at lines 2035--2035
+Overfull \hbox (1.6374pt too wide) in paragraph at lines 2000--2000
 []  \OT1/cmtt/m/n/10.95 (4) input bol.flux (in W/m2) of the right-side source a
 t the right slab boundary[] 
  []
 
-[32] [33] [34] [35] (./manual.05.2012.aux)
-
-LaTeX Warning: There were undefined references.
-
- ) 
+[32] [33] [34] (./manual.05.2012.aux) ) 
 Here is how much of TeX's memory you used:
- 4640 strings out of 495062
- 66687 string characters out of 1182644
- 135576 words of memory out of 3000000
- 7738 multiletter control sequences out of 15000+50000
- 16903 words of font info for 66 fonts, out of 3000000 for 9000
+ 4639 strings out of 495062
+ 66675 string characters out of 1182644
+ 134802 words of memory out of 3000000
+ 7736 multiletter control sequences out of 15000+50000
+ 17036 words of font info for 66 fonts, out of 3000000 for 9000
  28 hyphenation exceptions out of 8191
  38i,11n,37p,400b,487s stack positions out of 5000i,500n,10000p,200000b,50000s
 
-Output written on manual.05.2012.dvi (37 pages, 199232 bytes).
+Output written on manual.05.2012.dvi (36 pages, 202272 bytes).

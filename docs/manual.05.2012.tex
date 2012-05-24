@@ -129,7 +129,7 @@ fixes, by checking the \D\ Web site.
 % ******* Table of contents *****
 {\large\tableofcontents}
 
-\bigskip \bigskip \hrule
+\bigskip \bigskip \hrule \bigskip \bigskip
 % ******* Table of contents *****
 
 
@@ -154,12 +154,12 @@ All dimensional quantities in \D\ are in SI units with minor
 exceptions: $\lambda$ in \mic, radius of the inner shell boundary
 $r_1$ in cm, and the luminosity of the source in \Lo.
 
-The purpose of this manual is to help users get quickly acquainted
-with the code. Following a short description of the installation
-procedure in Section~\ref{sec:installation}, the input and output are
-described in full in Sections~\ref{sec:input} and~\ref{sec:output},
-respectively. Finally, Section~\ref{sec:user_control} describes the
-user control of \D
+The purpose of this manual is to help users get quickly acquainted with the
+code. Following a short description of the installation procedure in
+Section~\ref{sec:installation}, the input is described in full in
+\S\ref{sec:input}, the output in Sections~\ref{sec:output_sph}
+and~\ref{sec:output_slb} for, respectively, spheres and slabs. Finally,
+Section~\ref{sec:user_control} describes the user control of \D
 
 \subsection{Major Changes}
 \label{sec:major_changes}
@@ -184,6 +184,11 @@ major changes are:
 
   \noindent{\bf Note:\ The keywords can be entered in either upper or
     lower case, and each keyword must be followed by a blank space}.
+
+\item {\bf Sublimation temperature as dust property:} The input file
+  has to include the dust sublimation temperature as one of the dust
+  properties.  Details of the dust properties and the available
+  options are described in Section~\ref{sec:sub_temp}.
 
 \item {\bf Master Input File:} The name of the master input file has
   changed from {\tt dusty.inp} to {\tt dusty.mas}. Names of the input
@@ -410,11 +415,10 @@ The spherical geometry is invoked by the input statement
 \begin{verbatim}
    GEOMETRY = SPHERE
 \end{verbatim}
-Beginning with this version, \D\ provides a choice between two
-different numerical methods for solution of the spherical problem. The
-above input invokes an accelerated $\Lambda$-iteration scheme, which
-is now \D's standard method. Optionally, the spherical geometry can be
-invoked with
+Beginning with this version, \D\ provides a choice between two different
+numerical methods for solution of the spherical problem. The above input
+invokes an accelerated $\Lambda$-iteration scheme, which is now \D's standard
+method. Optionally, the spherical geometry can instead be invoked with
 \begin{verbatim}
    GEOMETRY = SPHERE_MATRIX
 \end{verbatim}
@@ -431,16 +435,15 @@ density distribution is specified in terms of the scaled radius
 \[
 y = {r \over r_1}
 \]
-where $r_1$ is the shell inner radius.  This quantity is irrelevant to
-the radiative transfer problem \cite{IE97}, therefore it is not
-entered ($r_1$ scales with the luminosity $L$ as $L^{1/2}$ when all
-other parameters are held fixed. The explicit relation is provided as
-part of \D's output; see \S \ref{default_sph}.) The density
-distribution is described by the dimensionless profile $\eta(y)$,
-which \D\ normalizes according to $\int\eta dy = 1$. Note that the
-shell inner boundary is always $y = 1$.  Its outer boundary in terms
-of scaled radii is the shell relative thickness, and is specified as
-part of the definition of $\eta$.
+where $r_1$ is the shell inner radius.  This quantity is irrelevant to the
+radiative transfer problem \cite{IE97}, therefore it is not entered ($r_1$
+scales with the luminosity $L$ as $L^{1/2}$ when all other parameters are held
+fixed. The explicit relation is provided as part of \D's output; see \S
+\ref{sec:default_sph}.) The density distribution is described by the
+dimensionless profile $\eta(y)$, which \D\ normalizes according to $\int\eta
+dy = 1$. Note that the shell inner boundary is always $y = 1$.  Its outer
+boundary in terms of scaled radii is the shell relative thickness, and is
+specified as part of the definition of $\eta$.
 
 \D\ provides three methods for entering the spherical density
 distribution: prescribed analytical forms, hydrodynamic calculation of
@@ -652,10 +655,9 @@ options are described separately in the following subsections.
 \begin{verbatim}
             external = OFF
 \end{verbatim}
-  ends the external radiation input in this case.
-
-  \textbf{NOTE: Only one source of radiation, either internal or
-    external, is allowed in the spherical case}
+  ends the external radiation input in this case. \textbf{NOTE: Only one
+  source of radiation, either internal or external, is allowed in the
+  spherical case}
 
 \item In the slab case, both isotropic radiation and parallel-ray
   illumination maintain the planar symmetry (see figure
@@ -1058,6 +1060,9 @@ a flag, as follows:
 refractive indices of various compounds of common interest. This
 library is described in appendix \ref{nklib}.
 
+\subsubsection{Sublimation temperature}
+\label{sec:sub_temp}
+
 
 \subsubsection{Grain Size Distribution}
 
@@ -1226,12 +1231,12 @@ expanded by increasing {\tt npy}, as described in \S\ref{Memory}.
 
 \subsection{Output Control}
 
-The final input entries control \D's output. All output and its
-control is explained in the next section (\S\ref{sec:output}).
+The final input entries control \D's output. All output and its control is
+explained in the next section.
 
 
 \section{Output: Sphere}
-\label{sec::output_sph}
+\label{sec:output_sph}
 
 A typical \D\ run generates an enormous amount of information, and the
 volume of output can easily get out of hand. To avoid that, \D's
@@ -1240,7 +1245,7 @@ about the run, as described next. All other output is optional and
 fully controlled by the user.
 
 \subsection{Default Output for Sphere}
-\label{sec::default_sph}
+\label{sec:default_sph}
 
 \D\ always produces the output file {\tt fname.out} for each model
 input {\tt fname.inp}. In addition to a summary of the input
@@ -1252,15 +1257,11 @@ Subsequent columns list quantities calculated by \D\ for that {\tt
   tau0}:
 
 \begin{list}{$\diamond$}{}
-\item {\tt F1} -- the bolometric flux, in $\rm W\ m^{-2}$, at the
-  inner radius $y = 1$. Only the central source contributes to {\tt
-    F1}; the external radiation field carries no flux because it is
-  isotropic and the diffuse flux vanishes there under the point-source
-  assumption. Note that {\tt F1} is {\em independent} of overall
-  luminosity, fully determined by the scaled solution (see
-  \cite{IE97}). The bolometric flux emerging from the spherical
-  distribution is {\tt F1/$Y^2$}.
-
+\item {\tt F1} -- the bolometric flux, in $\rm W\ m^{-2}$, at the inner radius
+    $y = 1$. Only the central source contributes to {\tt F1}; the diffuse flux
+    vanishes at $y = 1$ under the point source assumption and the external
+    radiation field carries no flux because it is isotropic. The bolometric
+    flux emerging from the spherical distribution is {\tt F1/$Y^2$}.
 
   Any measure of the shell dimension is irrelevant to the radiative
   transfer problem and thus not part of \D's calculations.  Still, the
@@ -1269,10 +1270,11 @@ Subsequent columns list quantities calculated by \D\ for that {\tt
   the shell size expressed in terms of redundant quantities such as
   the luminosity:
 
-\item {\tt r1(cm)} -- the shell inner radius where the dust
-  temperature is {\tt TSUB}, specified in the input.  This radius
-  scales in proportion to $L^{1/2}$, where $L$ is the luminosity. The
-  tabulated value corresponds to $L$ = \E4\ \Lo.
+\item {\tt r1(cm)} -- the shell inner radius. If the heating radiation
+    strength is specified through option {\tt T1} (see
+    \S\ref{sec:scaling_radiation}) then {\tt r1} is the radius where this is
+    the dust temperature. This radius scales in proportion to $L^{1/2}$, where
+    $L$ is the luminosity. The tabulated value corresponds to $L$ = \E4~\Lo.
 
 \item {\tt r1/rc} -- where {\tt rc} is the radius of the central
   source.  This quantity scales in proportion to $(T_e/T_1)^2$, where
@@ -1287,11 +1289,11 @@ Subsequent columns list quantities calculated by \D\ for that {\tt
   observed bolometric flux.  The tabulated value corresponds to
   $F_{\rm obs} = \E{-6}\ \rm W\ m^{-2}$.
 
-\item {\tt T1(Y)} -- the dust temperature, in K, at the envelope's
+\item {\tt T1} -- the dust temperature, in K, at the envelope's
   inner boundary.
 
-\item {\tt Td(Y)} -- the dust temperature, in K, at the envelope's
-  outer edge.
+\item {\tt Td} -- the dust temperature, in K, at the envelope's
+  outer boundary $(y = Y)$.
 
 \item {\tt RPr(1)} -- The ratio of radiation pressure at the inner
   boundary to gravitational force, where both forces are per unit
@@ -1346,26 +1348,26 @@ values correspond to $\sigma/V$, the cross section per grain volume in
 $\mic^{-1}$.  If that is not the case, in the scaling relations
 $r_{\rm gd}$ must be replaced with $r_{\rm gd}V/\sigma$.
 
-Finally, \D\ assumes that the external radiation originates in a
-central point source. This assumption can be tested with eqs.\ (27)
-and (28) of \cite{IE97} which give expressions for the central source
-angular size and occultation effect. From these it follows that the
-error introduced by the point-source assumption is no worse than 6\%
-whenever \eq{\label{Tmin} T_e > 2\times\max[T_1,
-  (F_{e1}/\sigma)^{1/4}].  } Thanks to scaling, \Te\ need not be
-specified and is entirely arbitrary as far as \D\ is
-concerned. However, compliance with the point-source assumption
-implies that the output is meaningful only for sources whose effective
-temperature obeys eq.\ \ref{Tmin}. For assistance with this
-requirement, {\tt fname.out} lists the lower bound on $T_e$ obtained
-from this relation for optically thin sources. Since $F_{e1}$
-decreases with optical depth (see \cite{IE97}), the listed bound
-ensures compliance for all the models in the series. However, in
-optically thick cases $F_{e1}$ may become so small that the listed
-bound will greatly exceed the actual limit from eq.\ \ref{Tmin}. In
-those cases, the true bounds can be obtained, if desired, from eq.\
-\ref{Tmin} and the model tabulated {\tt F1} (note again that with the
-point source assumption, {\tt F1} = $F_{e1}$).
+Finally, \D\ assumes that the external radiation originates in a central point
+source. This assumption can be tested with eqs.\ (27) and (28) of \cite{IE97}
+which give expressions for the central source angular size and occultation
+effect. From these it follows that the error introduced by the point-source
+assumption is no worse than 6\% whenever \eq{\label{Tmin} T_e >
+2\times\max[T_1, (F_{e1}/\sigma)^{1/4}]} where $T_e$ is the effective
+temperature of the central source and $F_{e1}$ is its flux at the shell inner
+boundary; note again that with the point source assumption, {\tt F1} =
+$F_{e1}$. Thanks to scaling, \Te\ need not be specified and is entirely
+arbitrary as far as \D\ is concerned. However, compliance with the
+point-source assumption implies that the output is meaningful only for sources
+whose effective temperature obeys eq.\ \ref{Tmin}. For assistance with this
+requirement, {\tt fname.out} lists the lower bound on $T_e$ obtained from this
+relation for optically thin sources. Since $F_{e1}$ decreases with optical
+depth when {\tt T1} is specified as input (see \cite{IE97}), the listed bound
+ensures compliance for all the models in the series. However, in optically
+thick cases $F_{e1}$ may become so small that the listed bound will greatly
+exceed the actual limit from eq.\ \ref{Tmin}. In those cases, the true bounds
+can be obtained, if desired, from eq.\ \ref{Tmin} and the model tabulated {\tt
+F1}.
 
 Black-body emission provides an absolute upper bound on the intensity
 of any thermal source. Therefore, input radiation whose spectral shape
@@ -1380,7 +1382,7 @@ the Planck or Engelke-Marengo function whose temperature violates eq.\
 
 
 \subsection{Optional Output for Sphere}
-\label{sec::optional_sph}
+\label{sec:optional_sph}
 
 In addition to the default output, the user can obtain numerous
 tabulations of spectra, imaging profiles and radial distributions of
@@ -1408,7 +1410,7 @@ be used for quick reference.
 
 
 \subsubsection {Detailed spectra for each model}
-\label{sec::detail_sph}
+\label{sec:detail_sph}
 
 The next output flag triggers listing of detailed spectra for each
 model in the run.  Setting this flag to 1 produces tables for the
@@ -1416,7 +1418,7 @@ emerging spectra of all models in the single output file {\tt
   fname.stb}.  Setting the flag to 2 places each table in its own
 separate file, where file {\tt fname.s\#\#\#} contains the tabulation
 for model number {\tt \#\#\#} in the optical depth sequence listed in
-the default output file (\S\ref{default_sph}).
+the default output file (\S~\ref{sec:default_sph}).
 
 In addition to the emerging spectrum, the table for each model also
 lists separately the contributions of various components to the
@@ -1442,7 +1444,17 @@ specified with a wavelength of $-1$ contains the absolute scale in
 \end{list}
 
 \subsubsection{Images at specified wavelengths}
-\label{sec::images_sph}
+\label{sec:images_sph}
+
+The surface brightness is a luminosity-independent self-similar distribution
+\cite{IE96a} of $b/r_1$, the impact parameter scaled by the envelope inner
+radius (fig. \ref{impact parameter}); note that $r_1$ is listed in the default
+output file (\S\ref{sec:default_sph}) for a source luminosity \E4~\Lo. \D\ can
+produce maps of the surface brightness at up to 20 wavelengths, specified in
+the input file. Setting the option flag to 1 produces imaging tabulations for
+all the models of the run in the single output file {\tt fname.itb}, setting
+the flag to 2 puts the table for model number {\tt \#\#\#} in its separate
+file {\tt fname.i\#\#\#}.
 
 \begin{figure}[ht]
   \centering
@@ -1451,17 +1463,6 @@ specified with a wavelength of $-1$ contains the absolute scale in
   \caption{Notation for imaging output.}
   \label{impact parameter}
 \end{figure}
-
-The surface brightness is a luminosity-independent self-similar
-distribution \cite{IE96a} of $b/r_1$, the impact parameter scaled by
-the envelope inner radius (fig. \ref{impact parameter}); note that
-$r_1$ is listed in the default output file (\S\ref{default_sph}) for a
-source luminosity \E4~\Lo. \D\ can produce maps of the surface
-brightness at up to 20 wavelengths, specified in the input
-file. Setting the option flag to 1 produces imaging tabulations for
-all the models of the run in the single output file {\tt fname.itb},
-setting the flag to 2 puts the table for model number {\tt \#\#\#} in
-its separate file {\tt fname.i\#\#\#}.
 
 Following the option selection flag, the number ($\le 20$) of desired
 wavelengths is entered first, followed by a list of these wavelengths
@@ -1487,12 +1488,12 @@ imaging should be part of the grid, modifying it if necessary (see
 Each map is tabulated with a single header line as follows:
 \begin{list}{$\diamond$}{}
 \item{\tt b} $= b/r_1$, where $b$ is the impact parameter.
-\item {\tt t(b)} = $\tau(\tt b)/\tau(0)$, where $\tau(\tt b)$ is the
-  overall optical depth along a path with impact parameter {\tt b}.
-  Note that $\tau(0)$ is simply the overall radial optical depth {\tt
-    tauT}, listed in the file {\tt fname.s\#\#\#} (\S \ref{fname.s}),
-  and that {\tt t(b)} doubles its value across the shell once the
-  impact parameter exceeds the stellar radius.
+\item {\tt t(b)} = $\tau(\tt b)/\tau(0)$, where $\tau(\tt b)$ is the overall
+    optical depth along a path with impact parameter {\tt b}. Note that
+    $\tau(0)$ is simply the overall radial optical depth {\tt tauT}, listed in
+    the file {\tt fname.s\#\#\#} (\S \ref{sec:detail_sph}), and that {\tt t(b)}
+    doubles its value across the shell once the impact parameter exceeds the
+    stellar radius.
 \item The intensity, in Jy arcsec$^{-2}$, at each of the wavelengths
   listed in the header line.
 \end{list}
@@ -1510,7 +1511,7 @@ the Planck or Engelke-Marengo function, the arguments of those
 functions are used for $T_e$.
 
 \subsubsection{Radial profiles for each model}
-\label{sec::radial_sph}
+\label{sec:radial_sph}
 
 The next option flag triggers tabulations of the radial profiles of
 the density, optical depth and dust temperature. Setting the flag to 1
@@ -1527,7 +1528,7 @@ for model number {\tt \#\#\#} in its own separate file {\tt
   any wavelength $\lambda$, the optical depth at radius $y$ measured
   from the inner boundary is {\tt t*tauT}, where {\tt tauT} is the
   overall optical depth at that wavelength, tabulated in the file {\tt
-    fname.s\#\#\#} (\S \ref{fname.s}).
+    fname.s\#\#\#} (\S \ref{sec:detail_sph}).
 
 \item{\tt tauF} -- radial profile of the flux-averaged optical depth
 \item {\tt epsilon} -- the fraction of grain heating due to the
@@ -1535,48 +1536,27 @@ for model number {\tt \#\#\#} in its own separate file {\tt
   \cite{IE97}).
 \item{\tt Td} -- radial profile of the dust temperature
 \item{\tt RPr} -- radial profile of the ratio of radiation pressure to
-  gravitational force normalized to the ratio at the inner boundary
-  RPr(y=1) The inner boundary value at y=1 is listed in the .out file.
- 
-  % \item{\tt rg} -- radial profile of the ratio of radiation pressure
-  %   to gravitational force, where both forces are per unit volume:
-  %   \eq{ {\Frad\over\Fgrav} = {1\over4\pi Gcm} \cdot{L\over
-  %   M}\cdot{n_d\sigma_V\over n_H}\, \int\!Q_\lambda
-  %   f_\lambda\,d\lambda } Here $m$ is the mass of a hydrogen atom,
-  %   $f_\lambda = F_\lambda/\int F_\lambda d\lambda$ is the local
-  %   spectral shape, $n_d$ the dust number density and $n_H$ the
-  %   number density of hydrogen nuclei.  This expression holds only
-  %   if the gas and dust are fully collisionally coupled. The
-  %   tabulated value is for the standard Galactic value
-  %   $n_d\sigma_V/n_H = 5\cdot\E{-22}$ cm$^{-2}$ and for $L/M$ = \E4
-  %   \Lo/\Mo.
-
-  %   \textbf{XXXX ME: Are we doing what is written below? Then need
-  %   to change it from a question to a description XXXX}
-
-  %   {\bf \underline {NOTE:}} We will list the value of the above
-  %   ratio at $y = 1$ and tabulate the radial profile of the ratio
-  %   normalized to its $y = 1$ value (i.e., the first tabulated value
-  %   is always 1). Add the same tabulation to the slab output.
+    gravitational force normalized to the ratio at the inner boundary RPr$(y =
+    1)$. The inner boundary value at $y = 1$ is listed in the .out file.
 
 \end{list}
-
-Once a dust-to-gas ratio is assumed, the radial profiles {\tt
-  eta}$(y)$ and {\tt t}$(y)$ determine also the radial run of gas
-density and column density.  The standard conversion is that the
-hydrogen column associated with dust optical depth \tV\ is $N_{\rm H}
-= 2\cdot\E{21}$ \tV\ cm$^{-2}$. Then the radial variation of gas
-column is $N_{\rm H}(y) = N_{\rm H}\times{\tt t}(y)$, the volume
-density is $n_{\rm H}(y) = (N_{\rm H}/r_1)\times{\tt eta}(y)$. In the
-case of dynamical calculation with {\tt density type = 3} for AGB
-stars (\S\ref{winds}), the following additional profiles are
-tabulated:
+The radial profiles {\tt eta}$(y)$ and {\tt t}$(y)$ determine also the radial
+runs of gas density and column density once a dust-to-gas ratio is assumed;
+the standard conversion is that the hydrogen column associated with dust
+optical depth \tV\ is $N_{\rm H} = 2\cdot\E{21}$ \tV\ cm$^{-2}$. Then the
+radial profiles of gas column and volume densities are
+\begin{equation}\label{eq:profiles}
+  N_{\rm H}(y) = N_{\rm H}\times{\tt t}(y), \qquad
+  n_{\rm H}(y) = (N_{\rm H}/r_1)\times{\tt eta}(y)
+\end{equation}
+In the case of dynamical calculation with {\tt density type = 3} for AGB stars
+(\S\ref{winds}), the following additional profiles are tabulated:
 
 \begin{list}{$\diamond$}{}
 \item {\tt u} -- the dimensionless radial velocity profile normalized
   to the terminal velocity {\tt Ve}, which is tabulated for the
   corresponding overall optical depth in file {\tt fname.out} (\S
-  \ref{default_sph}).
+  \ref{sec:default_sph}).
 \item {\tt drift} -- the radial variation of $v_{\rm g}/v_{\rm d}$,
   the velocity ratio of the gas and dust components of the envelope.
   This quantity measures the relative decrease in dust opacity due to
@@ -1585,22 +1565,21 @@ tabulated:
 \end{list}
 
 \subsubsection{Detailed Run-time messages}
-\label{sec::error_sph}
+\label{sec:error_sph}
 
-In case of an error, the default output file issues a
-warning. Optionally, additional, more detailed run-time error messages
-can be produced and might prove useful in tracing the program's
-progress in case of a failure. Setting the corresponding flag to 1
-produces messages for all the models in the single output file {\tt
-  fname.mtb}, setting the flag to 2 puts the messages for model number
-{\tt \#\#\#} in its own separate file {\tt fname.m\#\#\#}.
+In case of an error, the default output file issues a warning. Optionally,
+additional, more detailed run-time error messages can be produced and might
+prove useful in tracing the program's progress in case of a failure. Setting
+the corresponding flag to 1 produces messages for all the models in the single
+output file {\tt fname.mtb}, setting the flag to 2 puts the messages for model
+number {\tt \#\#\#} in its own separate file {\tt fname.m\#\#\#}.
 
 
 \section{Output: Slab}
-\label{sec::output_slb}
+\label{sec:output_slb}
 
 \subsection{Default Output for Slab}
-\label{sec::default_slb}
+\label{sec:default_slb}
 
 \D\ always produces the output file {\tt fname.out} for each model
 input {\tt fname.inp}. In addition to a summary of the input
@@ -1627,25 +1606,24 @@ Subsequent columns list quantities calculated by \D\ for that {\tt
 \item {\tt TdR(K)} -- the dust temperature at the slab right boundary.
 \item{\tt RPr} -- spatial profile of the ratio of radiation pressure to
   gravitational force normalized to the ratio at the inner boundary
-  rg(y=1). 
+  rg(y=1) \textbf{XXXX ME: Doesn't make much sense!!! XXXX}.
 \item{\tt err} -- the flux conservation error, defined as in the
   spherical case.
 
 \end{list}
 
 \subsection{Optional Output for Slab}
-\label{sec::optional_slb}
+\label{sec:optional_slb}
 
 \subsubsection{Detailed spectra for each model }
-\label{sec::detail_slb}
+\label{sec:detail_slb}
 
-The next output flag triggers listing of detailed spectra for each
-model in the run.  Setting this flag to 1 produces tables for the
-emerging spectra of all models in the single output file {\tt
-  fname.stb}.  Setting the flag to 2 places each table in its own
-separate file, where file {\tt fname.s\#\#\#} contains the tabulation
-for model number {\tt \#\#\#} in the optical depth sequence listed in
-the default output file (\S\ref{default_slb}).
+The next output flag triggers listing of detailed spectra for each model in
+the run.  Setting this flag to 1 produces tables for the emerging spectra of
+all models in the single output file {\tt fname.stb}.  Setting the flag to 2
+places each table in its own separate file, where file {\tt fname.s\#\#\#}
+contains the tabulation for model number {\tt \#\#\#} in the optical depth
+sequence listed in the default output file (\S\ref{sec:default_slb}).
 
 In addition to the emerging spectrum for both sides of the slab, the
 table for each model also lists separately the contributions of
@@ -1672,15 +1650,15 @@ absolute scale in [W/m$^2$]. The following quantities are tabulated:
 \end{list}
 
 \subsubsection{Intensities for each model }
-\label{sec::inten_slb}
+\label{sec:inten_slb}
 
-The next output flag triggers listing of the intensity for user
-specified angles for each model in the run.  Setting this flag to 1
-produces tables for the emerging spectra of all models in the single
-output file {\tt fname.itb}.  Setting the flag to 2 places each table
-in its own separate file, where file {\tt fname.i\#\#\#} contains the
-tabulation for model number {\tt \#\#\#} in the optical depth sequence
-listed in the default output file (\S\ref{default_slb}).
+The next output flag triggers listing of the intensity for user specified
+angles for each model in the run.  Setting this flag to 1 produces tables for
+the emerging spectra of all models in the single output file {\tt fname.itb}.
+Setting the flag to 2 places each table in its own separate file, where file
+{\tt fname.i\#\#\#} contains the tabulation for model number {\tt \#\#\#} in
+the optical depth sequence listed in the default output file
+(\S\ref{sec:default_slb}).
 
 After triggering the the intensities file with the output flag the
 angle grid has to be specified. First the type of the grid either
@@ -1690,26 +1668,18 @@ followed by the maximum angle and the steppsize inbetween.
 \begin{verbatim}
   intensities at specified angles;     fname.i### = 2
   angletype = 1 (linear)
-  theta_min = 0 theta_max = 80 stepp = 5  
+  theta_min = 0 theta_max = 80 stepp = 5
 \end{verbatim}
 
+
 \subsubsection{Spatial Profiles}
-\label{sec::spatial_slb}
-The output for spatial profiles is similar to the spherical case. The
-radial distance {\tt y} and density profile {\tt eta} are removed.
-The relative distance in optical depth from the left boundary, {\tt
-  t}, becomes the running variable, and the tabulations of {\tt tauF},
-{\tt epsilon} and {\tt Td} are the same (see
-\ref{fname.r}). % {\bf \underline{TODO:}} Add the same tabulation of
-% \Frad/\Fgrav\ as in the spherical case. Keep the listing of the
-% three components of the overall bolometric flux: {\tt febol} is the
-% local net bolometric flux of external radiation; {\tt fRbol} and
-% {\tt fLbol} are, respectively, the rightward and leftward
-% half-fluxes of the local diffuse radiation. All components are
-% normalized by {\tt Fe1} so that the flux conservation relation is
-% {\tt febol + fRbol - fLbol} = {\tt f1} everywhere in the slab. Note
-% that {\tt fRbol} vanishes on the slab left face, {\tt fLbol} on the
-% right face.
+\label{sec:spatial_slb}
+
+The output for spatial profiles is similar to the spherical case. The radial
+distance {\tt y} and density profile {\tt eta} are removed. The relative
+distance in optical depth from the left boundary, {\tt t}, becomes the running
+variable, and the tabulations of {\tt tauF}, {\tt epsilon} and {\tt Td} are
+the same (see \ref{sec:radial_sph}).
 
 \bigskip \D's distribution contains two sample input files, {\tt
   slab1.inp} and {\tt slab2.inp}, which can be used as templates for
@@ -1718,28 +1688,22 @@ in appendix \ref{slab1}.
 
 
 \subsubsection{Detailed Run-time messages}
-\label{sec::error_slb}
+\label{sec:error_slb}
 
-In case of an error, the default output file issues a
-warning. Optionally, additional, more detailed run-time error messages
-can be produced and might prove useful in tracing the program's
-progress in case of a failure. Setting the corresponding flag to 1
-produces messages for all the models in the single output file {\tt
-  fname.mtb}, setting the flag to 2 puts the messages for model number
-{\tt \#\#\#} in its own separate file {\tt fname.m\#\#\#}.
+These messages are triggered in the same way as in the spherical case (see
+\S\ref{sec:error_sph}).
 
 
 \section{User Control of \D}
 \label{sec:user_control}
 
-\D\ allows the user control of some of its inner working through
-tinkering with actual code statements that control the spatial and
-spectral grids. The appropriate statements were placed in the file
-{\tt userpar.inc} separate from the main {\tt dusty.f}, and are
-imbedded during compilation by the FORTRAN statement {\tt
-  INCLUDE}\footnote{{\tt userpar.inc} must always stay with the source
-  code in the same directory.}. After modifying statements in {\tt
-  userpar.inc} , \D\ must be recompiled to enable the changes.
+\D\ allows the user control of some of its inner working through tinkering
+with actual code statements that control the spatial and spectral grids. The
+appropriate statements were placed in the file {\tt userpar.inc} separate from
+the main {\tt dusty.f}, and are imbedded during compilation by the FORTRAN
+statement {\tt INCLUDE}; note that {\tt userpar.inc} \emph{must always stay
+with the source code in the same directory}. After modifying statements in
+{\tt userpar.inc} , \D\ must be recompiled to enable the changes.
 
 \subsection{Array Sizes for Spatial Grid}
 \label{Memory}
@@ -1759,7 +1723,7 @@ To modify {\tt npY} simply open {\tt userpar.inc}, change the number
 Every other modification follows a similar procedure. Since \D's
 memory requirements vary roughly as the second power of {\tt npY}, the
 maximum value that can be accommodated on any given machine is
-determined by the system memory.  
+determined by the system memory.
 
 The parameter {\tt npY} defines also the size {\tt npP} of the grid
 used in angular integrations.  In the case of planar geometry \D\ uses
@@ -1769,15 +1733,14 @@ redundant, {\tt npP} can be set to unity, allowing a larger maximum
 
 \subsection{Wavelength Grid} \label{F-Grid}
 
-\D's wavelength grid is used both in the internal calculations and for
-the output of all wavelength dependent quantities. The number of grid
-points is set in {\tt userpar.inc} by the parameter {\tt npL}, the
-grid itself is read from the file {\tt lambda\_grid.dat}\footnote{{\tt
-    lambda\_grid.dat} must always stay in the data directory.}.  This
-file starts with an arbitrary number of text lines, the beginning of
-the wavelength list is signaled by an entry for the number of grid
-points. This number must be equal to {\tt npL} entered in {\tt
-  userpar.inc} and to the actual number of entries in the list.
+\D's wavelength grid is used both in the internal calculations and for the
+output of all wavelength dependent quantities. The number of grid points is
+set in {\tt userpar.inc} by the parameter {\tt npL}. The grid itself is read
+from the file {\tt lambda\_grid.dat}, which \emph{must always stay in the
+directory {\tt data}}.  This file starts with an arbitrary number of header
+lines, the beginning of the wavelength list is signaled by an entry for the
+number of grid points. This number must be equal to {\tt npL} entered in {\tt
+userpar.inc} and to the actual number of entries in the list.
 
 The grid supplied with \D\ contains 105 points from 0.01 to
 $3.6\times10^{4}$ \mic.  The short wavelength boundary is to ensure
@@ -1810,23 +1773,23 @@ a finer grid in {\tt lambda\_grid.dat} and the input of user-supplied
 optical properties (see \S\ref{chemistry}) defined on that same grid.
 
 
-\newpage
+%\newpage
 
 \addcontentsline{toc}{section}{\bf Appendices}
 \begin{appendix}
-  % \section*{\sc Appendices}
-  % \addtocontents{toc}{\break \vfil}
+\section*{\sc Appendices}
+%   \addtocontents{toc}%{\break \vfil}
 
 
-  \section{Output Summary}
-  \label{summary}
+\section{Output Summary}
+\label{summary}
 
-  \D's default output is the file {\tt fname.out}, described in
-  \S\ref{sec::default_sph} (sphere) and \S\ref{sec::default_slb}
-  (slab). Additional output is optionally produced through selection
-  flags, summarized in the following table.  The second column lists
-  the section number where a detailed description of the corresponding
-  output is provided.
+\D's default output is the file {\tt fname.out}, described in
+\S\ref{sec:default_sph} (sphere) and \S\ref{sec:default_slb}
+(slab). Additional output is optionally produced through selection
+flags, summarized in the following table.  The second column lists
+the section number where a detailed description of the corresponding
+output is provided.
 
   \begin{table}[htbp]
     \begin{center}
@@ -1839,23 +1802,23 @@ optical properties (see \S\ref{chemistry}) defined on that same grid.
     File Triggered by Flag} \\ \cline{3-5} & & 1 & 2 & 3 \\ \hline
   {\bf Sphere} & & & &\\
   \hline
-  Detailed spectra, each model     & \ref{sec::detail_sph} & {\tt fname.stb} & {\tt fname.s\#\#\#} & {\tt fname.s\#\#\#} \\
+  Detailed spectra, each model     & \ref{sec:detail_sph} & {\tt fname.stb} & {\tt fname.s\#\#\#} & {\tt fname.s\#\#\#} \\
   \hline
-  Images                           & \ref{sec::images_sph} & {\tt fname.itb} & {\tt fname.i\#\#\#} & {\tt fname.i\#\#\#} \\
+  Images                           & \ref{sec:images_sph} & {\tt fname.itb} & {\tt fname.i\#\#\#} & {\tt fname.i\#\#\#} \\
   \hline
-  Radial profiles                  & \ref{sec::radial_sph} & {\tt fname.rtb} & {\tt fname.r\#\#\#} &  \\
+  Radial profiles                  & \ref{sec:radial_sph} & {\tt fname.rtb} & {\tt fname.r\#\#\#} &  \\
   \hline
-  Error messages                   & \ref{sec::error_sph} & {\tt fname.mtb} & {\tt fname.m\#\#\#} &  \\
+  Error messages                   & \ref{sec:error_sph} & {\tt fname.mtb} & {\tt fname.m\#\#\#} &  \\
   \hline
   {\bf Slab} & & & &\\
   \hline
-  Detailed spectra, each model     & \ref{sec::detail_slb} & {\tt fname.stb} & {\tt fname.s\#\#\#} & {\tt fname.s\#\#\#} \\
+  Detailed spectra, each model     & \ref{sec:detail_slb} & {\tt fname.stb} & {\tt fname.s\#\#\#} & {\tt fname.s\#\#\#} \\
   \hline
-  Intensities                      & \ref{sec::inten_slb}  & {\tt fname.itb} & {\tt fname.i\#\#\#} & {\tt fname.i\#\#\#} \\
+  Intensities                      & \ref{sec:inten_slb}  & {\tt fname.itb} & {\tt fname.i\#\#\#} & {\tt fname.i\#\#\#} \\
   \hline
-  Spatial profiles                 & \ref{sec::spatial_slb} & {\tt fname.rtb} & {\tt fname.r\#\#\#} &  \\
+  Spatial profiles                 & \ref{sec:spatial_slb} & {\tt fname.rtb} & {\tt fname.r\#\#\#} &  \\
   \hline
-  Error messages                   & \ref{sec::error_slb}  & {\tt fname.mtb} & {\tt fname.m\#\#\#} &  \\
+  Error messages                   & \ref{sec:error_slb}  & {\tt fname.mtb} & {\tt fname.m\#\#\#} &  \\
   \hline
 \end{tabular}
 \end{center}
@@ -1885,7 +1848,7 @@ are repeated here for completeness.
 \end{verbatim}
   This message is a clear sign that the input is out of order.
 
-  \newpage
+%  \newpage
 
 \item On occasion, when the execution results in a segmentation fault
   under Linux or MacOS, increasing the stacksize of the console may
@@ -1898,18 +1861,20 @@ are repeated here for completeness.
 
 \end{itemize}
 
-\vspace {1cm}
+%\vspace {1cm}
+
+\newpage
 
 \section{Sample Output File: {\tt sphere1.out}}
 \label{sphere1}
 
 \begin{verbatim}
  ===========================
-  Output from program dusty 
+  Output from program dusty
   version: 4.00
  ===========================
-  
-  Input parameters from file: 
+
+  Input parameters from file:
   examples/sphere1/sphere1.inp
 * ----------------------------------------------------------------------
 * NOTES:
@@ -1932,21 +1897,21 @@ are repeated here for completeness.
    Required Temp accuracy:        0.24%
   --------------------------------------------
   --------------------------------------------
-          
+
   RESULTS:
   --------
- ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1   T1(K)    Td(K)    RPr(1)  e(%)                              
- ###     1       2        3        4        5        6        7        8        9      10                               
+ ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1   T1(K)    Td(K)    RPr(1)  e(%)
+ ###     1       2        3        4        5        6        7        8        9      10
  ========================================================================================
    1 1.00E+01 1.01E+00 7.70E+04 1.99E+14 2.89E+01 1.49E+00 1.20E+03 4.81E+01 1.39E+07   2
  =====================================
   (1) optical depth at 5.5E-01 microns
   (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0= 6.06E+00
-  (3) bolometric flux at the inner radius 
+  (3) bolometric flux at the inner radius
   (4) inner radius for L = 1e4 Lo
   (5) ratio of the inner to the stellar radius
   (6) angular size (in arcsec) when Fbol=1e-6 W/m2
-  (7) dust temperature at the inner radius 
+  (7) dust temperature at the inner radius
   (8) dust temperature at the outer edge
   (9) radiation pressure on inner boundary; see manual for units
  (10) maximum error in flux conservation (Fmax-Fmin)/(Fmax+Fmin)
@@ -1964,11 +1929,11 @@ are repeated here for completeness.
 \label{slab1}
 \begin{verbatim}
  ===========================
-  Output from program dusty 
+  Output from program dusty
   version: 4.00
  ===========================
-  
-  Input parameters from file: 
+
+  Input parameters from file:
   examples/slab1/slab1.inp
 * ----------------------------------------------------------------------
 * NOTES:
@@ -1993,8 +1958,8 @@ are repeated here for completeness.
   --------------------------------------------
   Optical depths at 5.5E-01 microns
   ranging from 1.00E+01 to 2.00E+01
-    2 models with grid from file                                                                                                                                                                                                                
-    examples/slab1/tauV.tab                                               
+    2 models with grid from file
+    examples/slab1/tauV.tab
    Required Flux accuracy:        5.00%
    Required Temp accuracy:        0.12%
   --------------------------------------------
@@ -2004,11 +1969,11 @@ are repeated here for completeness.
     80.0
    equidistant in theta_out, step= 5.0
   --------------------------------------------
-          
+
   RESULTS:
   --------
- ###    Tau0    Psi/Psi0     FiL      FiR       FbolL    FbolR     r1(cm)    TdL(K)    TdR(K)    RPr(1)   e(%)          
- ###      1        2          3        4          5        6         7          8         9       10      11            
+ ###    Tau0    Psi/Psi0     FiL      FiR       FbolL    FbolR     r1(cm)    TdL(K)    TdR(K)    RPr(1)   e(%)
+ ###      1        2          3        4          5        6         7          8         9       10      11
  =============================================================================================================
    1  1.00E+01  1.53E+00  6.97E+02  0.00E+00 -7.04E+03  7.01E+03  2.09E+15  8.00E+02  7.04E+02  3.53E+05  4
    2  2.00E+01       NaN       NaN       NaN       NaN       NaN       NaN       NaN       NaN       NaN  0
