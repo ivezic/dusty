@@ -82,7 +82,7 @@ Module common
   double precision :: gmax
 
   character*4 :: version
-  parameter (version='4.00-Rev $Id$')
+  parameter (version='4.00-$Rev$')
   integer :: error,warning,iverb
   double precision :: Tstar(2) ! needed to calculate intensities ???
   double precision, allocatable :: lambda(:)  ! lambda grid dusty
