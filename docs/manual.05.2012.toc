@@ -15,8 +15,8 @@
 \contentsline {subsection}{\numberline {4.3}Dust Properties}{15}{subsection.4.3}
 \contentsline {subsubsection}{\numberline {4.3.1}Chemical Composition}{15}{subsubsection.4.3.1}
 \contentsline {subsubsection}{\numberline {4.3.2}Sublimation temperature}{16}{subsubsection.4.3.2}
-\contentsline {subsubsection}{\numberline {4.3.3}Grain Size Distribution}{16}{subsubsection.4.3.3}
-\contentsline {subsection}{\numberline {4.4}Optical Depth}{17}{subsection.4.4}
+\contentsline {subsubsection}{\numberline {4.3.3}Grain Size Distribution}{17}{subsubsection.4.3.3}
+\contentsline {subsection}{\numberline {4.4}Optical Depth}{18}{subsection.4.4}
 \contentsline {subsection}{\numberline {4.5}Numerical Accuracy and Internal Bounds}{18}{subsection.4.5}
 \contentsline {subsection}{\numberline {4.6}Output Control}{19}{subsection.4.6}
 \contentsline {section}{\numberline {5}Output: Sphere}{19}{section.5}
@@ -24,21 +24,21 @@
 \contentsline {subsection}{\numberline {5.2}Optional Output for Sphere}{21}{subsection.5.2}
 \contentsline {subsubsection}{\numberline {5.2.1}Detailed spectra for each model}{22}{subsubsection.5.2.1}
 \contentsline {subsubsection}{\numberline {5.2.2}Images at specified wavelengths}{22}{subsubsection.5.2.2}
-\contentsline {subsubsection}{\numberline {5.2.3}Radial profiles for each model}{23}{subsubsection.5.2.3}
+\contentsline {subsubsection}{\numberline {5.2.3}Radial profiles for each model}{24}{subsubsection.5.2.3}
 \contentsline {subsubsection}{\numberline {5.2.4}Detailed Run-time messages}{24}{subsubsection.5.2.4}
 \contentsline {section}{\numberline {6}Output: Slab}{25}{section.6}
 \contentsline {subsection}{\numberline {6.1}Default Output for Slab}{25}{subsection.6.1}
-\contentsline {subsection}{\numberline {6.2}Optional Output for Slab}{25}{subsection.6.2}
-\contentsline {subsubsection}{\numberline {6.2.1}Detailed spectra for each model }{25}{subsubsection.6.2.1}
+\contentsline {subsection}{\numberline {6.2}Optional Output for Slab}{26}{subsection.6.2}
+\contentsline {subsubsection}{\numberline {6.2.1}Detailed spectra for each model }{26}{subsubsection.6.2.1}
 \contentsline {subsubsection}{\numberline {6.2.2}Intensities for each model }{26}{subsubsection.6.2.2}
-\contentsline {subsubsection}{\numberline {6.2.3}Spatial Profiles}{26}{subsubsection.6.2.3}
-\contentsline {subsubsection}{\numberline {6.2.4}Detailed Run-time messages}{26}{subsubsection.6.2.4}
-\contentsline {section}{\numberline {7}User Control of {\sf DUSTY}}{26}{section.7}
+\contentsline {subsubsection}{\numberline {6.2.3}Spatial Profiles}{27}{subsubsection.6.2.3}
+\contentsline {subsubsection}{\numberline {6.2.4}Detailed Run-time messages}{27}{subsubsection.6.2.4}
+\contentsline {section}{\numberline {7}User Control of {\sf DUSTY}}{27}{section.7}
 \contentsline {subsection}{\numberline {7.1}Array Sizes for Spatial Grid}{27}{subsection.7.1}
-\contentsline {subsection}{\numberline {7.2}Wavelength Grid}{27}{subsection.7.2}
+\contentsline {subsection}{\numberline {7.2}Wavelength Grid}{28}{subsection.7.2}
 \contentsline {section}{\bf Appendices}{28}{subsection.7.2}
 \contentsline {section}{\numberline {A}Output Summary}{28}{appendix.A}
-\contentsline {section}{\numberline {B}Pitfalls, Real and Imaginary}{29}{appendix.B}
+\contentsline {section}{\numberline {B}Pitfalls, Real and Imaginary}{28}{appendix.B}
 \contentsline {section}{\numberline {C}Sample Output File: {\tt sphere1.out}}{30}{appendix.C}
 \contentsline {section}{\numberline {D}Sample Output File: \tt slab1.out}{31}{appendix.D}
 \contentsline {section}{\numberline {E}Library of Optical Constants}{33}{appendix.E}
