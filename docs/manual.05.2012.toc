@@ -25,7 +25,7 @@
 \contentsline {subsubsection}{\numberline {5.2.1}Detailed spectra for each model}{22}{subsubsection.5.2.1}
 \contentsline {subsubsection}{\numberline {5.2.2}Images at specified wavelengths}{22}{subsubsection.5.2.2}
 \contentsline {subsubsection}{\numberline {5.2.3}Radial profiles for each model}{24}{subsubsection.5.2.3}
-\contentsline {subsubsection}{\numberline {5.2.4}Detailed Run-time messages}{24}{subsubsection.5.2.4}
+\contentsline {subsubsection}{\numberline {5.2.4}Detailed Run-time messages}{25}{subsubsection.5.2.4}
 \contentsline {section}{\numberline {6}Output: Slab}{25}{section.6}
 \contentsline {subsection}{\numberline {6.1}Default Output for Slab}{25}{subsection.6.1}
 \contentsline {subsection}{\numberline {6.2}Optional Output for Slab}{26}{subsection.6.2}
@@ -37,8 +37,8 @@
 \contentsline {subsection}{\numberline {7.1}Array Sizes for Spatial Grid}{27}{subsection.7.1}
 \contentsline {subsection}{\numberline {7.2}Wavelength Grid}{28}{subsection.7.2}
 \contentsline {section}{\bf Appendices}{28}{subsection.7.2}
-\contentsline {section}{\numberline {A}Output Summary}{28}{appendix.A}
-\contentsline {section}{\numberline {B}Pitfalls, Real and Imaginary}{28}{appendix.B}
-\contentsline {section}{\numberline {C}Sample Output File: {\tt sphere1.out}}{30}{appendix.C}
-\contentsline {section}{\numberline {D}Sample Output File: \tt slab1.out}{31}{appendix.D}
-\contentsline {section}{\numberline {E}Library of Optical Constants}{33}{appendix.E}
+\contentsline {section}{\numberline {A}Output Summary}{29}{appendix.A}
+\contentsline {section}{\numberline {B}Pitfalls, Real and Imaginary}{29}{appendix.B}
+\contentsline {section}{\numberline {C}Sample Output File: {\tt sphere1.out}}{31}{appendix.C}
+\contentsline {section}{\numberline {D}Sample Output File: \tt slab1.out}{32}{appendix.D}
+\contentsline {section}{\numberline {E}Library of Optical Constants}{34}{appendix.E}

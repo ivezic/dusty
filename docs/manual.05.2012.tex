@@ -14,6 +14,7 @@
 \topmargin -0.5in
 \textheight 8.25in
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Definitons %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1072,9 +1073,13 @@ which the dust grains can exist:
     Sublimation Temperature = 1500K
 \end{verbatim}
 If \D's solution includes dust at higher temperatures, these grains
-are removed. Therefore, specifying input radiation strength (see
-\S\ref{sec:scaling_radiation}) that produces on the heated surface a
-dust temperature higher than sublimation results in error.
+are removed. When the specified input radiation strength (see
+\S\ref{sec:scaling_radiation}) produces on the heated surface a dust
+temperature higher than sublimation, it is changed such that that
+temperature is the sublimation temperature. In addition \D\ will print
+a warning message on the screen and in {\tt fname.out}. The Sections
+\ref{sec:default_sph} (sphere) and \ref{sec:default_sph} (slab)
+describe the file {\tt fname.out} in detail.
 
 \subsubsection{Grain Size Distribution}
 
@@ -1262,11 +1267,12 @@ fully controlled by the user.
 \D\ always produces the output file {\tt fname.out} for each model
 input {\tt fname.inp}. In addition to a summary of the input
 parameters, the default output file tabulates global properties for
-each of the optical depths covered in the run. The table's left column
-lists the sequential number {\tt \#\#\#} of the model with the
-fiducial optical depth {\tt tau0} listed in the next column.
-Subsequent columns list quantities calculated by \D\ for that {\tt
-  tau0}:
+each of the optical depths covered in the run.
+
+The table's left column lists the sequential number {\tt \#\#\#} of
+the model with the fiducial optical depth {\tt tau0} listed in the
+next column.  Subsequent columns list quantities calculated by \D\ for
+that {\tt tau0}:
 
 \begin{list}{$\diamond$}{}
 \item {\tt Psi/Psi0} -- Psi as defined by eq.14 in IE97 with optically
@@ -1306,7 +1312,10 @@ Subsequent columns list quantities calculated by \D\ for that {\tt
   $F_{\rm obs} = \E{-6}\ \rm W\ m^{-2}$.
 
 \item {\tt T1} -- the dust temperature, in K, at the envelope's inner
-  boundary.
+  boundary. When the specified input radiation strength (see
+  \S\ref{sec:scaling_radiation}) produces a temperature in excess of
+  the sublimation temperature {\tt Tsub}, it is changed such that {\tt
+    T1 = Tsub} and \D\ will print a warning message.
 
 \item {\tt Td} -- the dust temperature, in K, at the envelope's outer
   boundary $(y = Y)$.
@@ -1396,6 +1405,7 @@ in fact could be meaningless.  \D\ issues a stern warning after the
 tabulation line of any model with input spectral shape that is either
 the Planck or Engelke-Marengo function whose temperature violates eq.\
 \ref{Tmin}.
+
 
 
 
@@ -1613,11 +1623,12 @@ produces messages for all the models in the single output file {\tt
 \D\ always produces the output file {\tt fname.out} for each model
 input {\tt fname.inp}. In addition to a summary of the input
 parameters, the default output file tabulates global properties for
-each of the optical depths covered in the run. The table's left column
-lists the sequential number {\tt \#\#\#} of the model with the
-fiducial optical depth {\tt tau0} listed in the next column.
-Subsequent columns list quantities calculated by \D\ for that {\tt
-  tau0}:
+each of the optical depths covered in the run.
+
+The table's left column lists the sequential number {\tt \#\#\#} of
+the model with the fiducial optical depth {\tt tau0} listed in the
+next column.  Subsequent columns list quantities calculated by \D\ for
+that {\tt tau0}:
 
 
 \begin{list}{$\diamond$}{}
@@ -1633,8 +1644,13 @@ Subsequent columns list quantities calculated by \D\ for that {\tt
   slab boundary.
 \item{\tt r1(cm)} -- the distance at which a point source with
   luminosity \E4 \Lo\ produces the bolometric flux $F_{e1}$.
-\item {\tt TdL(K)} -- the dust temperature at the slab left boundary.
+\item {\tt TdL(K)} -- the dust temperature at the slab left
+  boundary. When the specified input radiation strength (see
+  \S\ref{sec:scaling_radiation}) produces a temperature in excess of
+  the sublimation temperature {\tt Tsub}, it is changed such that {\tt
+    TdL = Tsub} and \D\ will print a warning message.
 \item {\tt TdR(K)} -- the dust temperature at the slab right boundary.
+  See previous item for values in excess of {\tt Tsub}.
 \item {\tt RPr(1)} -- The ratio of radiation pressure to gravitational
   force at the left boundary. Both forces are per unit volume: \eq{
     {\Frad\over\Fgrav} = {1\over4\pi Gcm} \cdot{L\over M}
