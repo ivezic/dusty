@@ -88,7 +88,7 @@ II. PHYSICAL PARAMETERS
                                                                         
   III. NUMERICS                                                           
       
-     accuracy for flux conservation = 0.05
+     accuracy for flux conservation = 0.10
  
   ----------------------------------------------------------------------
 

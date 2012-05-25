@@ -64,7 +64,7 @@ II. PHYSICAL PARAMETERS
      1.2) Scale: %(available options: flux\Lum_r1\energy_den\dilutn_fac\T1)
         
 		Scale = T1   % Td at the inner boundary
-		flux = 800
+		T1 = 1800
 		illumination angle = DIRECTIONAL
 		angle = 0.
 
@@ -90,7 +90,7 @@ II. PHYSICAL PARAMETERS
                                                                         
   III. NUMERICS                                                           
       
-     - accuracy for flux conservation = 0.05
+     - accuracy for flux conservation = 0.10
  
   ----------------------------------------------------------------------
                                                                         

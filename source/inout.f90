@@ -154,7 +154,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
               print*,' Input of Temperature at the inner boundery not possible for two side illumination:'
               print*,' !!!!!Error!!!!!'
            end if
-           write(12,*) ' Dust temperature on the inner boundary:', Tinner,' K'
+           write(12,*) ' Dust temperature on the inner boundary:', Tinner_fidG,' K'
         end if
      else
         typentry(1) = 0
@@ -237,7 +237,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         if (typentry(1).eq.5) then
            ! enter dust temperature on inner boundary, T1[K]
            Tinner_fidG = RDINP(Equal,1,12)
-           write(12,*) ' Dust temperature on the inner boundary:', Tinner,' K'
+           write(12,*) ' Dust temperature on the inner boundary:', Tinner_fidG,' K'
         end if
         write(12,'(a33)') ' Calculation in planar geometry:'
         !find the kind of illumination
@@ -453,6 +453,17 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         if (Tsub(iG).gt.Tsub(ifidG)) ifidG = iG
         print'(A,I3,A,F12.3)',' Grain:',iG,' Sublimation Temperature:',Tsub(iG)
      end do
+  end if
+  if (Tinner_fidG.gt.Tsub(ifidG)) then 
+     Tinner_fidG = Tsub(ifidG)
+     write(12,*) ' *** Warning***'
+     write(12,*) ' Inner boundary temperature larger than sublimation temperature'
+     write(12,*) ' -> reduced to ',Tinner_fidG
+     write(12,*) ' *** Warning***'
+     write(6,*) ' *** Warning***'
+     write(6,*) ' Inner boundary temperature larger than sublimation temperature'
+     write(6,*) ' -> reduced to ',Tinner_fidG
+     write(6,*) ' *** Warning***'
   end if
   if (typentry(1).eq.5) then 
      Tinner(ifidG) = Tinner_fidG

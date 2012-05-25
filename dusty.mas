@@ -12,12 +12,12 @@
 % constant density 
 % for 4 optical depth (1,10,100,1000)
 
- examples/ivezic97/ivezic97.inp
+% examples/ivezic97/ivezic97.inp
 
 % dust distriubtuion 1/r^2 profile
 % for 4 optical depth (1,10,100,1000)
 
- examples/ivezic97/ivezic97_2.inp
+% examples/ivezic97/ivezic97_2.inp
 
 % Spherical dust distribution with 
 % 1/r density profile 
@@ -53,18 +53,18 @@
 % directional input of power law spectrum
 % left side temperature of 800 K
 
- examples/slab1/slab1.inp
+% examples/slab1/slab1.inp
 
 % Example slab geometry
 % isotropic input on both sides
 % ISM-OHM dust grain properties
 
- examples/slab2/slab2.inp
+% examples/slab2/slab2.inp
 
 % Example slab geometry
 % only left side illumination (flux input)
 % ISM-OHM dust grain properties
 
- examples/slab3/slab3.inp
+% examples/slab3/slab3.inp
 
 % -------------------------------
