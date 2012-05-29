@@ -1,1 +1,1 @@
-gfortran -O3 -lgomp -fbounds-check -fopenmp -o dusty.exe Dusty4.f90
+gfortran -O3 -lgomp -fopenmp -o dusty.exe dusty.f90
