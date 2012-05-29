@@ -46,9 +46,13 @@ SUBROUTINE WINDS(nY,nYprev,EtaOK)
   ! -----------------------------------------------------------------------
 
   allocate(ETAold(npY))
+  ETAold = 0
   allocate(faux(nL))
+  faux = 0
   allocate(reddn(npY))
+  reddn = 0
   allocate(w(npY))
+  w = 0
   ver = 1
   IF (iX.GE.1) THEN
      write(18,*)' Doing Dynamics'
@@ -204,8 +208,11 @@ SUBROUTINE DYNAMICS(eps_loc, f, uScale, phi_loc, u, zeta,  &
   data   itMax/100/, k/0.4/
 
   allocate(etaold(npY))
+  etaold = 0
   allocate(uold(npY))
+  uold = 0
   allocate(zeta(npG,npY))
+  zeta = 0
 
   !  we may wish to control itMax and k as input parameters
   ! -----------------------------------------------------------------------
@@ -287,9 +294,13 @@ SUBROUTINE CalcVel(eps_loc, f, ws, phi_loc, wold, w, zeta, nY, ver)
   ! -----------------------------------------------------------------------
   
   allocate(z(npY))
+  z = 0
   allocate(zz(npY))
+  zz = 0
   allocate(F1(npY))
+  F1 = 0
   allocate(F2(npY))
+  F2 = 0
   ! first get the drift profile zeta
   CALL CalcDrift(phi_loc, wold, zeta, nY)
   ! then the normalization N (= EtaINT; eq D3)

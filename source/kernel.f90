@@ -84,7 +84,9 @@ subroutine GetTauMax(tau0,taumax)
   double precision,allocatable :: faux1(:), faux2(:)
   !---------------------------------------------------------------------
   allocate(faux1(nL))
+  faux1 = 0
   allocate(faux2(nL))
+  faux2 = 0
   do iL = 1, nL
      faux1(iL) = sigmaA(nG+1,iL)
      faux2(iL) = sigmaS(nG+1,iL)
@@ -189,15 +191,25 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,&
   logical initTemp
   !---------------------------------------------------------------------
   allocate(fs(nL,npY))
+  fs = 0
   allocate(us(nL,npY))
+  us = 0
   allocate(T4_ext(npY))
+  T4_ext = 0
   allocate(emiss(nG,nL,npY))
+  Emiss = 0
   allocate(fDebol(npY))
+  fDebol = 0
   allocate(fDsbol(npY))
+  fDsbol = 0
   allocate(fdsm(nL,npY))
+  fdsm = 0
   allocate(fdsp(nL,npY))
+  fdsp = 0
   allocate(fdem(nL,npY))
+  fdem = 0
   allocate(fdep(nL,npY))
+  fdep = 0
   if (iX.ne.0) then
      call line(0,2,18)
      write(18,'(a7,i3,a20)') ' model ',model,'  RUN-TIME MESSAGES '
@@ -450,6 +462,7 @@ subroutine SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,&
   logical initial
   !-----------------------------------------------------------------------
   allocate(tau(npY))
+  tau = 0
   if (sph) then
      if (initial.and.iterfbol.eq.1) then
         ! generate y-grid
@@ -1149,9 +1162,11 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   external eta
 
   allocate(emiss_total(nL,npY))
+  emiss_total = 0
   allocate(ubol_old(npY))
+  ubol_old = 0
   allocate(utot_old2(nL,npY))
-
+  utot_old2 = 0
   !------------------------------------------------------------------------
   error = 0
   if(sph) then
@@ -1313,194 +1328,6 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
 end subroutine Rad_Transf
 !***********************************************************************
 
-!!$!********************************************************************
-!!$subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
-!!$     iterfbol,initTemp,T4_ext)
-!!$!======================================================================
-!!$  use omp_lib
-!!$  use common
-!!$  implicit none
-!!$  INTERFACE
-!!$     subroutine find_Text(nY,T4_ext)
-!!$       integer nY
-!!$       double precision, allocatable :: T4_ext(:)
-!!$     end subroutine find_Text
-!!$     subroutine OccltMSG(us)
-!!$       double precision,allocatable :: us(:,:)
-!!$     end subroutine OccltMSG
-!!$     subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
-!!$       integer nY, nP
-!!$       double precision :: pstar
-!!$       double precision, allocatable :: T4_ext(:)
-!!$       double precision, allocatable :: fs(:,:),us(:,:)
-!!$     end subroutine Find_Tran
-!!$     subroutine Emission(nY,T4_ext,emiss,emiss_total)
-!!$       integer nY
-!!$       double precision, allocatable :: T4_ext(:),emiss(:,:,:),emiss_total(:,:)
-!!$     end subroutine Emission
-!!$     subroutine find_diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
-!!$       integer nY,nP,iter,iterfbol,moment
-!!$       logical initial
-!!$       double precision, allocatable :: T4_ext(:)
-!!$       double precision, allocatable :: us(:,:)
-!!$       double precision, allocatable :: emiss(:,:,:)
-!!$     end subroutine find_diffuse
-!!$     subroutine init_temp(nY,T4_ext,us)
-!!$       integer nY
-!!$       double precision,allocatable :: us(:,:),T4_ext(:)
-!!$     end subroutine init_temp
-!!$     subroutine find_temp(nY,T4_ext)
-!!$       integer :: nY
-!!$       double precision, allocatable :: T4_ext(:)
-!!$     end subroutine find_temp
-!!$     subroutine SPH_DIFF(flag,moment,nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,vec2)
-!!$       integer nY,nP,iter,iterfbol,flag,moment
-!!$       double precision, allocatable :: T4_ext(:),emiss(:,:,:),us(:,:),vec2(:,:)
-!!$       logical initial
-!!$     end subroutine SPH_DIFF
-!!$  END INTERFACE
-!!$  logical, intent(in) :: initial,initTemp
-!!$  integer, intent(in) :: y_incr,iterfbol
-!!$  integer :: nY,nP,nYprev,itereta
-!!$  double precision pstar
-!!$  double precision,allocatable :: us(:,:), fs(:,:),ubol_old(:)
-!!$  double precision,allocatable :: T4_ext(:)
-!!$  double precision,allocatable :: emiss(:,:,:),emiss_total(:,:)
-!!$  !---- local variable
-!!$  integer :: itlim,conv,iter,iG,iL,iY,iY1, moment, thread_id,i,istop,iOut
-!!$  double precision aux1,maxerrT,maxerrU,m,n,JL,JR,xx
-!!$  external eta
-!!$
-!!$  allocate(emiss_total(nL,npY))
-!!$  allocate(ubol_old(npY))
-!!$
-!!$  !------------------------------------------------------------------------
-!!$  error = 0
-!!$  if(sph) then
-!!$     ! generate spline coefficients for ETA as in old Dusty [MN'Aug,10]
-!!$     CALL setupETA(nY,nYprev,itereta)
-!!$     ! evaluate ETAzp (carried in common)
-!!$     CALL getETAzp(nY,nP)
-!!$  end if
-!!$  ! generate albedo through the envelope
-!!$  call getOmega(nY)
-!!$  ! generate stellar spectrum
-!!$  call Find_Tran(pstar,nY,nP,T4_ext,us,fs)
-!!$  if(iVerb.eq.2) write(*,*)' Done with transmitted radiation.'
-!!$  ! issue a message in fname.out about the condition for neglecting
-!!$  ! occultation only if T1 is given in input:
-!!$  if(typentry(1).eq.5.and.sph) then
-!!$     if(iterfbol.eq.1.and.itereta.eq.1.and.right.eq.0) call OccltMSG(us)
-!!$  end if
-!!$  ! finish when file with the stellar spectrum is not available
-!!$  if (error.eq.3) goto 999
-!!$  ! in the case of first (lowest) optical depth,
-!!$  ! us is the intial approximation for utot(iL,iY) for the first iteration over Td
-!!$  ! Find initial approximation of Td for the case of first iteration over Fbol or flux error to large.
-!!$  !if ((initial.and.(iterfbol.eq.1)).or.(initTemp.and.(iterfbol.gt.2))) then
-!!$  if ((iterfbol.eq.1).or.(initTemp.and.(iterfbol.gt.2))) then
-!!$     call Init_Temp(nY,T4_ext,us)
-!!$     if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
-!!$  end if
-!!$  do iY = 1,nY
-!!$     do iG = 1,nG
-!!$        Td_old(iG,iY) = Td(iG,iY)
-!!$     end do
-!!$  end do
-!!$  itlim = 2000
-!!$  conv = 0
-!!$  iter = 0
-!!$  !=== iterations over dust temperature =========
-!!$  do while (conv.eq.0.and.iter.le.itlim)
-!!$     iter = iter + 1
-!!$     !print*,iter
-!!$     ! find T_external for the new y-grid if T(1) given in input
-!!$     if (typentry(1).eq.5) call find_Text(nY,T4_ext)
-!!$     ! find emission term
-!!$     call Emission(nY,T4_ext,emiss,emiss_total)
-!!$     ! moment = 1 is for finding total energy density only
-!!$     moment = 1
-!!$     call Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
-!!$     call Find_Temp(nY,T4_ext)
-!!$     ! assign previus Td to Td_old
-!!$     maxerrU = 0.0d0  
-!!$     maxerrT = 0.0d0
-!!$     do iY = 1,nY
-!!$        do iL=1,nL
-!!$           if (abs(utot(iL,iY)).gt.dynrange*dynrange) then 
-!!$              aux1 = dabs((utot_old(iL,iY)-utot(iL,iY))/utot(iL,iY))
-!!$           else 
-!!$              aux1 = 0.0D0
-!!$           end if
-!!$           if (maxerrU.lt.aux1) then 
-!!$              maxerrU=aux1
-!!$              !print*,iL,iY,utot(iL,iY),utot_old(iL,iY),aux1
-!!$           end if
-!!$           utot_old(iL,iY) = utot(iL,iY)
-!!$        end do
-!!$        do iG = 1,nG
-!!$           aux1 = dabs(Td_old(iG,iY) - Td(iG,iY))/Td(iG,iY)
-!!$           if (aux1.gt.maxerrT) maxerrT = aux1
-!!$           Td_old(iG,iY) = Td(iG,iY)
-!!$        end do
-!!$     end do
-!!$     if(iVerb.eq.2) write(*,fmt='(a1)',advance='no') '.'
-!!$     if ((maxerrT.le.accTemp).and.(maxerrU.lt.(accFlux*9.e-1))) conv = 1
-!!$     if (iter.eq.itlim) print'(A,I6,A)','  !!! Reached iteration limit of ',itlim,' !!!!'
-!!$  enddo
-!!$   if(iVerb.eq.2) write(*,*) ' '
-!!$  !=== the end of iterations over Td ===
-!!$  if(iVerb.eq.2) then 
-!!$     write(*,'(A,I3,A)') '  Done with finding dust temperature after ',iter,' iterations'
-!!$     write(*,'(A,1PE9.3,A,1PE9.3)') '    errT: ',maxerrT,' errU: ',maxerrU
-!!$  end if
-!!$  ! find T_external for the converged dust temperature
-!!$  if (typentry(1).eq.5) call find_Text(nY,T4_ext)
-!!$  ! find Jext, needed in PrOut [MN]
-!!$  do iY = 1, nY
-!!$     Jext(iY) = sigma/pi * T4_ext(iY)
-!!$  end do
-!!$  ! calculate the emission term using the converged Td
-!!$  call Emission(nY,T4_ext,emiss,emiss_total)
-!!$  ! calculate total energy density and diffuse flux using the converged Td
-!!$  moment = 2
-!!$  call Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
-!!$  if(iVerb.eq.2) write(*,*) ' Done with finding energy density and diffuse flux.'
-!!$  !-----------------------------------------------------------------
-!!$  ! Find the energy density profiles if required.
-!!$  ! They are normalized in PrOut [MN,11]
-!!$  IF (iJ.gt.0) THEN
-!!$     if (sph_matrix) then 
-!!$        print*,'  J output not available for matrix method!!!'
-!!$     else
-!!$        call SPH_diff(1,0,nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,Ude)
-!!$        call SPH_diff(2,0,nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,Uds)
-!!$     end if
-!!$     ! interpolate J-output(iOut) to Y(iOut)
-!!$      DO iOut = 1, nJOut
-!!$         ! bracket the needed wavelength
-!!$        istop = 0
-!!$        i = 0
-!!$        DO WHILE (istop.EQ.0)
-!!$          i = i + 1
-!!$          IF (Y(i).GT.YJOut(iOut)) istop = 1
-!!$          IF (i.EQ.nJout) istop = 1
-!!$        END DO
-!!$        ! interpolate intensity
-!!$        xx = (YJOut(iOut)-Y(i-1))/(Y(i)-Y(i-1))
-!!$        DO iL = 1, nL
-!!$          JL = Ude(iL,i-1) + Uds(iL,i-1)
-!!$          JR = Ude(iL,i) + Uds(iL,i)
-!!$          JOut(iL,iOut) = JL + xx*(JR - JL)
-!!$        END DO
-!!$      END DO
-!!$   END IF
-!!$999 deallocate(emiss_total)
-!!$  deallocate(ubol_old)
-!!$  return
-!!$end subroutine Rad_Transf
-!!$!***********************************************************************
-
 !***********************************************************************
 subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
 !=======================================================================
@@ -1535,11 +1362,17 @@ subroutine Find_Tran(pstar,nY,nP,T4_ext,us,fs)
 !-----------------------------------------------------------------------
 
   allocate(usL(nL,nY))
+  usL = 0
   allocate(usR(nL,nY))
+  usR = 0
   allocate(m0(nL,nY))
+  m0 = 0
   allocate(m1(nL,nY))
+  m1 = 0
   allocate(m1p(nL,nY))
+  m1p = 0
   allocate(m1m(nL,nY))
+  m1m = 0
 
   dyn2 = 1.0d-30
   ! define T_external for typEntry(1).ne.5
@@ -1830,6 +1663,7 @@ subroutine Bolom(q,qbol,nY)
   !---------------------------------------------------------------------
   ! loop over iY (radial coordinate)
   allocate(qaux(nL))
+  qaux = 0
   do iY = 1, nY
      ! generate auxiliary function for integration
      ! loop over iL (wavelength)
@@ -1865,11 +1699,17 @@ subroutine SPH_ext_illum(m0,m1,m1p,m1m,nY,nP)
   external eta
 
   allocate(term1(nL,nP))
+  term1 = 0
   allocate(term2(nL,nP)) 
+  term2 = 0
   allocate(term_aux1(nP))
+  term_aux1 = 0
   allocate(tauaux(nY)) 
+  tauaux = 0
   allocate(z(nP,nY))
+  z = 0
   allocate(angle(nP))
+  angle = 0
 !-----------------------------------------------------------------------
   dyn2 = 1.0d-30
   error = 0
@@ -1927,7 +1767,9 @@ subroutine SPH_ext_illum(m0,m1,m1p,m1m,nY,nP)
            if(allocated(xg)) deallocate(xg)
            if(allocated(wg)) deallocate(wg)
            allocate(xg(nn))
+           xg = 0
            allocate(wg(nn))
+           wg = 0
            call gauleg(x1,x2,xg,wg,nn)
            do i = 1, nn
               p_loc = xg(i)
@@ -1947,7 +1789,9 @@ subroutine SPH_ext_illum(m0,m1,m1p,m1m,nY,nP)
            if(allocated(xg)) deallocate(xg)
            if(allocated(wg)) deallocate(wg)
            allocate(xg(nn))
+           xg = 0
            allocate(wg(nn))
+           wg = 0
            call gauleg(x1,x2,xg,wg,nn)
            do i = 1, nn
               p_loc = xg(i)
@@ -2053,9 +1897,13 @@ subroutine Find_Diffuse(nY,nP,initial,moment,iter,iterfbol,T4_ext,us,emiss)
   external eint2
   !----------------------------------------------------------------------
   allocate(sph_em(nL,nY))
+  sph_em = 0
   allocate(sph_sc(nL,nY))
+  sph_sc = 0
   allocate(tau(nY))
+  tau = 0 
   allocate(Sfn_em(nY))
+  Sfn_em = 0
   !----------------------------------------------------------------------
   dyn2 = 1.0d-30
   error = 0
@@ -2166,7 +2014,9 @@ subroutine Find_Temp(nY,T4_ext)
   external Planck
   !---------------------------------------------------------------------
   allocate(fnum(nG))
+  fnum = 0
   allocate(ff(nG))
+  ff = 0
   ! if T1 given in input:
   if(typentry(1).eq.5) call find_Text(nY,T4_ext)
   ! loop over grains
@@ -2236,7 +2086,9 @@ subroutine Find_Text(nY,T4_ext)
 !-----------------------------------------------------------------------
 
   allocate(fnum(nL))
+  fnum = 0
   allocate(fdenum(nL))
+  fdenum = 0
 ! loop over grains
   do iG = 1, nG
      do iL = 1, nL
@@ -2287,7 +2139,9 @@ subroutine Find_Text_multi(nY,T4_ext)
   double precision, allocatable :: fnum(:),fdenum(:)
   !----------------------------------------------------------------------
   allocate(fnum(nL))
+  fnum = 0
   allocate(fdenum(nL))
+  fdenum = 0
   ! set to fiducial Grain
   do iL = 1, nL
      fnum(iL) = sigmaA(ifidG,iL)*utot(iL,1)/lambda(iL)
@@ -2361,8 +2215,11 @@ subroutine SPH_diff(flag,moment,nY,nP,initial,iter,iterfbol,&
   external eta
   !-----------------------------------------------------------------------
   allocate(xN(nP))
+  xN = 0
   allocate(yN(nP))
+  yN = 0
   allocate(S_unscaled(nL,nY))
+  S_unscaled = 0
   first = 1
   !!** Prepcalcualte unscaled source function
   !$OMP PARALLEL DO PRIVATE(iY,iL,iG)
@@ -2712,7 +2569,9 @@ SUBROUTINE NORDLUND(nY,nP,flag,x,f,N1,N2,m,intfdx)
   double precision, allocatable :: wSimp(:), wCorr(:)
   ! ------------------------------------------------------------------
   allocate(wSimp(nP))
+  wSimp = 0
   allocate(wCorr(nP))
+  wCorr = 0
   error = 0
   ! parameter 'first' selects choice for derivatives at boundary points.
   ! For first.EQ.0 derivatives are 0 and first*(f2-f1)/(x2-x1) otherwise.
@@ -3001,7 +2860,9 @@ subroutine Init_Temp(nY,T4_ext,us)
   double precision,allocatable ::fnum(:),ff(:)
 
   allocate(fnum(nL))
+  fnum = 0
   allocate(ff(nL))
+  ff = 0
   
   !--------------------------------------------------------------------------
   if(typentry(1).eq.5) then
@@ -3079,10 +2940,15 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol,fbolom,fbol_em,fbol_sc,fbo
   external eta
   !---------------------------------------------------------------------
   allocate(ratio(npY))
+  ratio = 0
   allocate(tauaux(npY))
+  tauaux = 0
   allocate(etatemp(npY))
+  etatemp = 0
   allocate(Yins(npY))
+  Yins = 0
   allocate(iYins(npY))
+  iYins = 0
   flag= 0
   error = 0.0d0
   kins = 0
@@ -3280,7 +3146,9 @@ subroutine SLBdiff(nY,flag,grid,T4_ext,em,fp,fm)
   double precision, allocatable ::  tau(:),faux(:)
   external eint3
   allocate(tau(nY))
+  tau  = 0
   allocate(faux(nY))
+  faux  = 0 
   !--------------------------------------------------------------------
   do iL = 1, nL
      !$OMP PARALLEL DO private(iY,iG,frac) firstprivate(iL)
@@ -3355,7 +3223,9 @@ subroutine add2(nY,flxs,flxe,fbsum)
   double precision, allocatable :: flxsb(:),flxeb(:)
   !-------------------------------------------------------------------
   allocate(flxsb(nY))
+  flxsb = 0
   allocate(flxeb(nY))
+  flxeb = 0
   call bolom(flxs,flxsb,nY)
   call bolom(flxe,flxeb,nY)
   do iY = 1, nY
@@ -3431,21 +3301,37 @@ SUBROUTINE SPH_Int(nY,nP,fs)
 !!$! -----------------------------------------------------------------------
   ! temporary
   allocate(qaux(nL))
+  qaux = 0
   allocate(qaux2(nL))
+  qaux2 = 0
   allocate(alpha(1,nY))
+  alpha = 0
   allocate(fnum(nL))
+  fnum = 0 
   allocate(fdenum(nL))
+  fdenum = 0
   allocate(Istell(nL))
+  Istell = 0 
   allocate(tauOut(nL))
+  tauOut = 0
   allocate(Ids(nL,nP))
+  Ids = 0
   allocate(Ide(nL,nP))
+  Ide = 0
   allocate(Istsc(nL,nP))
+  Istsc = 0
   allocate(Istem(nL,nP))
+  Istem = 0
   allocate(tzp(nP))
+  tzp = 0
   allocate(Semis(nP))
+  Semis = 0 
   allocate(Sscat(nP))
+  Sscat = 0
   allocate(Sstem(nP))
+  Sstem = 0
   allocate(Sstsc(nP))
+  Sstsc = 0
   IF (nG.GT.1.AND.iX.GE.1) THEN
      print*, ' FindInt should be fixed, nG>1 ! kernel.f90 LINE 3141'
      stop
@@ -3750,6 +3636,7 @@ end subroutine SPH_Int
   external Sexp
   ! --------------------------------------------------------------------
   allocate(tau1(nY))
+  tau1 = 0 
   ! Loop over wavelengths
   do iL = 1, nL
      taut = TAUslb(iL,nY)
@@ -3843,12 +3730,19 @@ end subroutine SPH_Int
 !!$       L4, Mo, Tc3, sig_22
 !!$  external eta
   allocate(spectrum(nL))
+  spectrum = 0
   allocate(qaux(nL))
+  qaux = 0 
   allocate(qaux2(nL))
+  qaux2 = 0 
   allocate(K1(nY))
+  K1 = 0
   allocate(K2(nY))
+  K2 = 0
   allocate(qpTd(nG,nY))
+  qpTd = 0
   allocate(qpstar(nY))
+  QpStar = 0
   ! spectrum (flux at the outer edge as a function of wavelength)
   do iL = 1, nL
      spectrum(iL) = dabs(ftot(iL,nY))

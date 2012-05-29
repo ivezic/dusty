@@ -202,7 +202,9 @@ subroutine OccltMSG(us)
   double precision :: res1, res2, Te_min_loc, mx, psitn, Planck, xp
   !----------------------------------------------------------------------
   allocate(qaux(nL))
+  qaux = 0
   allocate(qaux2(nL))
+  qaux2 = 0
   ! Estimate min Teff required to neglect occultation (eq.(5) in Manual):
   write(18,*) 'Tsub(',ifidG,')=', Tsub(ifidG)
   ! write(18,*) '  lambda(iL)  SigmaA(1,iL) Planck(xP)   xP'

@@ -19,9 +19,10 @@ cat source/winds.f90 >> release/dusty/dusty.f90
 mkdir release/dusty/docs
 cp docs/manual.05.2012.pdf release/dusty/docs/manual.pdf
 cp data release/dusty/ -rf
+cp dusty.mas release/dusty/ -rf
 
 echo 'all:' > release/dusty/Makefile
-echo '\t gfortran -O3 -lgmp -fopenmp -o dusty dusty.f90' >> release/dusty/Makefile
+echo -e "\t gfortran -O3 -lgmp -fopenmp -o dusty dusty.f90" >> release/dusty/Makefile
 echo 'gfortran -O3 -lgomp -fopenmp -o dusty.exe dusty.f90' > release/dusty/compile.bat
 
 

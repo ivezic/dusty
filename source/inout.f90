@@ -110,6 +110,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         write(12,*) ' Central source spectrum described by'
         if (allocated(shpL)) deallocate(shpL)
         allocate(shpL(nL))
+        shpL = 0
         call inp_rad(1,shpL,spec_scale,startyp(1))
         !typentry give the scale of input radiation
         call rdinps2(Equal,1,12,str,L,UCASE)
@@ -166,6 +167,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         write(12,*) ' External source spectrum described by'
         if (allocated(shpR)) deallocate(shpR)
         allocate(shpR(nL))
+        shpR = 0
         call inp_rad(2,shpR,spec_scale,startyp(2))
         !typentry give the scale of input radiation
         if (left.eq.0) then
@@ -209,6 +211,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         write(12,*) ' Left-side source spectrum described by'
         if (allocated(shpL)) deallocate(shpL)
         allocate(shpL(nL))
+        shpL = 0
         call inp_rad(1,shpL,spec_scale,startyp(1))
         ! typentry give the scale of input radiation
         call rdinps2(Equal,1,12,str,L,UCASE)
@@ -263,6 +266,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         write(12,*) ' Right-side source spectrum described by'
         if (allocated(shpR)) deallocate(shpR)
         allocate(shpR(nL))
+        shpR = 0
         call inp_rad(2,shpR,spec_scale,startyp(2))
         call rdinps2(Equal,1,12,str,L,UCASE)
         if (str(1:L).eq.'DIRECTIONAL') then
@@ -443,8 +447,10 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   ! 2.2 Temperatures
   if (allocated(Tsub)) deallocate(Tsub)
   allocate(Tsub(nG))
+  Tsub = 0
   if (allocated(Tinner)) deallocate(Tinner)
   allocate(Tinner(nG))
+  Tinner = 0
   Tsub(1) = RDINP(Equal,1,12)
   print'(A,I3,A,F12.3)',' Grain:',1,' Sublimation Temperature:',Tsub(1)
   if (nG.gt.1) then
@@ -471,8 +477,10 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   end if
   if (allocated(SigmaA)) deallocate(SigmaA)
   allocate(SigmaA(nG+1,nL))
+  SigmaA = 0
   if (allocated(SigmaS)) deallocate(SigmaS)
   allocate(SigmaS(nG+1,nL))
+  SigmaS = 0
   call getOptPr(nameQ,nameNK,error,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
   IF (iVerb.ge.2) print*,'Done with getOptPr'
 
@@ -519,6 +527,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         if (Ntr.gt.0) then
            if (allocated(Ytr)) deallocate(Ytr)
            allocate(Ytr(Ntr))
+           Ytr = 0
            Ytr(1) = RDINP(Equal,1,12)
            if (Ntr.gt.1) then
               do i = 2, Ntr
@@ -536,6 +545,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         if (Ntr.gt.0) then
            if (allocated(ptr)) deallocate(ptr)
            allocate(ptr(Ntr))
+           ptr = 0
            do i = 1, Ntr
               ptr(i) = RDINP(NoEqual,1,12)
            end do
@@ -622,16 +632,22 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         nYetaf = i - 1
         if (allocated(xx)) deallocate(xx)
         allocate(xx(nYetaf))
+        xx = 0
         if (allocated(aa)) deallocate(aa)
         allocate(aa(nYetaf))
+        aa = 0
         if (allocated(bb)) deallocate(bb)
         allocate(bb(nYetaf))
+        bb = 0
         if (allocated(e)) deallocate(e)
         allocate(e(nYetaf))
+        e = 0
         if (allocated(yetaf)) deallocate(yetaf)
         allocate(yetaf(nYetaf))
+        yetaf = 0
         if (allocated(etaf)) deallocate(etaf)
         allocate(etaf(nYetaf))
+        etaf = 0
         rewind(26)
         ! # Read header again  --- **FH** need function to read header !!!!
         do i = 1, 3
@@ -1031,8 +1047,10 @@ subroutine inp_rad(is,shp,spec_scale,styp)
      ! Stellar temperature(s)
      if (allocated(Tbb)) deallocate(Tbb)
      allocate(Tbb(nBB))
+     Tbb = 0
      if (allocated(rellum)) deallocate(rellum)
      allocate(rellum(nBB))
+     rellum = 0
      Tbb(1) = RDINP(Equal,1,12)
      if (Tbb(1).le.0.0d0) then
         call msg(8)
@@ -1102,8 +1120,10 @@ subroutine inp_rad(is,shp,spec_scale,styp)
      nBB = 1
      if (allocated(Tbb)) deallocate(Tbb)
      allocate(Tbb(nBB))
+     Tbb = 0
      if (allocated(rellum)) deallocate(rellum)
      allocate(rellum(nBB))
+     rellum = 0 
      Tbb(1) = RDINP(Equal,1,12)
      Tstar(is) = Tbb(1)
      ! Depth of SiO abs.feature in %
@@ -1124,8 +1144,10 @@ subroutine inp_rad(is,shp,spec_scale,styp)
      nLamTr= RDINP(Equal,1,12)
      if (allocated(lamtr)) deallocate(lamtr)
      allocate(lamTr(nLamTr+1))
+     lamTr = 0
      if (allocated(klam)) deallocate(klam)
      allocate(klam(nLamTr+1))
+     klam = 0
      if (nLamTr.gt.0) then
         lamtr(1) = RDINP(Equal,1,12)
         if (nLamTr.gt.1) then
@@ -1149,8 +1171,10 @@ subroutine inp_rad(is,shp,spec_scale,styp)
      end if
      if (allocated(fl)) deallocate(fl)
      allocate(fl(nLamTr))
+     fl = 0 
      if (allocated(fpl)) deallocate(fpl)
      allocate(fpl(nL))
+     fpl = 0
      fl(1) = 1.0d0
      if (nLamtr.gt.1) then
         do i = 2, nLamtr
@@ -1231,9 +1255,13 @@ subroutine inp_rad(is,shp,spec_scale,styp)
      ios1 = 0
      iLs = 0
      allocate(lambda_s(nLs))
+     lambda_s = 0
      allocate(shp_s(nLs))
+     shp_s = 0
      allocate(tmp_sort1(nLs))
+     tmp_sort1 = 0
      allocate(tmp_sort2(nLs))
+     tmp_sort2 = 0
      do iLs = 1,nLs
         read(3,*,end=900,iostat=ios1) a, b
         if(ios1.ge.0) then
@@ -1311,6 +1339,7 @@ subroutine input_slb_ang(ang_type)
      imu = 1
      if (allocated(theta)) deallocate(theta)
      allocate(theta(int((th_max-th_min)/angstep)+1))
+     theta = 0
      theta(1)=th_min
      do while(theta(imu).lt.th_max)
         theta(imu+1) = theta(imu) + angstep
@@ -1333,6 +1362,7 @@ subroutine input_slb_ang(ang_type)
      imu = 1
      if (allocated(theta)) deallocate(theta)
      allocate(theta(int((cth_max-cth_min)/AngStep)+1))
+     theta = 0
      caux = cth_min
      do while (caux.gt.0.0d0)
         theta(imu) = dacos(caux)*180.0d0/pi
@@ -1381,7 +1411,9 @@ subroutine getOmega(nY)
   ! ** this is for future multigrain code **
   ! ** for single grains it is trivial **
   allocate(ext(nL))
+  ext = 0
   allocate(sca(nL))
+  sca = 0
   do iL = 1, nL
      ext(iL) = 0
      sca(iL) = 0
@@ -1494,12 +1526,17 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   external eta,psfn
   !---------------------------------------------------------------------
   allocate(ftotL(nL))
+  ftotL = 0
   allocate(ftotR(nL))
+  ftotR = 0
   allocate(faux(nL))
+  faux = 0
   allocate(sigma_tmp(nL))
+  sigma_tmp = 0
   if(allocated(Elems)) deallocate(Elems)
   if (nG.gt.1) allocate(Elems(nL,3+2*nG))
   if (nG.eq.1) allocate(Elems(nL,3))
+  Elems = 0
   do iL=1,nL
      sigma_tmp(iL) = sigmaS(nG+1,iL)
   end do
@@ -1543,6 +1580,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   FbolIR=FbolIR*Jext(nY)
   if(allocated(Elems)) deallocate(Elems)
   allocate(Elems(nL,8))
+  Elems = 0
   !  find the bolometric fluxes at the boundaries [MN]
   !** FH changed to find ftot everywhere
   do iY = 1, nY
@@ -1829,6 +1867,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   if (iB.ne.0) then
      if(allocated(Elems)) deallocate(Elems)
      allocate(Elems(nY,9+nG))
+     Elems = 0
      hdrslb1= '#     t        epsilon     tauF       RPr   '
      do iG = 1,nG
         write(hdrslb2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)'), '    Td(',iG,') '
@@ -1935,6 +1974,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
      if (slb) then
         if(allocated(Elems)) deallocate(Elems)
         allocate(Elems(nL,nmu+2))
+        Elems = 0
         hdint = '#  lambda'
         unt = 17
         call line(1,2,unt)
@@ -1978,6 +2018,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
      elseif(sph) then
         if(allocated(Elems)) deallocate(Elems)
         allocate(Elems(np+2,nLambdaOut+2))
+        Elems = 0
         hdint = '#     b          t(b)'
         hdcon = '#   offset '
         hdvis = '#     q    '
@@ -2017,6 +2058,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
      call line(1,1,unt)
      if(allocated(Elems)) deallocate(Elems)
      allocate(Elems(nconv,nLambdaOut+1))
+     Elems = 0
      do i = 1, nconv
         Elems(i,1) = offset(i)
         do j = 1, nLambdaOut
@@ -2056,6 +2098,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
         call line(1,1,unt)
         if(allocated(Elems)) deallocate(Elems)
         allocate(Elems(nvisi,nLambdaOut+1))
+        Elems = 0
         do i = 1, nvisi
            Elems(i,1) = qtheta1(i)
            do j = 1, nLambdaOut
@@ -2071,6 +2114,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   if(sph) then
      if(allocated(Elems)) deallocate(Elems)
      allocate(Elems(nL,nJOut+1))
+     Elems = 0
      if(iJ.gt.0) then
         unt = 19
         call line(1,2,unt)

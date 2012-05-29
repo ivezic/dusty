@@ -558,9 +558,13 @@ SUBROUTINE ANALINT(nY,Nanal,xaux,yaux,m,aux)
   double precision,allocatable :: A(:,:),xaux_tmp(:),yaux_tmp(:),coeff(:)
   ! ---------------------------------------------------------------------
   allocate(A(Nanal,Nanal))
+  A = 0
   allocate(xaux_tmp(Nanal))
+  xaux_tmp = 0
   allocate(yaux_tmp(Nanal))
+  yaux_tmp = 0
   allocate(coeff(Nanal))
+  coeff = 0
   do i=1,Nanal
      xaux_tmp(i) = xaux(i)
      yaux_tmp(i) = yaux(i)
@@ -689,10 +693,15 @@ SUBROUTINE LINSYS(Nreal,A,B,X)
   END INTERFACE
   ! ---------------------------------------------------------------------
   allocate(indx(Nreal))
+  indx = 0
   allocate(A1c(Nreal,Nreal))
+  A1c = 0
   allocate(B1(Nreal))
+  B1 = 0
   allocate(A2c(Nreal,Nreal))
+  A2c = 0
   allocate(B2(Nreal))
+  B2 = 0
   error = 0
   ! generate DOUBLE PRECISION copies of A and B (two copies because they
   ! are changed in LUDCMP and LUBKSB, but still needed for MPROVE)
@@ -783,6 +792,7 @@ SUBROUTINE LUDCMP(A,N,NP,INDX,D)
   double precision :: SUM,aamax,DUM
   ! ------------------------------------------------------------------
   allocate(VV(N))
+  VV = 0
   error = 0
   D = 1.
   DO I = 1, N
@@ -871,6 +881,7 @@ SUBROUTINE MPROVE(A,ALUD,N,NP,INDX,B,X)
   double precision,allocatable :: R(:)
   ! ---------------------------------------------------------------------
   allocate(R(N))
+  R = 0
   DO i = 1, N
      SDP = -B(i)
      DO j = 1, N

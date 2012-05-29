@@ -31,10 +31,15 @@ SUBROUTINE solve_matrix(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,devi
   double precision, allocatable :: emiss(:,:,:)
   !----------------------------------------------------------------------
   allocate(fs(nL,npY))
+  fs = 0
   allocate(us(nL,npY))
+  us = 0
   allocate(T4_ext(npY))
+  T4_ext = 0 
   allocate(emiss(nG,nL,npY))
+  Emiss = 0
   allocate(u_old(nL,npY))
+  u_old = 0
   IF (iX.NE.0) THEN
      CALL LINE(0,2,18)
      write(18,'(a7,i3,a20)') ' model ',model,'  RUN-TIME MESSAGES '
@@ -314,18 +319,25 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
  
   if (allocated(omat)) deallocate(omat)
   allocate(omat(nL,npY))
+  omat = 0
   if (allocated(emiss_total)) deallocate(emiss_total)
   allocate(emiss_total(nL,npY))
+  emiss_total = 0
   if (allocated(UbolChck)) deallocate(UbolChck)
   allocate(UbolChck(npY))
+  UbolChck = 0
   if (allocated(Uchck)) deallocate(Uchck)
   allocate(Uchck(nL,npY))
+  Uchck = 0
   if (allocated(fbolold)) deallocate(fbolold)
   allocate(fbolold(npY))
+  fbolold = 0
   if (allocated(fdebol)) deallocate(fdebol)
   allocate(fdebol(npY))
+  fdebol = 0
   if (allocated(fdsbol)) deallocate(fdsbol)
   allocate(fdsbol(npY))
+  fdsbol = 0
   !------------------------------------------------------------------------
   ! generate, or improve, or do not touch the Y and P grids
   IF (iterETA.EQ.1.OR.iterFbol.GT.1) THEN
@@ -373,9 +385,13 @@ SUBROUTINE RADTRANSF_matrix(pstar,iPstar,nY,nYprev,nP,nCav,nIns,TAUmax,&
   if (allocated(mifront)) deallocate(mifront)
   if (allocated(miback)) deallocate(miback)
   allocate(mat0(nL,nY,nY))
+  mat0 = 0
   allocate(mat1(nL,nY,nY))
+  mat1 = 0
   allocate(mifront(nL,(20*nY+20),nY))
+  mifront = 0
   allocate(miback(nL,(20*nY+20),nY))
+  miback = 0
   ! generate spline coefficients for ETA
   CALL setupETA(nY,nYprev,itereta)
   ! evaluate ETAzp
@@ -640,8 +656,11 @@ SUBROUTINE INVERT(nY,mat,Us,Em,Uold,omat)
   DOUBLE PRECISION,allocatable ::  A(:,:), B(:), X(:)
   !--------------------------------------------------------------------
   allocate(B(nY))
+  B = 0
   allocate(A(nY,nY))
+  A = 0
   allocate(X(nY))
+  X = 0
   error = 0
   ! calculate new energy density
   ! loop over wavelengths
@@ -940,24 +959,43 @@ SUBROUTINE matrix(pstar,iPstar,m0,m1,mifront,miback,nP,nY,nPok,nYok,T4_ext)
   END INTERFACE
   !---------------------------------------------------------------------
   allocate(nZ(nP))
+  nZ = 0
   allocate(haux(nP))
+  haux = 0 
   allocate(TAUaux(nL,nP,nY))
+  TAUaux = 0
   allocate(Tplus(nP,nY,nY))
+  Tplus = 0
   allocate(Tminus(nP,nY,nY))
+  Tminus = 0 
   allocate(xN(nP))
+  xN = 0
   allocate(yN(nP))
+  yN = 0
   allocate(TAUr(nY))
+  TAUr = 0
   allocate(wm(nY))
+  wm = 0
   allocate(wmT(nY))
+  wmt = 0
   allocate(wp(npY))
+  wp = 0
   allocate(alpha(nY,nY))
+  alpha = 0 
   allocate(beta(nY,nY))
+  beta = 0
   allocate(gamma2(nY,nY))
+  gamma2 = 0
   allocate(delta(nY,nY))
+  delta = 0
   allocate(wgmatp(nY,nY))
+  wgmatp = 0
   allocate(wgmatm(nY,nY))
+  wgmatm = 0
   allocate(Yok(nY))
+  Yok = 0
   allocate(Pok(nP))
+  Pok = 0
   error = 0
   ! generate auxiliary arrays haux & nZ
   DO iP = 1, nP
@@ -1198,8 +1236,11 @@ SUBROUTINE MYSPLINE(x,N,alpha,beta,gamma2,delta)
   EXTERNAL Kron
   
   allocate(secnder(N,N))
+  secnder = 0
   allocate(yaux(N))
+  yaux = 0 
   allocate(deraux(N))
+  deraux = 0
   ! -----------------------------------------------------------------------
   ! generate second derivatives, secnder(j,l)
   DO j = 1, N
@@ -1291,13 +1332,21 @@ SUBROUTINE WEIGHTS(TAUaux,iP,iL,nZ,alpha,beta,gamma2,delta,wgp,wgm,nY)
      end SUBROUTINE Kint4
   END INTERFACE
   allocate(K1p(nY))
+  K1p = 0
   allocate(K2p(nY))
+  K2p = 0
   allocate(K3p(nY))
+  K3p = 0
   allocate(K4p(nY))
+  K4p = 0
   allocate(K1m(nY))
+  K1m = 0
   allocate(K2m(nY))
+  K2m = 0
   allocate(K3m(nY))
+  K3m = 0
   allocate(K4m(nY))
+  K4m = 0
   !-----------------------------------------------------------------------
   ! generate integrals of 'TAUr**n'
   CALL Kint4(TAUaux,iP,iL,nZ,K1p,K2p,K3p,K4p,K1m,K2m,K3m,K4m)
@@ -2095,8 +2144,11 @@ SUBROUTINE ChkFlux(nY,nYprev,flux,tolern,consfl,iterEta)
   double precision,allocatable :: EtaTemp(:),Yins(:)
   !--------------------------------------------------------------------
   allocate(iYins(nY))
+  iYins = 0 
   allocate(EtaTemp(nY))
+  EtaTemp = 0
   allocate(Yins(nY))
+  Yins = 0
   ! save old grid and values of Eta (important for denstyp = 5 or 6)
   IF (denstyp.eq.3) THEN !3(RDW)
      DO iY = 1, nY

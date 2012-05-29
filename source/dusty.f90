@@ -10,7 +10,6 @@ PROGRAM DUSTY
   CHARACTER(len=235) :: dustyinpfile, path, apath, nameIn, &
        nameOut, stdf(7)
   INTEGER iL
-  include "source/interfaces.f90"
   INTERFACE
      SUBROUTINE GetTau(tau1,tau2,GridType,Nmodel,tau)
        integer Nmodel, GridType
@@ -90,6 +89,7 @@ PROGRAM DUSTY
            IF (error.eq.0) THEN 
               IF(ALLOCATED(tau)) DEALLOCATE(tau)
               ALLOCATE(tau(Nmodel))
+              tau = 0
               CALL GetTau(tau1,tau2,GridType,Nmodel,tau)
               IF (iVerb.ge.2) print*,'Done with GetTau'
               CALL Kernel(path,lpath,tau,Nmodel)
@@ -133,6 +133,7 @@ subroutine ReadLambda()
   call skip_header(4)
   nL = RDINP(Equal,4,6)
   allocate(lambda(nL))
+  lambda = 0
   ! initialize lambda array
   do iL = 1, nL
      read(4,*,end=99) lambda(iL)
@@ -199,46 +200,37 @@ implicit none
 integer :: iL, iY, iR, iG, iP
   ! Memory allocation----------------------------------
   allocate(fsL(nL,npY))
+  fsL = 0
   allocate(fsR(nL,npY))
+  fsR = 0
   allocate(TAUtot(nL))
+  TAUtot = 0 
   allocate(TAUslb(nL,npY))
+  TAUslb = 0 
   allocate(omega(npG+1,nL))
+  omega = 0
   allocate(Utot(nL,npY))
+  Utot = 0
   allocate(Utot_old(nL,npY))
+  Utot_old = 0
   allocate(Ude(nL,npY))
+  Ude = 0
   allocate(Uds(nL,npY))
+  Uds = 0
   allocate(fds(nL,npY))
+  fds = 0
   allocate(fde(nL,npY))
+  fde = 0
   allocate(ftot(nL,npY))
+  ftot = 0
   allocate(IstR(nL))
+  IstR = 0
   allocate(SLBIntm(npR,nL))
+  SLBIntm = 0
   allocate(SLBIntp(npR,nL))
+  SLBIntp = 0
   allocate(Intens(nL,npP+2))
-  !Initialize arrays with zeros
-  do iL = 1, nL
-     TAUtot(iL) = 0.
-     IstR(iL) = 0.
-     do iG = 1, npG+1
-        omega(iG,iL) = 0.
-     end do
-     do iY = 1, npY
-        fsL(iL,iY) = 0.
-        fsR(iL,iY) = 0.
-        TAUslb(iL,iY) = 0.
-        Ude(iL,iY) = 0.
-        Uds(iL,iY) = 0.
-        fds(iL,iY) = 0.
-        fde(iL,iY) = 0.
-        ftot(iL,iY) = 0.
-     end do
-     do iR = 1, npR
-        SLBIntm(iR,iL) = 0.
-        SLBIntp(iR,iL) = 0.
-     end do
-     do iP = 1, npP+2
-        Intens(iL,iP) = 0.
-     end do
-  end do
+  Intens = 0
 end subroutine alloc_mem_nL
 
 subroutine alloc_mem()
@@ -247,87 +239,69 @@ implicit none
   integer :: iG, iY,iP
   ! Memory allocation----------------------------------
   allocate(Y(npY))
+  Y = 0
   allocate(Yprev(npY))
+  Yprev = 0
   allocate(Plast(npY))
+  Plast = 0
   allocate(ETAdiscr(npY))
+  ETAdiscr = 0
   allocate(fsLbol(npY))
+  fsLbol = 0 
   allocate(fsRbol(npY))
+  fsRbol = 0
   allocate(fsbol(npY))
+  fsbol = 0
   allocate(Jext(npY))
+  Jext = 0
   allocate(RPr(npY))
+  RPr = 0
   allocate(tauF(npY))
+  tauF = 0 
   allocate(eps(npY))
+  eps = 0
   allocate(ugas(npY))
+  ugas = 0
   allocate(Gamma(npY))
+  Gamma = 0
   allocate(fbol(npY))
+  fbol = 0
   allocate(ubol(npY))
+  ubol = 0
   allocate(fpbol(npY))
+  fpbol = 0
   allocate(fmbol(npY))
+  fmbol = 0
   allocate(qF(npY))
+  qF = 0
   allocate(tauFdyn(npY))
+  tauFdyn = 0
   allocate(ETAzp(npP,npY))
+  ETAzp = 0 
   allocate(abund(npG+1,npY))
+  abund = 0
   allocate(Td_old(npG+1,npY))
+  Td_old = 0
   allocate(Td(npG+1,npY))
+  Td = 0
   allocate(vrat(npG+1,npY))
+  vrat = 0
   allocate(rg(npG+1,npY))
-  !initialze arrays to zero
-  do iY = 1, npY
-     do iP = 1,npP
-        ETAzp(iP,iY) = 0.
-     end do
-     do iG = 1,npG+1
-        abund(iG,iY) = 0.
-        Td_old(iG,iY) = 0.
-        Td(iG,iY) = 0.
-        vrat(iG,iY) = 0.
-        rg(iG,iY) = 0.
-     end do
-     tauFdyn(iY) = 0.
-     Y(iY) = 0.
-     Yprev(iY) = 0.
-     Plast(iY) = 0.
-     ETAdiscr(iY) = 0.
-     fsLbol(iY) = 0.
-     fsRbol(iY) = 0.
-     fsbol(iY) = 0.
-     Jext(iY) = 0.
-     RPr(iY) = 0.
-     tauF(iY) = 0.
-     eps(iY) = 0.
-     ugas(iY) = 0. 
-     Gamma(iY) = 0.
-     fbol(iY) = 0. 
-     ubol(iY) = 0.
-     fpbol(iY) = 0.
-     fmbol(iY) = 0.
-     qF(iY) = 0.
-  end do
+  rg = 0
   allocate(P(npP))
+  P = 0
   allocate(iYfirst(npP))
+  iYfirst = 0
   allocate(YPequal(npP))
-  do iP=1,npP
-     P(iP) = 0.
-     iYfirst(iP) = 0
-     YPequal(iP) = 0.
-  end do
+  YPequal = 0
   allocate(IntOut(20,npP+2))
+  IntOut = 0
   allocate(bOut(npP+2))
+  bout = 0
   allocate(tauZout(npP+2))
-  do iP = 1, npP+2
-     bout(iP) = 0.
-     tauZout(iP) = 0.
-     do iY = 1, 20
-        IntOut(iY,iP) = 0.
-     end do
-  end do
+  tauZout = 0
   allocate(destroyed(npG,npY))
-  do iG = 1,npG
-     do iY = 1,npY
-        !all grains existent at the beginning of the simulation
-        destroyed(iG,iY) = 1.0
-     end do
-  end do
+  destroyed = 0
 end subroutine alloc_mem
 
 subroutine dealloc_mem()

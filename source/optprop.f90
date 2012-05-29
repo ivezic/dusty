@@ -30,13 +30,21 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
   Nprop = 7
   !----------------------------------------------------------------
   allocate(n(nL))
+  n = 0
   allocate(k(nL))
+  k = 0
   allocate(aQabs(npA,nL))
+  aQabs = 0
   allocate(aQsca(npA,nL))
+  aQsca = 0
   allocate(SigAbs(npA,nL))
+  SigAbs = 0
   allocate(SigSca(npA,nL))
+  SigSca = 0
   allocate(n_int(nL))
+  n_int = 0
   allocate(k_int(nL))
+  k_int = 0
   er = 0
   ! first check that the user supplied wavelength grid is
   ! monotonously increasing
