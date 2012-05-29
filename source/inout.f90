@@ -1512,7 +1512,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   integer :: model,nY,nP,nYprev,itereta
   double precision :: delta
   !---local variables
-  integer :: i, j, iLV, iG, iL, iY, unt, imu, iOut, iNloc
+  integer :: i, j, iLV, iG, iL, iY, unt, imu, iOut, iNloc, tsub_reached
   double precision, allocatable::Elems(:,:),ftotL(:),ftotR(:),faux(:),sigma_tmp(:)
   double precision :: sigmaVs,sigmaVa,sigmaVe,Y_loc,J_loc,Jbol(10)
   double precision :: FbolL, FbolR, FbolIL,FbolIR,res, xAttTotL,&
@@ -1714,6 +1714,22 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   end if
   ! print output tables for ea.model
   !---------------- Output for slab: ---------------------------
+  tsub_reached = 0
+  do iY=1,nY
+     do iG=1,nG
+        if (Td(iG,iY).gt.Tsub(1)) then 
+           tsub_reached = 1
+        end if
+     end do
+  end do
+  if (tsub_reached.eq.1) then 
+     write(12,*) ' ***Warning***'
+     write(12,*) ' dust temperature is higher then sublimation temperature'
+     write(12,*) ' ***Warning***'
+     write(6,*) ' ***Warning***'
+     write(6,*) ' dust temperature is higher then sublimation temperature'
+     write(6,*) ' ***Warning***'
+  end if
   if(slb) then
      write(12,'(i4,1p,10e10.2,a3)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
      !---------- for spherical shell ------------------------------

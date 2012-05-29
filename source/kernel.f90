@@ -2050,7 +2050,7 @@ subroutine Find_Temp(nY,T4_ext)
         !Td(iG,iY) = (fnum1*T4_ext(iY)/gg)**(1.0d0/4.0d0)
         Td(iG,iY) = (fnum1/gg)**(1.0d0/4.0d0)*T4_ext(iY)**(1.0d0/4.0d0)
         if (Td(iG,iY).gt.(1.+2*accTemp)*Tsub(iG)) then 
-           destroyed(iG,iY) = 0.0
+           destroyed(iG,iY) = 1.0
         else 
            destroyed(iG,iY) = 1.0
         end if
