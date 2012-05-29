@@ -7,7 +7,7 @@
  examples/slab3/slab3.inp                                                                                                                                                                                                                   
 * ----------------------------------------------------------------------                                                                                                                                                                                       
 * NOTES:                                                                                                                                                                                                                                                       
-* Sample input file (slab2.inp)                                                                                                                                                                                                                                
+* Sample input file (slab3.inp)                                                                                                                                                                                                                                
 * directional input of power law spectrum                                                                                                                                                                                                                      
 * Flux as input                                                                                                                                                                                                                                                
 * ----------------------------------------------------------------------                                                                                                                                                                                       
@@ -26,8 +26,8 @@
   Directional illumination from the left.
   --------------------------------------------
   Optical depth at 5.5E-01 microns: 1.00E+01
-   Required Flux accuracy:        5.00%
-   Required Temp accuracy:        0.12%
+   Required Flux accuracy:       10.00%
+   Required Temp accuracy:        0.24%
   --------------------------------------------
   Intensity requested for these theta_out(deg):
      0.0    5.0   10.0   15.0   20.0   25.0   30.0   35.0
@@ -41,10 +41,10 @@
  ###    Tau0    Psi/Psi0     FiL      FiR       FbolL    FbolR     r1(cm)    TdL(K)    TdR(K)    RPr(1)   e(%)          
  ###      1        2          3        4          5        6         7          8         9       10      11            
  =============================================================================================================
-   1  1.00E+01  1.38E+00  2.84E+04  0.00E+00 -2.13E+04  7.73E+03  3.23E+14  1.40E+03  5.96E+02  1.64E+07  5
+   1  1.00E+01  1.38E+00  2.84E+04  0.00E+00 -2.11E+04  7.61E+03  3.23E+14  1.41E+03  5.92E+02  1.64E+07  3
  =====================================
   (1) optical depth at 5.5E-01 microns
-  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0= 2.18E+01
+  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0= 2.20E+01
   (3) input bol.flux (in W/m2) of the left-side source at the left slab boundary
   (4) input bol.flux (in W/m2) of the right-side source at the right slab boundary
   (5) bolometric flux (in W/m2) at the left slab boundary

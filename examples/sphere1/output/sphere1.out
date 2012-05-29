@@ -16,7 +16,7 @@
 * ----------------------------------------------------------------------                                                                                                                                                                                       
   Central source spectrum described by
    a single Black Body with temperature     5800.00 K
-  Dust temperature on the inner boundary:   0.0000000000000000       K
+  Dust temperature on the inner boundary:   1200.0000000000000       K
   --------------------------------------------
   density described by 1/r**k with k =  0.0
   relative thickness: 1.000E+03
@@ -32,10 +32,10 @@
  ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1   T1(K)    Td(K)    RPr(1)  e(%)                              
  ###     1       2        3        4        5        6        7        8        9      10                               
  ========================================================================================
-   1 1.00E+01 1.01E+00 7.70E+04 1.99E+14 2.89E+01 1.49E+00 1.20E+03 4.81E+01 1.39E+07   2
+   1 1.00E+01 1.01E+00 7.65E+04 2.00E+14 2.90E+01 1.49E+00 1.20E+03 4.81E+01 1.38E+07   2
  =====================================
   (1) optical depth at 5.5E-01 microns
-  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0= 6.06E+00
+  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0= 6.09E+00
   (3) bolometric flux at the inner radius 
   (4) inner radius for L = 1e4 Lo
   (5) ratio of the inner to the stellar radius
