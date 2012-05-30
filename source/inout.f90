@@ -1514,7 +1514,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   !---local variables
   integer :: i, j, iLV, iG, iL, iY, unt, imu, iOut, iNloc, tsub_reached
   double precision, allocatable::Elems(:,:),ftotL(:),ftotR(:),faux(:),sigma_tmp(:)
-  double precision :: sigmaVs,sigmaVa,sigmaVe,Y_loc,J_loc,Jbol(10)
+  double precision :: sigmaVs,sigmaVa,sigmaVe,Y_loc,J_loc,Jbol(10),temp_sub_reached
   double precision :: FbolL, FbolR, FbolIL,FbolIR,res, xAttTotL,&
        xAttTotR,xDsTotL,xDsTotR,xDeTotL,xDeTotR,temp1,temp2, &
        fnormL, fnormR, limval, tht1, dmax, GinfG1, xs, xde, xds, tr, &
@@ -1717,29 +1717,52 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   tsub_reached = 0
   do iY=1,nY
      do iG=1,nG
-        if (Td(iG,iY).gt.Tsub(1)) then 
+        if (Td(iG,iY).gt.(1+2*accTemp)*Tsub(1)) then 
            tsub_reached = 1
+           if (temp_sub_reached.lt.Td(iG,iY)) then 
+              temp_sub_reached = Td(iG,iY)
+           end if
         end if
      end do
   end do
   if (tsub_reached.eq.1) then 
-     write(12,*) ' ***Warning***'
-     write(12,*) ' dust temperature is higher then sublimation temperature'
-     write(12,*) ' ***Warning***'
+     if (iX.eq.1) then 
+        write(18,*) ' ***Warning***'
+        write(18,*) ' dust temperature is higher then sublimation temperature'
+        write(18,*) ' ***Warning***'
+     end if
      write(6,*) ' ***Warning***'
      write(6,*) ' dust temperature is higher then sublimation temperature'
      write(6,*) ' ***Warning***'
   end if
   if(slb) then
-     write(12,'(i4,1p,10e10.2,a3)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
+     if (tsub_reached.eq.0) then 
+        write(12,'(i4,1p,10e10.2,a3)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr
+     else
+        write(12,'(i4,1p,10e10.2,a3,a,1e11.3,a,1e11.3,a)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, &
+             FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr,' #WARNING: dust temperature (',temp_sub_reached,&
+             'K) is higher then sublimation temperature (',Tsub(1),'K)'
+     endif
      !---------- for spherical shell ------------------------------
   elseif(sph) then
      if ((denstyp.eq.3).or.(denstyp.eq.4).or.(denstyp.eq.6)) then ! 3(RDW) 4(RDWA) 6(RDWPR)
-        write(12,'(i4,1p,9e9.2,a1,a3,a1,1p,3e9.2)') &
-             model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr,' ',CMdot, CVe, CM
+        if (tsub_reached.eq.0) then 
+           write(12,'(i4,1p,9e9.2,a1,a3,a1,1p,3e9.2)') &
+                model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr,' ',CMdot, CVe, CM
+        else
+           write(12,'(i4,1p,9e9.2,a1,a3,a1,1p,3e9.2,a,1e11.3,a,1e11.3,a)') &
+                model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr,' ',CMdot, CVe, CM,&
+                ' #WARNING: dust temperature (',temp_sub_reached,'K) is higher then sublimation temperature (',Tsub(1),'K)'
+        end if
      else
-        write(12,'(i4,1p,9e9.2,a1,a3)') &
-             model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr
+        if (tsub_reached.eq.0) then 
+           write(12,'(i4,1p,9e9.2,a1,a3)') &
+                model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr
+        else
+           write(12,'(i4,1p,9e9.2,a1,a3,a,1e11.3,a,1e11.3,a)') &
+                model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr,&
+                ' #WARNING: dust temperature (',temp_sub_reached,'K) is higher then sublimation temperature (',Tsub(1),'K)'
+        endif
      end if
      if ((denstyp.eq.6)) then ! 6(RDWPR)
         !** private rdw file **
