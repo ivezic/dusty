@@ -1728,11 +1728,11 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
   if (tsub_reached.eq.1) then 
      if (iX.eq.1) then 
         write(18,*) ' ***Warning***'
-        write(18,*) ' dust temperature is higher then sublimation temperature'
+        write(18,*) ' dust temperature is higher than sublimation temperature'
         write(18,*) ' ***Warning***'
      end if
      write(6,*) ' ***Warning***'
-     write(6,*) ' dust temperature is higher then sublimation temperature'
+     write(6,*) ' dust temperature is higher than sublimation temperature'
      write(6,*) ' ***Warning***'
   end if
   if(slb) then
@@ -1741,7 +1741,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
      else
         write(12,'(i4,1p,10e10.2,a3,a,1e11.3,a,1e11.3,a)') model, taufid, Psi/Psi0,FbolIL, FbolIR, FbolL, &
              FbolR, Cr1, Td(1,1), Td(1,nY), RPr(1), Serr,' #WARNING: dust temperature (',temp_sub_reached,&
-             'K) is higher then sublimation temperature (',Tsub(1),'K)'
+             'K) is higher than sublimation temperature (',Tsub(1),'K)'
      endif
      !---------- for spherical shell ------------------------------
   elseif(sph) then
@@ -1752,7 +1752,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
         else
            write(12,'(i4,1p,9e9.2,a1,a3,a1,1p,3e9.2,a,1e11.3,a,1e11.3,a)') &
                 model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr,' ',CMdot, CVe, CM,&
-                ' #WARNING: dust temperature (',temp_sub_reached,'K) is higher then sublimation temperature (',Tsub(1),'K)'
+                ' #WARNING: dust temperature (',temp_sub_reached,'K) is higher than sublimation temperature (',Tsub(1),'K)'
         end if
      else
         if (tsub_reached.eq.0) then 
@@ -1761,7 +1761,7 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
         else
            write(12,'(i4,1p,9e9.2,a1,a3,a,1e11.3,a,1e11.3,a)') &
                 model, taufid, Psi/Psi0, Ji*4*pi, Cr1, r1rs, tht1, Td(1,1), Td(1,nY), RPr(1),' ',Serr,&
-                ' #WARNING: dust temperature (',temp_sub_reached,'K) is higher then sublimation temperature (',Tsub(1),'K)'
+                ' #WARNING: dust temperature (',temp_sub_reached,'K) is higher than sublimation temperature (',Tsub(1),'K)'
         endif
      end if
      if ((denstyp.eq.6)) then ! 6(RDWPR)
