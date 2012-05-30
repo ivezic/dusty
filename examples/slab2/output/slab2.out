@@ -33,10 +33,10 @@
  ###    Tau0    Psi/Psi0     FiL      FiR       FbolL    FbolR     r1(cm)    TdL(K)    TdR(K)    RPr(1)   e(%)          
  ###      1        2          3        4          5        6         7          8         9       10      11            
  =============================================================================================================
-   1  1.00E+01  1.26E+00  2.14E+03  2.14E+03 -2.26E+03  2.26E+03  5.98E+14  7.22E+02  7.22E+02  2.22E+05  5
+   1  1.00E+01  1.26E+00  2.51E+01  2.51E+01 -3.03E+01  3.01E+01  5.51E+15  3.90E+02  3.90E+02  1.73E+04  1
  =====================================
   (1) optical depth at 5.5E-01 microns
-  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0= 5.71E+00
+  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0= 4.14E+01
   (3) input bol.flux (in W/m2) of the left-side source at the left slab boundary
   (4) input bol.flux (in W/m2) of the right-side source at the right slab boundary
   (5) bolometric flux (in W/m2) at the left slab boundary

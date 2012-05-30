@@ -20,7 +20,7 @@
                  Ncav =  32
   Calculating with  48 grid points
    ******** MESSAGE from Solve ********
-  Achieved accuracy:   5.089E+00 %
+  Achieved accuracy:   5.172E+00 %
    Trying again with finer grids
               3  iteration over fbol
   Ncav increased to: 49
@@ -30,7 +30,7 @@
                  Ncav =  49
   Calculating with  74 grid points
    ******** MESSAGE from Solve ********
-  Achieved accuracy:   5.826E+00 %
+  Achieved accuracy:   6.162E+00 %
    Trying again with finer grids
               4  iteration over fbol
   Ncav increased to: 64
@@ -39,6 +39,6 @@
                  Nins = 192
                  Ncav =  64
   Calculating with  96 grid points
-  Accuracy of computed bolom. flux:   4.7 %
+  Accuracy of computed bolom. flux:   4.9 %
    ==== SOLVE successfully completed =====
    =======================================

@@ -17,9 +17,14 @@ cat source/solve_matrix.f90 >> release/dusty/dusty.f90
 cat source/winds.f90 >> release/dusty/dusty.f90 
 
 mkdir release/dusty/docs
+cd docs
+latex manual.05.2012.tex
+dvipdf manual.05.2012.dvi
+cd ..
 cp docs/manual.05.2012.pdf release/dusty/docs/manual.pdf
-cp data release/dusty/ -rf
+svn export ./data release/dusty/data
 cp dusty.mas release/dusty/ -rf
+cp userpar.inc release/dusty/ -rf
 
 echo 'all:' > release/dusty/Makefile
 echo -e "\t gfortran -O3 -lgmp -fopenmp -o dusty dusty.f90" >> release/dusty/Makefile

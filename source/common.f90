@@ -18,12 +18,12 @@ Module common
   integer nOutput                       ! number of output columns
   PARAMETER (nOutput=20)
   integer npY,npP,npL,npG,npR
-  PARAMETER (npY = 1000)
-  PARAMETER (npP = 20*npY+20)
+  !PARAMETER (npY = 1000)
+  !PARAMETER (npP = 20*npY+20)
   PARAMETER (npL = 125)
-  PARAMETER (npG = 16)
-  PARAMETER (npR = 90)
-
+  !PARAMETER (npG = 16)
+  !PARAMETER (npR = 90)
+  include "userpar.inc"
   double precision,allocatable :: ETAdiscr(:)
   integer,allocatable ::  iYfirst(:), YPequal(:), Plast(:)
   integer left,right

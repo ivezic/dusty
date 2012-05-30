@@ -3,8 +3,8 @@
  --------------------------------------------------
  ===========  starting to solve  ===========
               1  iteration over fbol
-  Tau grid generated, nY=  55
-  Calculating with  55 grid points
-  Accuracy of computed bolom. flux:   6.1 %
+  Tau grid generated, nY=  53
+  Calculating with  53 grid points
+  Accuracy of computed bolom. flux:   9.3 %
    ==== SOLVE successfully completed =====
    =======================================
