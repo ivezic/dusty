@@ -460,17 +460,17 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         print'(A,I3,A,F12.3)',' Grain:',iG,' Sublimation Temperature:',Tsub(iG)
      end do
   end if
-  if (Tinner_fidG.gt.Tsub(ifidG)) then 
-     Tinner_fidG = Tsub(ifidG)
-     write(12,*) ' *** Warning***'
-     write(12,*) ' Inner boundary temperature larger than sublimation temperature'
-     write(12,*) ' -> reduced to ',Tinner_fidG
-     write(12,*) ' *** Warning***'
-     write(6,*) ' *** Warning***'
-     write(6,*) ' Inner boundary temperature larger than sublimation temperature'
-     write(6,*) ' -> reduced to ',Tinner_fidG
-     write(6,*) ' *** Warning***'
-  end if
+!!$  if (Tinner_fidG.gt.Tsub(ifidG)) then 
+!!$     Tinner_fidG = Tsub(ifidG)
+!!$     write(12,*) ' *** Warning***'
+!!$     write(12,*) ' Inner boundary temperature larger than sublimation temperature'
+!!$     write(12,*) ' -> reduced to ',Tinner_fidG
+!!$     write(12,*) ' *** Warning***'
+!!$     write(6,*) ' *** Warning***'
+!!$     write(6,*) ' Inner boundary temperature larger than sublimation temperature'
+!!$     write(6,*) ' -> reduced to ',Tinner_fidG
+!!$     write(6,*) ' *** Warning***'
+!!$  end if
   if (typentry(1).eq.5) then 
      Tinner(ifidG) = Tinner_fidG
      print'(a,i3,a,f8.2)',' Inner Boundary Temperature of fiducial Grain(',ifidG,')=',Tinner(ifidG)

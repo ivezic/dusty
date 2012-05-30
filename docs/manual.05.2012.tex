@@ -1072,11 +1072,7 @@ which the dust grains can exist:
 \begin{verbatim}
     Sublimation Temperature = 1500K
 \end{verbatim}
-If \D's solution includes dust at higher temperatures, these grains
-are removed. When the specified input radiation strength (see
-\S\ref{sec:scaling_radiation}) produces on the heated surface a dust
-temperature higher than sublimation, it is changed such that that
-temperature is the sublimation temperature. In addition \D\ will print
+If \D's solution includes dust at higher temperatures, \D\ will print
 a warning message on the screen and in {\tt fname.out}. The Sections
 \ref{sec:default_sph} (sphere) and \ref{sec:default_slb} (slab)
 describe the file {\tt fname.out} in detail.
@@ -1314,8 +1310,7 @@ that {\tt tau0}:
 \item {\tt T1} -- the dust temperature, in K, at the envelope's inner
   boundary. When the specified input radiation strength (see
   \S\ref{sec:scaling_radiation}) produces a temperature in excess of
-  the sublimation temperature {\tt Tsub}, it is changed such that {\tt
-    T1 = Tsub} and \D\ will print a warning message.
+  the sublimation temperature {\tt Tsub}, \D\ will print a warning message.
 
 \item {\tt Td} -- the dust temperature, in K, at the envelope's outer
   boundary $(y = Y)$.
@@ -1647,8 +1642,7 @@ that {\tt tau0}:
 \item {\tt TdL(K)} -- the dust temperature at the slab left
   boundary. When the specified input radiation strength (see
   \S\ref{sec:scaling_radiation}) produces a temperature in excess of
-  the sublimation temperature {\tt Tsub}, it is changed such that {\tt
-    TdL = Tsub} and \D\ will print a warning message.
+  the sublimation temperature {\tt Tsub}, \D\ will print a warning message.
 \item {\tt TdR(K)} -- the dust temperature at the slab right boundary.
   See previous item for values in excess of {\tt Tsub}.
 \item {\tt RPr(1)} -- The ratio of radiation pressure to gravitational
