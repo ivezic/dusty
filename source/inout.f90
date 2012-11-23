@@ -917,8 +917,9 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
            ! end if for convolved images
         end if
         ! visibility (only if the intensity is requested)
-        iV = RDINP(Equal,1,12)
-        if(iV.ne.0) iV = abs(iC)
+        ! visibility not calculated in this version ...
+        !iV = RDINP(Equal,1,12)
+        !if(iV.ne.0) iV = abs(iC)
         ! end if for geometry
      end if
      write(12,*)' --------------------------------------------'

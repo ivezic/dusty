@@ -770,7 +770,7 @@ subroutine Pgrid(pstar,iPstar,nY,nP,nCav,nIns)
   implicit none
   !---parameter
   double precision pstar
-  integer ipstar,nY,nP,nCav,nIns
+  integer ipstar,nY,nP,nCav,nIns,nIns2
   !---local
   integer i,ii,k,iP,iz,iw,nZ,j, Naux, istop, NinsLoc
   double precision delP, eta
@@ -819,6 +819,29 @@ subroutine Pgrid(pstar,iPstar,nY,nP,nCav,nIns)
      end if
      ! in old dusty nins is allways 2
      Nins = 2
+     Nins = int(etadiscr(i)/etadiscr(nY))
+     if (Nins<1) Nins = 1
+     if (Nins>524288) then 
+        Nins = 5
+     else if (Nins>65536) then 
+        Nins = 4
+     else if (Nins>8192) then 
+        Nins = 3
+     else if (Nins>1024) then 
+        Nins = 3
+     else if (Nins>128) then 
+        Nins = 2
+     else if (Nins>16) then 
+        Nins = 2
+     else if (Nins>2) then 
+        Nins = 2
+     endif
+     nIns2 = int((1.3*etadiscr(i)/etadiscr(i+1)))
+!     if (nIns2>nIns) nIns = nIns2
+!     nIns = int(nIns*(1.0*etadiscr(i)/etadiscr(i+1)))
+     nIns = int(0.5*(etadiscr(i)+etadiscr(i+1))*(Y(i+1)-Y(i))*2*nY)+1
+!     if (Nins>8) Nins = 8
+     if (Nins<2) Nins = 2
      k = Nins
      Plast(i) = iP + 1
      delP = (Y(i+1) - Y(i))/dble(k)

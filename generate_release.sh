@@ -27,7 +27,7 @@ cp dusty.mas release/dusty/ -rf
 cp userpar.inc release/dusty/ -rf
 
 echo 'all:' > release/dusty/Makefile
-echo -e "\t gfortran -O3 -lgmp -fopenmp -o dusty dusty.f90" >> release/dusty/Makefile
+echo -e "\t gfortran -O3 -lgomp -fopenmp -o dusty dusty.f90" >> release/dusty/Makefile
 echo 'gfortran -O3 -lgomp -fopenmp -o dusty.exe dusty.f90' > release/dusty/compile.bat
 
 

@@ -2349,7 +2349,7 @@ SUBROUTINE FindErr(nY,flux,maxFerr)
   !---------------------------------------------------------------------
   ! tune_acc defines the accuracy in the case of zero flux
   ! tune_acc = 1/2*accFbol*Jext(nY) 
-  tune_acc = 5e-1
+  tune_acc = 6e-1
   if ((slb).and.(left.eq.1).and.(right.eq.1)) then 
      accFbol = min(Ji,Jo)*4*pi*accFlux*tune_acc / Jext(1)
   else if ((sph).and.(right.eq.1)) then
