@@ -26,26 +26,26 @@
 % constant density 
 % for 4 optical depth (1,10,100,1000)
 
-% examples/ivezic97/ivezic97.inp
+ examples/ivezic97/ivezic97.inp
 
 % dust distriubtuion 1/r^2 profile
 % for 4 optical depth (1,10,100,1000)
 
-% examples/ivezic97/ivezic97_2.inp
+ examples/ivezic97/ivezic97_2.inp
 
 % Spherical dust distribution with 
 % 1/r density profile 
 % heated by external raditition with a temperature of 1000K
 % no scattering 
 
-% examples/sphere_BB/sphere_BB.inp
+ examples/sphere_BB/sphere_BB.inp
 
 
 % Slab in a Black Body radiation field 
 % with temperature of 1000K 
 % for 4 optical depth (1,10,100,1000)
 
-% examples/slab_BB/slab_BB.inp
+ examples/slab_BB/slab_BB.inp
 
 % Spherical dust distribution with 
 % constant density profile 
@@ -53,18 +53,18 @@
 % for composite dust grain 70% silicates 30% carbon
 % for 2 optical depth (10,100)
 
-% examples/external/external.inp
+ examples/external/external.inp
 
 % Example slab geometry
 % isotropic input on both sides
 % ISM-OHM dust grain properties
 
-% examples/slab2/slab2.inp
+ examples/slab2/slab2.inp
 
 % Example slab geometry
 % only left side illumination (flux input)
 % ISM-OHM dust grain properties
 
-% examples/slab3/slab3.inp
+ examples/slab3/slab3.inp
 
 % -------------------------------

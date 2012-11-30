@@ -258,7 +258,7 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,&
      call SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,iterfbol,itereta)
      ! assign number of grid points to nY_old
      nY_old = nY
-     if (iVerb.eq.2) write(*,'(a19,i3,a12)') '  Calculating with ', nY,' grid points.'
+     if (iVerb.eq.2) print'(a,i4,a,i4,a,i4)', '  Calculating with nY=', nY,' nP=',nP,' nCav=',nCav
      if (iX.ge.1) then
         write(18,'(a19,i3,a12)') '  Calculating with ', nY,' grid points.'
      end if
@@ -312,7 +312,7 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,&
      end if
      if(iVerb.eq.2) write(*,'(A,F10.3,A)') '  Achieved error in bolometric Flux:',maxFerr*100,'%'
      call Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol,fbol,fDebol,fDsbol,fbolOK,maxrat)
-     if (iVerb.eq.2) write(*,'(a,i3,a,i3,a,i3)') '  After Flux_Cons nY=', nY,' nP=',nP,' Ncav=',Ncav
+     if (iVerb.eq.2) write(*,'(a,i3,a,i3,a,i3)') '  After Flux_Cons nY=', nY
      ! initialize flag, y_incr, which records whether there is an increase in
      ! y-grid points
      y_incr = 0
@@ -770,10 +770,10 @@ subroutine Pgrid(pstar,iPstar,nY,nP,nCav,nIns)
   implicit none
   !---parameter
   double precision pstar
-  integer ipstar,nY,nP,nCav,nIns,nIns2
+  integer ipstar,nY,nP,nCav,nIns,nIns1,nIns2
   !---local
   integer i,ii,k,iP,iz,iw,nZ,j, Naux, istop, NinsLoc
-  double precision delP, eta
+  double precision delP, eta,tmp1,tmp2
   external eta
   !--------------------------------------------------------------------
   error  = 0
@@ -819,29 +819,15 @@ subroutine Pgrid(pstar,iPstar,nY,nP,nCav,nIns)
      end if
      ! in old dusty nins is allways 2
      Nins = 2
-     Nins = int(etadiscr(i)/etadiscr(nY))
+     tmp1 = etadiscr(i)/etadiscr(i+1)
+     tmp2 = etadiscr(i+1)/etadiscr(i)
+     !Max 33% difference in gradient
+     nIns1 = int((max(tmp1,tmp2)-1.)*3.)
+     !Linear P grid with size close to Y - grid
+     nIns2 = int((Y(i+1)-Y(i))/Y(nY)*1.5*nY) 
+     nIns = max(nIns1,nIns2)
+     if (Nins>9) Nins = 9
      if (Nins<1) Nins = 1
-     if (Nins>524288) then 
-        Nins = 5
-     else if (Nins>65536) then 
-        Nins = 4
-     else if (Nins>8192) then 
-        Nins = 3
-     else if (Nins>1024) then 
-        Nins = 3
-     else if (Nins>128) then 
-        Nins = 2
-     else if (Nins>16) then 
-        Nins = 2
-     else if (Nins>2) then 
-        Nins = 2
-     endif
-     nIns2 = int((1.3*etadiscr(i)/etadiscr(i+1)))
-!     if (nIns2>nIns) nIns = nIns2
-!     nIns = int(nIns*(1.0*etadiscr(i)/etadiscr(i+1)))
-     nIns = int(0.5*(etadiscr(i)+etadiscr(i+1))*(Y(i+1)-Y(i))*2*nY)+1
-!     if (Nins>8) Nins = 8
-     if (Nins<2) Nins = 2
      k = Nins
      Plast(i) = iP + 1
      delP = (Y(i+1) - Y(i))/dble(k)
@@ -1294,7 +1280,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
 !!$     end if
      !print*,maxval(maxerrU),Td(1,1),Td(1,nY)
       if(iVerb.eq.2) write(*,fmt='(a1)',advance='no') '.'
-     if ((maxval(maxerrT).le.accTemp).and.(maxval(maxerrU).lt.(accFlux*9.e-1))) conv = 1
+      if ((maxval(maxerrT).le.accTemp*9e-1).and.(maxval(maxerrU).lt.(accFlux*9.e-1))) conv = 1
      if (iter.eq.itlim) print'(A,I6,A)','  !!! Reached iteration limit of ',itlim,' !!!!'
   enddo
    if(iVerb.eq.2) write(*,*) ' '
@@ -3000,7 +2986,7 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol,fbolom,fbol_em,fbol_sc,fbo
   ff = 0.0D+00                                                                                      
   istop = 0                                                                                     
   devfac = 0.1D+00                                                                                  
-  DO iY = 2, nY                                                                                 
+  DO iY = 1, nY-1
      IF (dabs(fbolom(iY)-fmed).GT.devmax) devmax = dabs(fbolom(iY)-fmed)
   END DO
 !!$  if (maxrat.gt.accFlux) then 
@@ -3032,39 +3018,60 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol,fbolom,fbol_em,fbol_sc,fbo
 !!$  endif
 
 
+!!$  if (maxrat.gt.accFlux) then 
+!!$     tmp2 = 0.0
+!!$     do iY = 2, nY
+!!$        tmp1 = dabs(fbolom(iY-1)-fbolom(iY))
+!!$        tmp2 = tmp2 + tmp1
+!!$        !if (tmp1.gt.tmp2) tmp2 = tmp1
+!!$     end do
+!!$     fact = -0.00001
+!!$     n_ins = nY
+!!$     do while (n_ins.gt.nY*0.3)
+!!$        fact = fact+0.00001
+!!$        n_ins = 0
+!!$        do iY = 2, nY
+!!$           tmp1 = dabs(fbolom(iY-1)-fbolom(iY))
+!!$           if  (tmp1.ge.fact*tmp2) n_ins = n_ins + 1
+!!$        end do
+!!$     end do
+!!$     !if # of added points is less than 5% of nY 
+!!$     ! or less than 2 additinal points
+!!$     if ((n_ins.lt.nY*0.05).or.(n_ins.lt.2)) fact = 0.0
+!!$     do iY = 2, nY
+!!$        tmp1 = dabs(fbolom(iY-1)-fbolom(iY))
+!!$        if  ((TAUtot(1)*(ETAzp(1,iY)-ETAzp(1,iY-1)).GT.delTAUmax).or.&
+!!$             (tmp1.ge.fact*tmp2).or.&
+!!$             ((iterfbol.lt.3).and.&
+!!$             ((((fbol_em(iY)/fbolom(iY)).gt.0.01).and.&
+!!$             ((fbol_em(iY)/fbolom(iY)).lt.0.99)).or. &
+!!$             (((fbol_sc(iY)/fbolom(iY)).gt.0.01).and.&
+!!$             ((fbol_sc(iY)/fbolom(iY)).lt.0.99))))) then
+!!$           !print*,iY,tmp1,tmp2,fact*tmp2
+!!$           n_ins = 1
+!!$           kins = kins + n_ins
+!!$           do i_ins = 1,n_ins
+!!$              Yins(kins-n_ins+i_ins) = Y(iY-1)+1.*i_ins/(1.*(n_ins+1))*(Y(iY)-Y(iY-1))
+!!$              iYins(kins-n_ins+i_ins) = iY-1
+!!$           end do
+!!$        endif
+!!$     enddo
+!!$  endif
+
   if (maxrat.gt.accFlux) then 
-!!$     kins = kins + 1
-!!$     Yins(kins) = 0.5*(Y(2)+Y(1))
-!!$     iYins(kins) = 1
-     tmp2 = 0.0
-     do iY = 2, nY
-        tmp1 = dabs(fbolom(iY-1)-fbolom(iY))
-        tmp2 = tmp2 + tmp1
-        !if (tmp1.gt.tmp2) tmp2 = tmp1
-     end do
-     fact = -0.00001
-     n_ins = nY
-     do while (n_ins.gt.nY*0.3)
-        fact = fact+0.00001
+     n_ins = 0
+     fact=0.0
+     do while (n_ins.lt.nY*0.5)
+        fact = fact+devmax*0.00001
         n_ins = 0
         do iY = 2, nY
-           tmp1 = dabs(fbolom(iY-1)-fbolom(iY))
-           if  (tmp1.ge.fact*tmp2) n_ins = n_ins + 1
+           tmp1 = dabs(fbolom(iY)-fmed)
+           if  (tmp1.ge.(devmax-fact)) n_ins = n_ins + 1
         end do
      end do
-     !if # of added points is less than 5% of nY 
-     ! or less than 2 additinal points
-     if ((n_ins.lt.nY*0.05).or.(n_ins.lt.2)) fact = 0.0
      do iY = 2, nY
-        tmp1 = dabs(fbolom(iY-1)-fbolom(iY))
-        if  ((TAUtot(1)*(ETAzp(1,iY)-ETAzp(1,iY-1)).GT.delTAUmax).or.&
-             (tmp1.ge.fact*tmp2).or.&
-             ((iterfbol.lt.3).and.&
-             ((((fbol_em(iY)/fbolom(iY)).gt.0.01).and.&
-             ((fbol_em(iY)/fbolom(iY)).lt.0.99)).or. &
-             (((fbol_sc(iY)/fbolom(iY)).gt.0.01).and.&
-             ((fbol_sc(iY)/fbolom(iY)).lt.0.99))))) then
-           !print*,iY,tmp1,tmp2,fact*tmp2
+        tmp1 = dabs(fbolom(iY)-fmed)
+        if (tmp1.ge.(devmax-fact)) then
            n_ins = 1
            kins = kins + n_ins
            do i_ins = 1,n_ins
@@ -3074,6 +3081,8 @@ subroutine Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol,fbolom,fbol_em,fbol_sc,fbo
         endif
      enddo
   endif
+
+
   do iY=1,nY
      Yprev(iY) = Y(iY)
      do iG=1,nG

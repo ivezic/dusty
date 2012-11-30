@@ -2332,7 +2332,7 @@ END SUBROUTINE SHIFT
 
 
 ! *************************************************************************
-SUBROUTINE FindErr(nY,flux,maxFerr)
+SUBROUTINE FindErr_old(nY,flux,maxFerr)
 !========================================================================
 !This subroutine finds maximum err in flux conservation for both
 !spherical and slab case as (fmax-fmin)/(fmax+fmin)   [MN,Aug'99]
@@ -2382,6 +2382,31 @@ SUBROUTINE FindErr(nY,flux,maxFerr)
      maxFerr = dabs(fmax - dabs(fmin))/(fmax + dabs(fmin))
   end if
   ! ----------------------------------------------------------------------
+  RETURN
+END SUBROUTINE FindErr_old
+! *************************************************************************
+
+SUBROUTINE FindErr(nY,flux,maxFerr)
+!========================================================================
+!This subroutine finds maximum err in flux conservation for both
+!spherical and slab case as (fmax-fmin)   [MN,Aug'99]
+!=========================================================================
+  use common
+  IMPLICIT none
+  !--- parameter
+  integer nY
+  DOUBLE PRECISION maxFerr
+  double precision,allocatable :: flux(:)
+  !--- local
+  INTEGER iY
+  DOUBLE PRECISION fmin, fmax, aux, accFbol, tune_acc
+
+  !---------------------------------------------------------------------
+  tune_acc = 1.
+  ! Find the min and max of fbol values
+  fmin = minval(flux(:nY))
+  fmax = maxval(flux(:nY))
+  maxFerr = (fmax-fmin)/(4*pi) !/(4*pi*maxval(Jext(:nY)))
   RETURN
 END SUBROUTINE FindErr
 ! *************************************************************************
