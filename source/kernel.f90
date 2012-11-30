@@ -305,10 +305,8 @@ subroutine Solve(model,taumax,nY,nYprev,itereta,nP,nCav,nIns,initial,&
      call Finderr(nY,fbol,maxFerr)
      if ((maxFerr-maxFerr_old.gt.0.).and.(.not.initTemp)) then
         initTemp=.true.
-        print*,'true'
      else 
         initTemp=.false.
-        print*,'false'
      end if
      if(iVerb.eq.2) write(*,'(A,F10.3,A)') '  Achieved error in bolometric Flux:',maxFerr*100,'%'
      call Flux_Consv(nY,nYprev,Ncav,itereta,iterfbol,fbol,fDebol,fDsbol,fbolOK,maxrat)
@@ -1210,10 +1208,12 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   ! us is the intial approximation for utot(iL,iY) for the first iteration over Td
   ! Find initial approximation of Td for the case of first iteration over Fbol or flux error to large.
   !if ((initial.and.(iterfbol.eq.1)).or.(initTemp.and.(iterfbol.gt.2))) then
-  if ((iterfbol.eq.1).or.(initTemp.and.(iterfbol.gt.2))) then
-     call Init_Temp(nY,T4_ext,us)
-     if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
-  end if
+!  if ((iterfbol.eq.1).or.(initTemp.and.(iterfbol.gt.2))) then
+!     call Init_Temp(nY,T4_ext,us)
+!     if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
+!  end if
+  call Init_Temp(nY,T4_ext,us)
+  if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
   do iY = 1,nY
      do iG = 1,nG
         Td_old(iG,iY) = Td(iG,iY)
