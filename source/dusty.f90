@@ -38,11 +38,11 @@ PROGRAM DUSTY
   ! Get or generate master input file
   IF (TRIM(dustyinpfile).eq."") THEN
      PRINT*, "No input file name found on command line." 
-     PRINT*, "Proceeding with default file dusty.mas"
-     dustyinpfile = "dusty.mas"
+     PRINT*, "Proceeding with default file dusty.master"
+     dustyinpfile = "dusty.master"
   ELSE
-     suffix = dustyinpfile(LEN(TRIM(dustyinpfile))-3:)
-     IF (suffix .eq. '.mas') THEN
+     suffix = dustyinpfile(LEN(TRIM(dustyinpfile))-6:)
+     IF (suffix .eq. '.master') THEN
         PRINT*, "Found master input file ",TRIM(dustyinpfile), &
              " on on command line."
      ELSE IF (suffix .eq. '.inp') THEN
@@ -51,7 +51,7 @@ PROGRAM DUSTY
         CALL GETARG(2,verbosity)
         if (TRIM(verbosity).eq."") verbosity = "2"
         !generate temperay master file
-        OPEN(unit=100,file="temp.mas")
+        OPEN(unit=100,file="temp.master")
         WRITE(100,*) "% Temporary master input for single input file"
         WRITE(100,*) "% DUSTY version: ",version
         WRITE(100,*) "verbose = ",verbosity
@@ -59,7 +59,7 @@ PROGRAM DUSTY
         !WRITE(100,*) dustyinpfile(1:LEN(TRIM(dustyinpfile))-4)
         WRITE(100,*) dustyinpfile
         CLOSE(unit=100)
-        dustyinpfile = "temp.mas"
+        dustyinpfile = "temp.master"
      ELSE
         PRINT*,'WARNING NOT A PROPER INPUT FILE!!!!'
         PRINT*,'DUSTY STOPPED'
@@ -103,7 +103,7 @@ PROGRAM DUSTY
   END DO
   CLOSE(13)
   IF (suffix .eq. '.inp') THEN 
-     OPEN(unit=100,file="temp.mas")
+     OPEN(unit=100,file="temp.master")
      CLOSE(unit=100,status='delete')
   END IF
   CALL SYSTEM_CLOCK(COUNT=clock_end)
