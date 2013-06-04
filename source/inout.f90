@@ -1290,12 +1290,14 @@ subroutine inp_rad(is,shp,spec_scale,styp)
      end if
      ! interpolate to dusty grid
      do iL=1,nL
-        call powerinter(nL,nL,lambda_s,shp_s,lambda(iL),iLs,shp(iL))
+        call powerinter(nLs,nLs,lambda_s,shp_s,lambda(iL),iLs,shp(iL))
      end do
+
      call Simpson(nL,1,nL,lambda,shp,spec_scale)
      do iL=1,nL
         shp(iL) = shp(iL)/spec_scale*lambda(iL)
      end do
+
      error = 0
      deallocate(lambda_s)
      deallocate(shp_s)
