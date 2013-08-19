@@ -2,113 +2,144 @@ PROGRAM DUSTY
   USE COMMON
   IMPLICIT NONE
   INTEGER :: clock_rate, clock_start, clock_end, io_status, lpath
-  INTEGER :: empty, GridType
-  INTEGER :: Nmodel
-  DOUBLE PRECISION :: RDINP, tau1, tau2
-  DOUBLE PRECISION, allocatable :: tau(:)
-  CHARACTER(len=4)   :: suffix,verbosity
-  CHARACTER(len=235) :: dustyinpfile, path, apath, nameIn, &
-       nameOut, stdf(7)
-  INTEGER iL
-  INTERFACE
-     SUBROUTINE GetTau(tau1,tau2,GridType,Nmodel,tau)
-       integer Nmodel, GridType
-       double precision  TAU1, TAU2, tau(:)
-     END SUBROUTINE GETTAU
-     SUBROUTINE KERNEL(path,lpath,tau,Nmodel)
-       integer  Nmodel, lpath
-       double precision tau(:)
-       character(len=235) path
-     END SUBROUTINE KERNEL
-  END INTERFACE
+  CHARACTER(len=3) :: suffix
+  CHARACTER(len=4) :: verbosity
+  CHARACTER(len=235) :: dustyinpfile, path, apath, stdf(7)
+
   !-------------------------------------------------------
   ! **************************
   ! *** ABOUT THIS VERSION ***
   ! **************************
   ! version= '4.00' set in common as parameter
 
+  ! get lambda grid
   CALL ReadLambda()
   IF (error.ne.0) THEN 
      PRINT*,'something wrong with lambda grid!'
      STOP
   END IF
+
+  ! timing
   CALL SYSTEM_CLOCK(COUNT_RATE=clock_rate) ! Find the rate
   CALL SYSTEM_CLOCK(COUNT=clock_start)
+
+  ! get path of input file, and desired verbosity, as args from command line
   CALL GETARG(1,dustyinpfile)
-  ! Get or generate master input file
+  CALL GETARG(2,verbosity) ! verbosity if optional, since a default exists
+  if (LEN_TRIM(verbosity) == 0) verbosity = "2"  ! and the default verbosity level is "2"
+  read(verbosity(1:2),'(I1)') iVerb ! make it an integer
+  if (iVerb > 2) iVerb = 2 ! largest implemented value is 2
+
+  ! interpret the input file path, and run the calcs if all os OK
   IF (TRIM(dustyinpfile).eq."") THEN
-     PRINT*, "No input file name found on command line." 
-     PRINT*, "Proceeding with default file dusty.master"
-     dustyinpfile = "dusty.master"
+     PRINT*, "No input file name found on command line."
+     PRINT*,'DUSTY STOPPED'
+     STOP
   ELSE
-     suffix = dustyinpfile(LEN(TRIM(dustyinpfile))-6:)
-     IF (suffix .eq. '.master') THEN
+     suffix = dustyinpfile(LEN(TRIM(dustyinpfile))-2:) ! the last 3 chars of path
+
+     ! If suffix is 'mas', we have multi-model DUSTY input file. Then
+     ! read each line, execute the requested model, and continue with
+     ! the next line.
+     IF (suffix .eq. 'mas') THEN
         PRINT*, "Found master input file ",TRIM(dustyinpfile), &
              " on on command line."
-     ELSE IF (suffix .eq. '.inp') THEN
+        OPEN(13,file=trim(dustyinpfile),status='old')
+        READ(13,'(a)',iostat=io_status) apath
+        DO WHILE (io_status.ge.0)
+           CALL clean(apath,path,lpath)
+           call rundusty(path,lpath)
+           READ(13,'(a)',iostat=io_status) apath
+        END DO
+        CLOSE(13)
+
+     ! If suffix is 'inp', this is a single-model DUSTY input file.
+     ELSE IF (suffix .eq. 'inp') THEN
         PRINT*, "Found normal input file ",TRIM(dustyinpfile), &
              " on on command line."
-        CALL GETARG(2,verbosity)
-        if (TRIM(verbosity).eq."") verbosity = "2"
-        !generate temperay master file
-        OPEN(unit=100,file="temp.master")
-        WRITE(100,*) "% Temporary master input for single input file"
-        WRITE(100,*) "% DUSTY version: ",version
-        WRITE(100,*) "verbose = ",verbosity
-        WRITE(100,*) "% filename:"
-        !WRITE(100,*) dustyinpfile(1:LEN(TRIM(dustyinpfile))-4)
-        WRITE(100,*) dustyinpfile
-        CLOSE(unit=100)
-        dustyinpfile = "temp.master"
+        apath = dustyinpfile(1:)
+        CALL clean(apath,path,lpath)
+        call rundusty(path,lpath)
+
+     ! everything else is considered an invalid input file
      ELSE
-        PRINT*,'WARNING NOT A PROPER INPUT FILE!!!!'
+        PRINT*,'WARNING NOT A PROPER INPUT FILE NAME!!!!'
         PRINT*,'DUSTY STOPPED'
         STOP
      END IF
+
   END IF
-  OPEN(13,file=trim(dustyinpfile),status='old')
-  iVerb = RDINP(.true.,13,6)
-  READ(13,'(a)',iostat=io_status) apath
-  DO WHILE (io_status.ge.0)
-     call alloc_mem()
-     call alloc_mem_nL()
-     CALL clean(apath,path,lpath)
-     ! remove .inp from input master file 
-     path = path(1:LEN(TRIM(path))-4)
-     lpath = lpath-4
-     IF (empty(path).ne.1) THEN
-        CALL attach(path,lpath,'.inp',nameIn)
-        CALL attach(path,lpath,'.out',nameOut)
-        print*,'working on file: ',TRIM(nameIn)
-        CALL Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
-        IF (iVerb.gt.0) THEN
-           print*,'working on input file: ',TRIM(nameIn)
-           IF (iVerb.ge.2) print*,'Done with reading input'
-        ENDIF
-        IF (error.ne.3) THEN 
-           IF (error.eq.0) THEN 
-              IF(ALLOCATED(tau)) DEALLOCATE(tau)
-              ALLOCATE(tau(Nmodel))
-              tau = 0
-              CALL GetTau(tau1,tau2,GridType,Nmodel,tau)
-              IF (iVerb.ge.2) print*,'Done with GetTau'
-              CALL Kernel(path,lpath,tau,Nmodel)
-           END IF
-        ELSE
-           PRINT*,
-        END IF
-     END IF
-     READ(13,'(a)',iostat=io_status) apath
-     call dealloc_mem()
-  END DO
-  CLOSE(13)
-  IF (suffix .eq. '.inp') THEN 
-     OPEN(unit=100,file="temp.master")
-     CLOSE(unit=100,status='delete')
-  END IF
-  CALL SYSTEM_CLOCK(COUNT=clock_end)
+
+  CALL SYSTEM_CLOCK(COUNT=clock_end) ! stop the timing
   print*,'ellapsed time:',(clock_end-clock_start)/clock_rate,'[s]'
+
 END PROGRAM DUSTY
+
+
+!***********************************************************************
+subroutine rundusty(path,lpath)
+!=======================================================================
+! This subroutine a single DUSTY process, independently of whether it
+! was specified in a single-model .inp file or in a multi-model .mas
+! file. All processing of paths and of command-line arguments is done
+! in the main code, before this subroutine is invoked.
+!                                                      [RN, August 2013]
+!=======================================================================
+  use common, only: iVerb, error
+  implicit none
+  integer :: lpath, empty, GridType, Nmodel
+  double precision :: tau1, tau2
+  double precision, allocatable :: tau(:)
+  character(len=235) :: path, nameIn, nameOut, stdf(7)
+
+  interface
+     subroutine GetTau(tau1,tau2,GridType,Nmodel,tau)
+       integer Nmodel, GridType
+       double precision  tau1, tau2, tau(:)
+     end subroutine GetTau
+     subroutine Kernel(path,lpath,tau,Nmodel)
+       integer Nmodel, lpath
+       double precision tau(:)
+       character(len=235) path
+     end subroutine Kernel
+  end interface
+
+  call alloc_mem()
+  call alloc_mem_nL()
+
+  path = path(1:LEN(TRIM(path))-4)
+  lpath = lpath-4
+
+  if (empty(path).ne.1) then
+     call attach(path,lpath,'.inp',nameIn)
+     call attach(path,lpath,'.out',nameOut)
+     call Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
+
+     if (iverb.gt.0) then
+        print*,'working on input file: ', trim(nameIn)
+        if (iVerb.ge.2) print*,'Done with reading input'
+     endif
+
+     if (error.ne.3) then 
+        if (error.eq.0) then 
+           if(allocated(tau)) deallocate(tau)
+           allocate(tau(Nmodel))
+           tau = 0
+           call GetTau(tau1,tau2,GridType,Nmodel,tau)
+           if (iVerb.ge.2) print*,'Done with GetTau'
+           call Kernel(path,lpath,tau,Nmodel)
+        end if
+     else
+        print*,
+     end if
+
+  end if
+
+  call dealloc_mem()
+
+end subroutine rundusty
+!***********************************************************************
+
 
 !***********************************************************************
 subroutine ReadLambda()

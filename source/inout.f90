@@ -766,6 +766,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   ! accuracy for flux conservation
   accFlux = RDINP(Equal,1,12)
   accTemp = ((1.+accFlux)**(1./4.)-1.)*1e-1
+!RN This converges better, but still not great.  accTemp = ((1.+accFlux)**(1./4.)-1.)*1.e-3
   if ((accFlux.le.0.0d0).or.(accFlux.gt.0.75)) then 
      print*,' Problem with specified Flux accuracy !!!'
   end if
