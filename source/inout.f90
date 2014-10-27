@@ -26,7 +26,7 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
        double precision,allocatable :: shp(:)
      end subroutine inp_rad
   END INTERFACE
-  logical ::  Equal, noEqual, UCASE
+  logical ::  Equal, noEqual, UCASE, composite
   character(len=235) :: stdf(7), str, nameIn, nameOut, nameEta,& 
        nameTau, strg, namepsf
   character(len=72) :: strpow,lamstr(nOutput)
@@ -309,13 +309,19 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   if (str(1:L).eq.'COMMON_GRAIN') then
      top = 1
      nG = 6
+     composite = .false.
   elseif (str(1:L).eq.'COMMON_GRAIN_COMPOSITE') then
      top = 1
+     composite = .true.
      nG = 1
   elseif (str(1:L).eq.'COMMON_AND_ADDL_GRAIN') then
      top = 2
+     composite = .false.
+     nG = 6
   elseif (str(1:L).eq.'COMMON_AND_ADDL_GRAIN_COMPOSITE') then
-     top = 4
+     top = 2
+     composite = .true.
+     nG = 1
   elseif (str(1:L).eq.'TABULATED') then
      top = 3
      nG = 1
@@ -339,7 +345,9 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         if (iG.ne.5) then
            xC(iG) = RDINP(noEqual,1,12)
            if (xC(iG).lt.0.0d0) xC(iG) = 0.0d0
-           if ((xC(iG).eq.0.0d0).and.(nG.gt.1)) nG = nG - 1
+           if ((xC(iG).eq.0.0d0).and.(composite .eqv. .false.)) then 
+              nG = nG - 1
+           endif
            ! i Equal 4 is data for graphite (parallel to c axis):
            if(iG.eq.4) xC(iG) = 1.0d0*xC(iG)/3.0d0
         else
@@ -360,10 +368,9 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
      if (iG.eq.7) write(stdf(iG),'(a)')"data/stnd_dust_lib/SiC-peg.nk"
   enddo
   ! user supplied n and k:
-  if ((top.eq.2).or.(top.eq.4)) then
+  if (top.eq.2) then
      nFiles = RDINP(Equal,1,12)
-     if (top.eq.2) nG = nfiles + 7
-     if (top.eq.4) nG = 1
+     if (composite .eqv. .false.) nG = nfiles + nG
      ! File names
      allocate(nameNK(nFiles))
      do iFiles = 1, nFiles
@@ -483,7 +490,6 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
   SigmaS = 0
   call getOptPr(nameQ,nameNK,error,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
   IF (iVerb.ge.2) print*,'Done with getOptPr'
-
   !=========  END READING DUST PROPERTIES ===================
   ! WriteOut prints all input data, read so far, in fname.out
   ! var1 is t1,fe1,luminosity or teff; var2 is r1; var3 is ext.rad. input

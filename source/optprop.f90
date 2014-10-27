@@ -69,6 +69,10 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
         nsd(iiA) = sizedist(qsd,a(iiA),szds,a2)
      end do
      call powerint(npA,1,nA,a,nsd,Cnorm)
+     if (1.eq.nA) then
+        print*,"Single grain size setting cnorm to nsd(1)"
+        cnorm = nsd(1)
+     endif
      ! find the average grain volume aveV and average grain  eff.
      ! area aveA (needed in dynamics)
      if(dabs(a1-a2).le.1.d-3) then
@@ -80,12 +84,14 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
            faux1(iiA)=nsd(iiA)*a(iiA)**3.0d0
         end do
         call powerint(npA,1,nA,a,faux1,a3ave)
+        if (1.eq.nA) a3ave=faux1(1) !Single grain size
         aveV = 4.0d0/3.0d0*pi*a3ave/Cnorm
         print*,'aveV:',aveV,'a3ave/Cnorm:',a3ave/Cnorm
         do iiA = 1, nA
            faux1(iiA)=nsd(iiA)*a(iiA)**2.0d0
         end do
         call powerint(npA,1,nA,a,faux1,a2ave)
+        if (1.eq.nA) a2ave=faux1(1) !Single grain size
         aveA = pi*a2ave/Cnorm
      end if
      !--  loop over supported components --
@@ -102,9 +108,11 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
               faux1(iiA)=nsd(iiA)*aQabs(iiA,iL)*pi*a(iiA)**2.0d0
               faux2(iiA)=nsd(iiA)*aQsca(iiA,iL)*pi*a(iiA)**2.0d0
            end do
-           call powerint(npA,1,nA,a,faux1,int)
+           call powerint(npA,1,nA,a,faux1,int) 
+           if (1.eq.nA) int=faux1(1) !Single grain size
            sigAbs(iiC,iL) = int/Cnorm
-           call powerint(npA,1,nA,a,faux2,int)
+           call powerint(npA,1,nA,a,faux2,int) 
+           if (1.eq.nA) int=faux2(1) !Single grain size
            sigSca(iiC,iL) = int/Cnorm
         end do
      end do
@@ -126,8 +134,10 @@ subroutine getOptPr(nameQ,nameNK,er,stdf,top,szds,qsd,a1,a2,nFiles,xC,XCuser)
                  faux2(iiA)=nsd(iiA)*aQsca(iiA,iL)*pi*a(iiA)**2.0d0
               end do
               call powerint(npA,1,nA,a,faux1,int)
+              if (1.eq.nA) int=faux1(1) !Single grain size
               sigAbs(iiC,iL) = int/Cnorm
               call powerint(npA,1,nA,a,faux2,int)
+              if (1.eq.nA) int=faux2(1) !Single grain size
               sigSca(iiC,iL) = int/Cnorm
            end do
         end do
@@ -286,9 +296,9 @@ subroutine GetProp(npL,lambda,nL,fname,en,ek,error)
   open(2,err=998,file=fname,status='old')
   call skip_header(2)
   ! read in a header from the input file
-  do i = 1, 7
-     read(2,'(a)',err=998)line
-  end do
+  !do i = 1, 7
+  !   read(2,'(a)',err=998)line
+  !end do
   ! read in input data
   iL = 0
   io1 = 0
