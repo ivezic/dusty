@@ -20,7 +20,7 @@ Module common
   integer npY,npP,npL,npG,npR
   !PARAMETER (npY = 1000)
   !PARAMETER (npP = 20*npY+20)
-  PARAMETER (npL = 125)
+  PARAMETER (npL = 119)
   !PARAMETER (npG = 16)
   !PARAMETER (npR = 90)
   include "userpar.inc"
