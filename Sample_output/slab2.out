@@ -1,0 +1,68 @@
+ ===========================
+  Output from program Dusty 
+  Version: 2.0
+ ===========================
+  
+  INPUT parameters from file:
+  slab2.inp                                                             
+  
+* ----------------------------------------------------------------------
+* NOTES:
+* This is an example for calculation in planar geometry with a second source
+* illuminating the slab on the right
+* ----------------------------------------------------------------------
+  Left-side source spectrum described by power law:                       
+     lambda      k
+  1.000E-02
+            5.000E-01
+  1.000E+03
+  --------------------------------------------
+  Abundances for supported grains:
+  Sil-Ow Sil-Oc Sil-DL grf-DL amC-Hn SiC-Pg
+  0.000  0.000  0.530  0.470  0.000  0.000
+  MRN size distribution:
+       Power q:  0.0
+  Minimal size: 1.00E-01 microns
+  Maximal size: 1.00E-01 microns
+  --------------------------------------------
+  Dust temperature on the slab left boundary: 1000 K
+  --------------------------------------------
+  Calculation in planar geometry:
+  cos of left illumination angle =   5.000E-01
+  R =   1.000E-01
+  cos of right illumination angle =  1.000E+00
+  Right-side source spectrum described by a black body                    
+  with temperature: 3000 K
+  --------------------------------------------
+  Optical depths at 5.5E-01 microns
+  ranging from 5.00E-01 to 2.00E+00
+    3 models with grid from file             
+    taugrid.dat                                                           
+  Required accuracy: 5%
+  --------------------------------------------
+  
+          
+  RESULTS:
+  --------
+ ###   tau0    Fe1(W/m2)   f1     r1(cm)  Td(K)  Te(L)   Te(R)   err
+ ###     1        2         3       4       5      6       7      8 
+ ===================================================================
+   1 5.00E-01 3.26E+03  6.34E-01 9.68E+14  821 4.90E+02 2.75E+02  0 
+   2 1.00E+00 3.16E+03  5.12E-01 9.83E+14  691 4.86E+02 2.73E+02  0 
+   3 2.00E+00 3.13E+03  4.29E-01 9.89E+14  526 4.85E+02 2.73E+02  1 
+ ===================================================================
+   (1) Optical depth at 5.5E-01 microns
+   (2) Bol.flux of the left-side source at the slab left boundary
+   (3) f1=F/Fe1, where F is the overall bol.flux in the slab
+   (4) Position of the left slab boundary for L=1E4 Lsun
+   (5) Dust temperature at the right slab face
+   (6) Effective temperature of the left source (in K)
+   (7) Effective temperature of the right source (in K)
+   (8) Maximum error in flux conservation (%)
+ =================================================
+  Everything is OK for all models
+  Table with spectral properties is in file *.spp
+  All spectra are in file *.stb
+  All radial profiles are in file *.rtb
+  All run-time messages are in file *.mtb
+ ========== THE END ==============================
