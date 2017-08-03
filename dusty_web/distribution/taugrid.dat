@@ -1,0 +1,15 @@
+------------------------------------------
+  Sample tau-grid
+
+This file can start with an arbitrary number of text lines (WARNING: the text 
+must not contain the "equal" sign!). The beginning of data is signaled by the 
+entry of the fiducial wavelength at which the optical depths are specified. The 
+list entries are one per line in arbitrary order --- DUSTY will sort the list 
+and use only the sorted version for internal work and output.  The number of 
+entries is limited to 999. 
+
+------------------------------------------
+lambda0 = 0.55 micron 
+   2.0
+   0.5
+   1.0

@@ -1,0 +1,13 @@
+%
+%  This file MUST stay in the same
+%  directory with DUSTY's executable file
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Input file names must end
+% with a carriage return
+      slab1
+%      slab2
+      sphere1
+%      sphere2
+%      sphere3
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

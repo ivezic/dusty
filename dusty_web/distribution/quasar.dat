@@ -1,0 +1,6 @@
+This is a silly example. The longest wavelength here is shorter than
+0.01 micron, so DUSTY will extrapolate Rayleigh-Jeans tail to this data.
+   lambda  lambda*F_lambda
+   0.001       125.00
+   0.002        50.00
+   0.005         1.00

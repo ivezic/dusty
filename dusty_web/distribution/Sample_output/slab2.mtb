@@ -1,0 +1,39 @@
+ ==================================================
+ model   1  RUN-TIME MESSAGES 
+ --------------------------------------------------
+ ===========  STARTING SOLVE  ===========
+              1 iteration over Fbol
+  Calculation for slab with  15 grid points
+  Calculating weight matrices
+  Weight matrices OK, calculating Tdust
+  Convergence achieved, number of
+  iterations over energy density:    8
+   Max error in bol.flux: 8.82E-05
+  ==== SOLVE successfully completed =====
+  =======================================
+ ==================================================
+ model   2  RUN-TIME MESSAGES 
+ --------------------------------------------------
+ ===========  STARTING SOLVE  ===========
+              1 iteration over Fbol
+  Calculation for slab with  15 grid points
+  Calculating weight matrices
+  Weight matrices OK, calculating Tdust
+  Convergence achieved, number of
+  iterations over energy density:    8
+   Max error in bol.flux: 9.28E-04
+  ==== SOLVE successfully completed =====
+  =======================================
+ ==================================================
+ model   3  RUN-TIME MESSAGES 
+ --------------------------------------------------
+ ===========  STARTING SOLVE  ===========
+              1 iteration over Fbol
+  Calculation for slab with  15 grid points
+  Calculating weight matrices
+  Weight matrices OK, calculating Tdust
+  Convergence achieved, number of
+  iterations over energy density:    8
+   Max error in bol.flux: 5.08E-03
+  ==== SOLVE successfully completed =====
+  =======================================
