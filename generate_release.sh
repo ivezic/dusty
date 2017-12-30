@@ -1,7 +1,7 @@
 #!/bin/bash
 
 rm release/* -rf
-mkdir release/dusty
+mkdir -p release/dusty
 echo '!DUSTY RELEASE' > release/dusty/dusty.f90
 cat source/common.f90 >> release/dusty/dusty.f90
 cat source/dusty.f90 >> release/dusty/dusty.f90
@@ -22,12 +22,12 @@ latex manual.05.2012.tex
 dvipdf manual.05.2012.dvi
 cd ..
 cp docs/manual.05.2012.pdf release/dusty/docs/manual.pdf
-svn export ./data release/dusty/data
-cp dusty.mas release/dusty/ -rf
-cp userpar.inc release/dusty/ -rf
+cp -r data release/dusty/data
+cp dusty.mas release/dusty/ 
+cp userpar.inc release/dusty/ 
 
 echo 'all:' > release/dusty/Makefile
-echo -e "\t gfortran -O3 -lgomp -fopenmp -o dusty dusty.f90" >> release/dusty/Makefile
+echo "\t gfortran -O3 -lgomp -fopenmp -o dusty dusty.f90" >> release/dusty/Makefile
 echo 'gfortran -O3 -lgomp -fopenmp -o dusty.exe dusty.f90' > release/dusty/compile.bat
 
 
