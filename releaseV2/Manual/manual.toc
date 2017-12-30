@@ -1,0 +1,40 @@
+\contentsline {section}{\numberline {1}\sc Introduction}{4}
+\contentsline {section}{\numberline {2}\sc Installation}{4}
+\contentsline {section}{\numberline {3}\sc Input}{5}
+\contentsline {subsection}{\numberline {3.1}External Radiation}{6}
+\contentsline {subsection}{\numberline {3.2}Dust Properties}{9}
+\contentsline {subsubsection}{\numberline {3.2.1}Chemical Composition}{9}
+\contentsline {subsubsection}{\numberline {3.2.2}Grain Size Distribution}{10}
+\contentsline {subsubsection}{\numberline {3.2.3}Dust Temperature on Inner Boundary}{11}
+\contentsline {subsection}{\numberline {3.3}Density Distribution}{12}
+\contentsline {subsubsection}{\numberline {3.3.1}Analytical Profiles}{12}
+\contentsline {subsubsection}{\numberline {3.3.2}Radiatively Driven Winds}{13}
+\contentsline {subsubsection}{\numberline {3.3.3}Tabulated Profiles}{14}
+\contentsline {subsection}{\numberline {3.4}Optical Depth}{14}
+\contentsline {subsection}{\numberline {3.5}Numerical Accuracy and Internal Bounds}{15}
+\contentsline {subsection}{\numberline {3.6}Output Control}{16}
+\contentsline {section}{\numberline {4}\sc Output}{16}
+\contentsline {subsection}{\numberline {4.1}Default Output}{16}
+\contentsline {subsection}{\numberline {4.2}Optional Output}{18}
+\contentsline {subsubsection}{\numberline {4.2.1}Properties of Emerging Spectra}{18}
+\contentsline {subsubsection}{\numberline {4.2.2}Detailed spectra for each model}{19}
+\contentsline {subsubsection}{\numberline {4.2.3}Images at specified wavelengths}{20}
+\contentsline {subsubsection}{\numberline {4.2.4}Visibilities}{21}
+\contentsline {subsubsection}{\numberline {4.2.5}Radial profiles for each model}{21}
+\contentsline {subsubsection}{\numberline {4.2.6}Detailed Run-time messages}{22}
+\contentsline {section}{\numberline {5}\sc Slab Geometry}{22}
+\contentsline {subsection}{\numberline {5.1}Illuminating Source(s)}{23}
+\contentsline {subsection}{\numberline {5.2}Slab Output}{24}
+\contentsline {subsubsection}{\numberline {5.2.1}Default Output}{24}
+\contentsline {subsubsection}{\numberline {5.2.2}Spectral Profiles}{24}
+\contentsline {subsubsection}{\numberline {5.2.3}Spatial Profiles}{25}
+\contentsline {section}{\numberline {6}\sc User Control of {\sf DUSTY}}{25}
+\contentsline {subsection}{\numberline {6.1}Array Sizes for Spatial Grid}{25}
+\contentsline {subsection}{\numberline {6.2}Wavelength Grid}{26}
+\penalty -\@M \vfil 
+\contentsline {section}{\sc Appendices}{28}
+\contentsline {section}{\numberline {A}\sc Output Summary}{28}
+\contentsline {section}{\numberline {B}\sc Pitfalls, Real and Imaginary}{28}
+\contentsline {section}{\numberline {C}\sc Sample Output File: {\tt sphere1.out}}{29}
+\contentsline {section}{\numberline {D}\sc Sample Output File: \tt slab1.out}{30}
+\contentsline {section}{\numberline {E}\sc Library of Optical Constants}{32}

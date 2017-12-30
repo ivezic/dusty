@@ -1,0 +1,39 @@
+ ==================================================
+ model   1  RUN-TIME MESSAGES 
+ --------------------------------------------------
+ ===========  STARTING SOLVE  ===========
+              1. iteration over Fbol
+  Y grid generated, nY = 16
+                    nP = 57
+                  Nins =  2
+                  Ncav = 10
+  Single wavelength accuracy: 2.913E-02
+  Calculating weight matrices
+  Weight matrices OK, calculating Tdust
+  Convergence achieved, number of
+  iterations over energy density:    6
+  Flux conservation OK within: 4.1E-03
+  ==== SOLVE successfully completed =====
+  =======================================
+ ==================================================
+ model   2  RUN-TIME MESSAGES 
+ --------------------------------------------------
+ ===========  STARTING SOLVE  ===========
+              1. iteration over Fbol
+  Y grid generated, nY = 16
+                    nP = 57
+                  Nins =  2
+                  Ncav = 10
+  Grids need improvement:
+                    fTot(nY): 1.023E+00
+       Single wavelength TAU: 6.504E+00
+           Required accuracy: 5.000E-02
+  Single wavelength accuracy: 6.321E-02
+  Y grid improved, nY = 24
+  Calculating weight matrices
+  Weight matrices OK, calculating Tdust
+  Convergence achieved, number of
+  iterations over energy density:    6
+  Flux conservation OK within: 3.5E-03
+  ==== SOLVE successfully completed =====
+  =======================================

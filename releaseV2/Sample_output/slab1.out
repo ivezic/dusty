@@ -1,0 +1,52 @@
+ ===========================
+  Output from program Dusty 
+  Version: 2.0
+ ===========================
+  
+  INPUT parameters from file:
+  slab1.inp                                                             
+  
+* ----------------------------------------------------------------------
+* NOTES:
+* This is a simple version of an input file for calculation in
+* planar geometry with single source illumination.
+* ----------------------------------------------------------------------
+  Left-side source spectrum described by a black body                     
+  with temperature: 2500 K
+  --------------------------------------------
+  Abundances for supported grains:
+  Sil-Ow Sil-Oc Sil-DL grf-DL amC-Hn SiC-Pg
+  1.000  0.000  0.000  0.000  0.000  0.000
+  MRN size distribution:
+       Power q:  3.5
+  Minimal size: 5.00E-03 microns
+  Maximal size: 2.50E-01 microns
+  --------------------------------------------
+  Dust temperature on the slab left boundary: 800  K
+  --------------------------------------------
+  Calculation in planar geometry:
+  cos of left illumination angle =   1.000E+00
+  R =   0.000E+00
+  --------------------------------------------
+  Optical depth at 5.5E-01 microns: 1.00E+00
+  Required accuracy: 5%
+  --------------------------------------------
+  
+          
+  RESULTS:
+  --------
+ ###   tau0    Fe1(W/m2)   f1     r1(cm)  Td(K)  Te(L)  err 
+ ###     1        2         3       4       5      6     7  
+ ========================================================== 
+   1 1.00E+00 2.59E+04  9.33E-01 3.43E+14  755 8.22E+02  0
+ ==========================================================
+   (1) Optical depth at 5.5E-01 microns
+   (2) Bol.flux of the left-side source at the slab left boundary
+   (3) f1=F/Fe1, where F is the overall bol.flux in the slab
+   (4) Position of the left slab boundary for L=1E4 Lsun
+   (5) Dust temperature at the right slab face
+   (6) Effective temperature of the left source (in K)
+   (7) Maximum error in flux conservation (%)
+ =================================================
+  Everything is OK for all models
+ ========== THE END ==============================

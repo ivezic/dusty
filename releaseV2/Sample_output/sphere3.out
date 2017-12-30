@@ -1,0 +1,77 @@
+ ===========================
+  Output from program Dusty 
+  Version: 2.0
+ ===========================
+  
+  INPUT parameters from file:
+  sphere3.inp                                                           
+  
+* ----------------------------------------------------------------------
+* NOTES:
+* This is a complicated version of an input file, with many user supplied
+* files.
+* ----------------------------------------------------------------------
+  Stellar spectrum supplied from file:
+  quasar.dat                                                            
+  --------------------------------------------
+  Abundances for supported grains:
+  Sil-Ow Sil-Oc Sil-DL grf-DL amC-Hn SiC-Pg
+  0.000  0.000  0.298  0.264  0.000  0.000
+  Abundances for user supplied grains:
+     1      2      3
+  0.253  0.056  0.129
+  User supplied n and k from:
+  1) amC-zb1.nk                                                            
+  2) amC-zb2.nk                                                            
+  3) amC-zb3.nk                                                            
+  MRN size distribution:
+       Power q:  3.5
+  Minimal size: 1.00E-02 microns
+  Maximal size: 5.00E-01 microns
+  --------------------------------------------
+  Dust temperature on the inner boundary: 1000 K
+  --------------------------------------------
+  Density distribution supplied from file:
+  collapse.dat                                                          
+  Relative thickness: 1.010E+02
+  --------------------------------------------
+  Optical depths at 5.5E-01 microns
+  ranging from 5.00E-01 to 2.00E+00
+    3 models with grid from file             
+    taugrid.dat                                                           
+  Required accuracy: 5%
+  --------------------------------------------
+  Images requested for these wavelengths (mic)
+  0.55  1.0  2.2  4.0  10   50  100  1000
+  --------------------------------------------
+  
+  ====================================================  
+  For compliance with the point-source assumption, the
+  following results should only be applied to sources 
+  whose effective temperature exceeds 2000 K.
+  ====================================================
+          
+  RESULTS:
+  --------
+ ###   tau0   F1(W/m2)  r1(cm)    r1/rc   theta1  Td(Y) err
+ ###     1        2        3        4        5      6    7 
+ ==========================================================
+   1 5.00E-01 1.59E+04 4.38E+14 1.89E+02 3.27E+00  133   0 
+   2 1.00E+00 1.45E+04 4.59E+14 1.98E+02 3.43E+00  120   0 
+   3 2.00E+00 1.29E+04 4.87E+14 2.10E+02 3.63E+00  100   1 
+ ==========================================================
+   (1) Optical depth at 5.5E-01 microns
+   (2) Bolometric flux at the inner radius 
+   (3) Inner radius for L=1E4 Lsun
+   (4) Ratio of the inner to the stellar radius
+   (5) Angular size (in arcsec) when Fbol=1E-6 W/m2
+   (6) Dust temperature at the outer edge (in K)
+   (7) Maximum error in flux conservation (%)
+ =================================================
+  Everything is OK for all models
+  Table with spectral properties is in file *.spp
+  All spectra are in file *.stb
+  All imaging quantities are in file *.itb
+  All radial profiles are in file *.rtb
+  All run-time messages are in file *.mtb
+ ========== THE END ==============================
