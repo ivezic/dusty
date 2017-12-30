@@ -1,0 +1,70 @@
+<HTML>
+<HEAD>
+   <TITLE>DUSTY, Homepage</TITLE>
+</HEAD>
+
+
+<BODY bgcolor="#EEE5DE">
+
+<font color="red">
+<H1><CENTER> DUSTY </CENTER></H1>
+
+</font>
+<HR NOSHADE WIDTH="90%">
+
+<BR><BR>
+
+The code DUSTY was developed at the University of Kentucky by <A  HREF="http://www.astro.washington.edu/users/ivezic/">
+&#381;eljko Ivezi&#263;</a>, <A  HREF="mailto:maiamnen AT sympatico dot ca">Maia Nenkova</a> and <A  HREF="mailto:moshe AT pa dot uky dot edu">Moshe Elitzur</a> for a commonly encountered  astrophysical problem: radiation from some source (star, galactic nucleus, etc.) viewed after processing by a dusty region. The original radiation is scattered, absorbed and reemitted by the dust, and the emerging processed spectrum often provides the only available information about the embedded object. DUSTY can handle both planar and centrally-heated spherical density distributions.  The solution is obtained through an integral equation for the spectral energy density, introduced in <A  HREF="http://faculty.washington.edu/ivezic/Publications/IE97.pdf"> Ivezic & Elitzur 1997</a>. The number of independent input model parameters is minimized by fully implementing the scaling properties of the radiative transfer problem, and the spatial temperature profile is found from radiative equilibrium at every point in the dusty region. 
+
+<p> DUSTY has built in optical properties for the most common types of astronomical dust and comes with a <A HREF="https://github.com/ivezic/dusty/tree/master/releaseV2/Lib_nk">
+library</a> for many other grains. It supports various analytical forms for the density distribution, and can perform a full dynamical calculation for radiatively driven winds around AGB stars. The spectral energy distribution of the source can be specified analytically as either Planckian or broken power-law. In addition, arbitrary dust optical properties, density distributions and external radiation can be entered in user supplied files. Furthermore, the wavelength grid can be modified to accommodate spectral features.  A single DUSTY run can process an unlimited number of models, with each input set producing a run of optical depths, as specified. The user controls the detail level of the output, which can include both spectral and imaging properties as well as other quantities of interest. 
+
+<BR><BR><HR NOSHADE WIDTH="90%">
+<H2> Manual </H2>
+
+The manual for DUSTY is available online in
+<A HREF="https://github.com/ivezic/dusty/blob/master/releaseV2/Manual/manual.pdf"> pdf</a> format,
+as well as the <A HREF="https://github.com/ivezic/dusty/blob/master/releaseV2/Manual">LaTeX source</a> itself.
+The latter is included in the DUSTY distribution package.
+
+<BR><BR><HR NOSHADE WIDTH="90%">
+<H2> Distribution Files </H2>
+
+The entire package comes in a single
+<A HREF="https://github.com/ivezic/dusty/blob/master/releaseV2/dustyV2.tar.gz"> gzip file</a> of less than
+700kb, which needs to be expanded.  Under UNIX:
+
+<p>
+
+<UL>
+<LI> gzip -d dustyV2.tar.gz
+<LI> tar -xvf dustyV2.tar
+</UL>
+
+<p>  If you work with Windows, WINZIP or any equivalent program will execute both steps.  Make sure the extraction preserves the sub-directories structure.
+
+<p>  If you prefer downloading the files separately, you can access them
+<A HREF="https://github.com/ivezic/dusty/blob/master/releaseV2">here</a>.
+In addition to the source code, the distribution contains various sample input files.
+The corresponding <A HREF="https://github.com/ivezic/dusty/blob/master/releaseV2/Sample_output/">output</a>
+can be accessed here.
+
+<p>  Make sure you have the most recent version of DUSTY by checking
+<A HREF="https://github.com/ivezic/dusty">DUSTY's website</a>. 
+
+<BR><BR><HR NOSHADE WIDTH="90%">
+
+Your comments and suggestions would be greatly appreciated.  To be placed on DUSTY's mailing list, please send an <A  HREF="mailto:ivezic AT astro dot washington dot edu">e-mail request</a>.
+
+<P> <hr NOSHADE>
+<address>
+<font color="Brown"><font size=-1>
+Last updated Dec 31, 2017.
+</font></font></address>
+
+</BODY>
+
+</HTML>
+
+
