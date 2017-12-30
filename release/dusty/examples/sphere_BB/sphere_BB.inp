@@ -1,0 +1,134 @@
+ ----------------------------------------------------------------------
+    Input data for DUSTY                                               
+ ---------------------------------------------------------------------- 
+ This is an input file for radiative transfer code DUSTY, version 4.0. 
+ NOTE: this input file is not compatible with old versions of Dusty 
+ due to the added new input options. Examples of each input option are 
+ given at the end of this file. For a more detailed description please 
+ refer to the Manual. 
+ 
+
+ The input file has a free format, text and empty lines can be entered
+ arbitrarily. All lines that start with the '*' sign are copied to the
+ output, and can be used to print out notes and comments. This option 
+ can also be useful when the program fails for some mysterious reason 
+ and you want to compare its output with an exact copy of the input line
+ as it was read in before processing by DUSTY. The occurrence of relevant 
+ numerical input, which is entered in standard FORTRAN conventions, is 
+ flagged by the equal sign `='. The only restrictions are that all required 
+ input entries must be specified, and in the correct order; the most likely 
+ source of an input error is failure to comply with these requirements. 
+ Recall, also, that FORTRAN requires a carriage return termination of the 
+ file's last line if it contains relevant input. Single entries are always 
+ preceded by the equal sign, `=', and must be padded by blanks on both sides; 
+ the terminating blank can be optionally preceded with a comma. For example: 
+ T = 10,000 K as well as Temperature = 1.E4 degrees and simply T = 10000.00 
+ are all equivalent, legal input entries (note that comma separations of long 
+ numbers are permitted).  Some input is entered as a list, in which case the 
+ first member is preceded by `=' and each subsequent member must be preceded 
+ by a blank (an optional comma can be entered before the blank for additional 
+ separation); for example, Temperatures  = 1E4, 2E4 30,000. Because of the 
+ special role of '=' as a flag for input entry, care must be taken not to 
+ introduce any '=' except when required.  All text following the  '%' sign 
+ is ignored (as in TeX) and this can be used to comment out material that 
+ includes '=' signs. For example, different options for the same physical 
+ property may require a different number of input entries. By commenting out 
+ with '%', all options may be retained in the input file with only the 
+ relevant one switched on.
+>
+
+* ----------------------------------------------------------------------
+* NOTES:                                                                
+* Sample input file (sphere_BB.inp)
+* spherical dust distribution with
+* 1/r density profile
+* heated by external raditition with a temperature of 1000K
+* no scattering
+* ----------------------------------------------------------------------
+
+I. GEOMETRY %(available options: sphere\slab)
+
+     geometry = sphere
+
+II. PHYSICAL PARAMETERS                                                 
+     1) Central Source %(available options: on\off)
+
+        	central = off
+
+     2) External source  %(available options: on\off)
+               
+		external = on
+
+     2.1) Shape: %(available options: black_body\engelkd_marengo\power_law\file_lambda_f_lambda\file_f_lambda\file_f_nu)
+
+      	        Spectral shape = black_body  
+                Number of BB = 1
+                Temperature = 1000 K 
+
+     2.2) Scale: %(available options: flux\Lum_r1\energy_den\dilutn_fac\T1)
+        
+		Scale = dilutn_fac   % Td at the inner boundary
+		dilut = 1.
+
+     3) Dust Properties 
+     
+     3.1 Chemical composition %(available options: common_grain\common_and_addl_grain\tabulated)
+
+           	 optical properties index = tabulated
+		 data/ism-noscatt.dat
+	   	 Tsub = 15000. % Sublimation Temperature
+
+     4) Density Distribution %(available options: powd\expd\rdw\rdwa\usr_suppld)
+
+         	 density type = POWD
+        	 number of powers = 1                
+        	 shell's relative thickness = 1000.
+        	 power = 1.
+
+
+     5) Optical Depth: %(available options: linear\logarithmic\user_supplied)
+   
+		 grid type = logarithmic % log grid
+        	 lambda0 = 0.55 micron    % fiducial wavelength
+		 % minimum optical depth @ fiducial wavelength
+        	 tau(min) = 1.0; 
+		 % maximum optical depth @ fiducial wavelength
+		 tau(max) = 1000.0   
+        	 number of models = 4
+
+  ----------------------------------------------------------------------
+                                                                        
+  III. NUMERICS                                                           
+      
+     - accuracy for flux conservation = 0.10
+ 
+  ----------------------------------------------------------------------
+                                                                        
+  IV. OUTPUT PARAMETERS                                                 
+
+  	The flags governing file production are as follows: 
+  	If flag.eq.0 the particular file(s) is not produced. If flag.eq.1
+	all model results are in corresponding files with extensions 'spp' 
+	(sp.properties), 'stb' (spectra), 'itb' (images and visibilities, 
+	if chosen), 'rtb' (radial profiles) and 'mtb' (messages).  If 
+	flag.eq.2 each model result is in a separate corresponding file, 
+	with visibilities contained in fname.i##. If the images flag.eq.3 
+	the visibilities will be in separate files fname.v## (the flag for 
+	visibilities has to be the same as for images).
+	Note that choosing imaging output requires additional input data 
+	(please refer to the exmaples below or to the Manual).
+
+
+        FILE DESCRIPTION                               FLAG        
+       ------------------------------------------------------------     
+       - detailed spectra for each model;           fname.s### = 2
+       - images at specified wavelengths;           fname.i### = 0
+       - en.density at specified radii;             fname.j### = 0
+       - radial profiles for each model;            fname.r### = 2
+       - detailed run-time messages;                fname.m### = 2
+       ------------------------------------------------------------- 
+ 
+
+  The end of the input parameters listing
+  **********************************************************************
+ 

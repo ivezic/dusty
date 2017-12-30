@@ -1,0 +1,52 @@
+ ===========================
+  Output from program dusty 
+  version: 4.00
+ ===========================
+  
+  Input parameters from file: 
+ examples/sphere1/sphere1.inp                                                                                                                                                                                                               
+* ----------------------------------------------------------------------                                                                                                                                                                                       
+* NOTES:                                                                                                                                                                                                                                                       
+* Sample input file (sphere1.inp)                                                                                                                                                                                                                              
+* Spherical dust distribution with                                                                                                                                                                                                                             
+* constant density profile                                                                                                                                                                                                                                     
+* heated by external radiation with a Black Body of 5000K                                                                                                                                                                                                      
+* for composite dust grain 70% silicates 30% carbon                                                                                                                                                                                                            
+* for 3 optical depth (30,40,50)                                                                                                                                                                                                                               
+* ----------------------------------------------------------------------                                                                                                                                                                                       
+  Central source spectrum described by
+   a single Black Body with temperature     5800.00 K
+  Dust temperature on the inner boundary:   1200.0000000000000       K
+  --------------------------------------------
+  density described by 1/r**k with k =  0.0
+  relative thickness: 1.000E+03
+  --------------------------------------------
+  Optical depth at 5.5E-01 microns: 1.00E+01
+   Required Flux accuracy:       10.00%
+   Required Temp accuracy:        0.24%
+  --------------------------------------------
+  --------------------------------------------
+          
+  RESULTS:
+  --------
+ ###   tau0   Psi/Psi0 Fi(W/m2)  r1(cm)   r1/rc    theta1   T1(K)    Td(K)    RPr(1)  e(%)                              
+ ###     1       2        3        4        5        6        7        8        9      10                               
+ ========================================================================================
+   1 1.00E+01 1.01E+00 7.65E+04 2.00E+14 2.90E+01 1.49E+00 1.20E+03 4.81E+01 1.38E+07   2
+ =====================================
+  (1) optical depth at 5.5E-01 microns
+  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0= 6.09E+00
+  (3) bolometric flux at the inner radius 
+  (4) inner radius for L = 1e4 Lo
+  (5) ratio of the inner to the stellar radius
+  (6) angular size (in arcsec) when Fbol=1e-6 W/m2
+  (7) dust temperature at the inner radius 
+  (8) dust temperature at the outer edge
+  (9) radiation pressure on inner boundary; see manual for units
+ (10) maximum error in flux conservation (Fmax-Fmin)/(Fmax+Fmin)
+  ================================================
+  Everything is ok for all models.
+  Spectra are in files *.s##
+  Radial profiles are in files *.r##
+  Run-time messages are in files *.m##
+ ========== the end ==============================

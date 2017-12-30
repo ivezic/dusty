@@ -1,0 +1,14 @@
+ ==================================================
+ model   3  RUN-TIME MESSAGES 
+ --------------------------------------------------
+ ===========  starting to solve  ===========
+              1  iteration over fbol
+  Ncav increased to: 11
+ y grid generated, nY =  17
+                   nP =  45
+                 Nins =  34
+                 Ncav =  11
+  Calculating with  17 grid points
+  Accuracy of computed bolom. flux:   5.0 %
+   ==== SOLVE successfully completed =====
+   =======================================

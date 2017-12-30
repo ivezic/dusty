@@ -1,0 +1,67 @@
+ ===========================
+  Output from program dusty 
+  version: 4.00
+ ===========================
+  
+  Input parameters from file: 
+ examples/slab_BB/slab_BB.inp                                                                                                                                                                                                               
+* ----------------------------------------------------------------------                                                                                                                                                                                       
+* NOTES:                                                                                                                                                                                                                                                       
+* Sample input file (slab_BB.inp)                                                                                                                                                                                                                              
+* Slab in a Black Body radiation field                                                                                                                                                                                                                         
+* with temperature of 1000K                                                                                                                                                                                                                                    
+* for 4 optical depth (1,10,100,1000)                                                                                                                                                                                                                          
+* ----------------------------------------------------------------------                                                                                                                                                                                       
+  Left-side source spectrum described by
+   a single Black Body with temperature     1000.00 K
+  Flux at the slab left boundary:   57000.000000000000       W/m^2
+  Calculation in planar geometry:
+   Isotropic illumination from the left.
+  Right-side source spectrum described by
+   a single Black Body with temperature     1000.00 K
+  Isotropic illumination from the right.
+  Relative bol.flux fraction of right source: R = 1.00
+  --------------------------------------------
+  Optical depths at 5.5E-01 microns
+  ranging from 1.00E-02 to 1.00E+03
+    6 models with logarithmic grid                                                                                                                                                                                                              
+   Required Flux accuracy:       10.00%
+   Required Temp accuracy:        0.24%
+  --------------------------------------------
+  Intensity requested for these theta_out(deg):
+     0.0    5.0   10.0   15.0   20.0   25.0   30.0   35.0
+    40.0   45.0   50.0   55.0   60.0   65.0   70.0   75.0
+    80.0
+   equidistant in theta_out, step= 5.0
+  --------------------------------------------
+          
+  RESULTS:
+  --------
+ ###    Tau0    Psi/Psi0     FiL      FiR       FbolL    FbolR     r1(cm)    TdL(K)    TdR(K)    RPr(1)   e(%)          
+ ###      1        2          3        4          5        6         7          8         9       10      11            
+ =============================================================================================================
+   1  1.00E-02  1.00E+00  5.73E+04  5.73E+04 -5.73E+04  5.73E+04  1.16E+14  1.00E+03  1.00E+03 -2.22E+00  5
+   2  1.00E-01  1.03E+00  5.73E+04  5.73E+04 -5.73E+04  5.73E+04  1.16E+14  1.00E+03  1.00E+03 -5.91E+01  5
+   3  1.00E+00  1.17E+00  5.73E+04  5.73E+04 -5.73E+04  5.73E+04  1.16E+14  1.00E+03  1.00E+03 -3.10E+02  5
+   4  1.00E+01  1.70E+00  5.73E+04  5.73E+04 -5.71E+04  5.71E+04  1.16E+14  1.00E+03  1.00E+03  4.89E+03  5
+   5  1.00E+02  1.93E+00  5.73E+04  5.73E+04 -5.34E+04  5.34E+04  1.16E+14  9.94E+02  9.94E+02  8.11E+04  5
+   6  1.00E+03  1.91E+00  5.73E+04  5.73E+04 -5.25E+04  5.25E+04  1.16E+14  9.92E+02  9.92E+02  1.03E+05  5
+ =====================================
+  (1) optical depth at 5.5E-01 microns
+  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0= 5.05E-01
+  (3) input bol.flux (in W/m2) of the left-side source at the left slab boundary
+  (4) input bol.flux (in W/m2) of the right-side source at the right slab boundary
+  (5) bolometric flux (in W/m2) at the left slab boundary
+  (6) bolometric flux (in W/m2) at the right slab boundary
+  (7) position of the left slab boundary for L = 1e4 Lo
+  (8) dust temperature at the left slab boundary
+  (9) dust temperature at the right slab boundary
+  (10) radiation pressure on left boundary; see manual for units
+  (11) maximum error in flux conservation (Fmax-Fmin)/(Fmax+Fmin)
+  ================================================
+  Everything is ok for all models.
+  Spectra are in files *.s##
+  Intensities are in files *.i##
+  Radial profiles are in files *.r##
+  Run-time messages are in files *.m##
+ ========== the end ==============================

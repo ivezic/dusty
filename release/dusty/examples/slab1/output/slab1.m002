@@ -1,0 +1,10 @@
+ ==================================================
+ model   2  RUN-TIME MESSAGES 
+ --------------------------------------------------
+ ===========  starting to solve  ===========
+              1  iteration over fbol
+  Tau grid generated, nY=  53
+  Calculating with  53 grid points
+  Accuracy of computed bolom. flux:   9.3 %
+   ==== SOLVE successfully completed =====
+   =======================================

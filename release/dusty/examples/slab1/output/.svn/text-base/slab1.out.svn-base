@@ -1,0 +1,71 @@
+ ===========================
+  Output from program dusty 
+  version: 4.00
+ ===========================
+  
+  Input parameters from file: 
+ examples/slab1/slab1.inp                                                                                                                                                                                                                   
+* ----------------------------------------------------------------------                                                                                                                                                                                       
+* NOTES:                                                                                                                                                                                                                                                       
+* Sample input file (slab1.inp)                                                                                                                                                                                                                                
+* directional input of power law spectrum                                                                                                                                                                                                                      
+* left side temperature of 800 K                                                                                                                                                                                                                               
+* ----------------------------------------------------------------------                                                                                                                                                                                       
+  Left-side source spectrum described by
+    Power law with:
+     lambda      k
+  1.000E-02
+            0.000E+00
+  1.000E-01
+            5.000E-01
+  1.000E+00
+            3.000E+00
+  3.600E+04
+  Dust temperature on the inner boundary:   1800.0000000000000       K
+  Calculation in planar geometry:
+  Directional illumination from the left.
+  --------------------------------------------
+  *** Warning***
+  Inner boundary temperature larger than sublimation temperature
+  -> reduced to    1500.0000000000000     
+  *** Warning***
+  Optical depths at 5.5E-01 microns
+  ranging from 1.00E+01 to 2.00E+01
+    2 models with grid from file                                                                                                                                                                                                                
+    examples/slab1/tauV.tab                                               
+   Required Flux accuracy:       10.00%
+   Required Temp accuracy:        0.24%
+  --------------------------------------------
+  Intensity requested for these theta_out(deg):
+     0.0    5.0   10.0   15.0   20.0   25.0   30.0   35.0
+    40.0   45.0   50.0   55.0   60.0   65.0   70.0   75.0
+    80.0
+   equidistant in theta_out, step= 5.0
+  --------------------------------------------
+          
+  RESULTS:
+  --------
+ ###    Tau0    Psi/Psi0     FiL      FiR       FbolL    FbolR     r1(cm)    TdL(K)    TdR(K)    RPr(1)   e(%)          
+ ###      1        2          3        4          5        6         7          8         9       10      11            
+ =============================================================================================================
+   1  1.00E+01  1.41E+00  4.07E+04  0.00E+00 -3.06E+04  1.06E+04  2.74E+14  1.50E+03  6.42E+02  2.35E+07  3
+   2  2.00E+01  1.42E+00  4.06E+04  0.00E+00 -3.31E+04  8.36E+03  2.74E+14  1.50E+03  5.66E+02  2.35E+07  6
+ =====================================
+  (1) optical depth at 5.5E-01 microns
+  (2) Psi as defined by eq.14 in IE97 with optically thin value Psi0= 2.00E+01
+  (3) input bol.flux (in W/m2) of the left-side source at the left slab boundary
+  (4) input bol.flux (in W/m2) of the right-side source at the right slab boundary
+  (5) bolometric flux (in W/m2) at the left slab boundary
+  (6) bolometric flux (in W/m2) at the right slab boundary
+  (7) position of the left slab boundary for L = 1e4 Lo
+  (8) dust temperature at the left slab boundary
+  (9) dust temperature at the right slab boundary
+  (10) radiation pressure on left boundary; see manual for units
+  (11) maximum error in flux conservation (Fmax-Fmin)/(Fmax+Fmin)
+  ================================================
+  Everything is ok for all models.
+  Spectra are in files *.s##
+  Intensities are in files *.i##
+  Radial profiles are in files *.r##
+  Run-time messages are in files *.m##
+ ========== the end ==============================

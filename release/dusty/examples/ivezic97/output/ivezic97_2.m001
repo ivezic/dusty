@@ -1,0 +1,16 @@
+ ==================================================
+ model   1  RUN-TIME MESSAGES 
+ --------------------------------------------------
+ ===========  STARTING SOLVE  ===========
+              1 . iteration over Fbol
+ y grid generated, nY =  22
+                   nP =  54
+                 Nins =  44
+                 Ncav =  10
+  Calculating weight matrices
+  Weight matrices OK, calculating Tdust
+  Convergence achieved, number of
+  iterations over energy density:    6
+  Flux conservation OK within: 2.9E-03
+  ==== SOLVE successfully completed =====
+  =======================================
