@@ -10,3 +10,21 @@ There are two versions:
    You can get V4 as *tar  
    [file distribution](release/dusty.tar), 
    which also includes the manual as [docs/manual.pdf](docs/manual.pdf)
+
+
+Internal info: 
+i) To generate V4 release files in directory release/, run 
+> sh generate_release.sh
+
+ii) then compile
+> cd release/dusty
+> make
+
+(for MacOS users: if you encounter "ld: library not found for -lcrt1.o" problem, 
+then do
+> xcode-select --install) 
+
+iii) and finally run the example master file:
+./dusty dusty.mas
+
+

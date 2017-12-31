@@ -61,7 +61,7 @@
 
 \begin{document}
 
-\title{User Manual for DUSTY}
+\title{User Manual for DUSTY (V4)}
 
 \author{\v Zeljko \Ivezic\footnote{Current address: Department of
     Astronomy, University of Washington, Seattle, WA 98105.}, Maia
@@ -117,11 +117,11 @@ This code is copywrited, 1996--2012 by Moshe Elitzur, and may not be
 copied without acknowledging its origin. Use of this code is not
 restricted, provided that acknowledgement is made in each publication.
 The bibliographic reference to this version of \D\ is \Ivezic, \v Z.,
-Nenkova, M., Heymann, F. \& Elitzur, M., 2012, User Manual for \D,
-University of Kentucky Internal Report, accessible at
-\url{http://www.pa.uky.edu/~moshe/dusty}(astro-ph XXX). Make sure that
-you have the current version, with the latest options and problem
-fixes, by checking the \D\ Web site.
+Nenkova, M., Heymann, F. \& Elitzur, M., 2012, User Manual for \D ~(V4),
+accessible at
+\url{https://github.com/ivezic/dusty/tree/master/release/dusty/docs/manual.pdf}. 
+Make sure that you have the current version, with the latest options and 
+problem fixes, by checking the \D\ Web site \url{https://github.com/ivezic/dusty}. 
 
 \newpage
 
@@ -166,8 +166,8 @@ control of \D
 \subsection{Major Changes}
 \label{sec:major_changes}
 
-This new version of \D\ ({\tt \ver.f90}) is faster than its previous
-public release (version 2.0), particularly for the slab case. Because
+This new version of \D\ ({\tt dusty.f90}, internally known as V4) is faster than its previous
+public release (internally known as version V2), particularly for the slab case. Because
 of the addition of some new features, the structure of the input has
 changed and old input files will not run on the current version. The
 major changes are:
@@ -209,14 +209,12 @@ major changes are:
 \section{Installation}
 \label{sec:installation}
 
-Download the file {\tt \ver.tar.gz} from
-\url{http://www.pa.uky.edu/~moshe/dusty}, and then unzip and untar it,
-maintaining the directory structure. The gzipped file contains the
-following:
+Download the file {\tt dusty.tar}\footnote{\url{https://github.com/ivezic/dusty/tree/master/release/dusty.tar}}
+and then untar it, maintaining the directory structure. The gzipped file contains the following:
 %
 \begin{itemize}
 %
-\item The source code {\tt \ver.f90}
+\item The source code {\tt dusty.f90}
 %
 \item The file {\tt userpar.inc} with user adjustable array sizes
 %
