@@ -12,7 +12,7 @@
    which also includes the manual as [docs/manual.pdf](docs/manual.pdf)
 
 
-## Building steps: 
+## Building steps for V4: 
 
 i) To generate V4 release files (directory release), run 
 > sh generate_release.sh
