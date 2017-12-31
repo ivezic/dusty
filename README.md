@@ -1,6 +1,6 @@
 # Radiative transfer code Dusty
 
-There are two versions: 
+## There are two versions: 
 
 1) The original 1999 version, known internally as V2. Instructions,
    the code, and supporting files for V2 are available from
@@ -12,19 +12,21 @@ There are two versions:
    which also includes the manual as [docs/manual.pdf](docs/manual.pdf)
 
 
-Internal info: 
-i) To generate V4 release files in directory release/, run 
+## Internal info: 
+
+i) To generate V4 release files (directory release), run 
 > sh generate_release.sh
 
 ii) then compile
 > cd release/dusty
+
 > make
 
-(for MacOS users: if you encounter "ld: library not found for -lcrt1.o" problem, 
+NB: for MacOS users - if you encounter "ld: library not found for -lcrt1.o" problem, 
 then do
-> xcode-select --install) 
+> xcode-select --install
 
 iii) and finally run the example master file:
-./dusty dusty.mas
+> ./dusty dusty.mas
 
 
