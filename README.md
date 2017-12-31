@@ -9,5 +9,4 @@ There are two versions:
 2) The latest and greatest ("new and improved") version, known internally as V4. 
    You can get V4 as *tar  
    [file distribution](release/dusty.tar), 
-   which also includes the manual in directory 
-   docs/ [docs/manual.pdf](docs/manual.pdf)
+   which also includes the manual as [docs/manual.pdf](docs/manual.pdf)
