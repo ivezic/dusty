@@ -9,7 +9,7 @@
 2) The latest and greatest ("new and improved") version, known internally as V4. 
    You can get V4 as *tar  
    [file distribution](release/dusty.tar), 
-   which also includes the manual as [docs/manual.pdf](docs/manual.pdf)
+   which also includes [the V4 manual](release/dusty/docs/manual.pdf)
 
 
 ## Building steps for V4: 
