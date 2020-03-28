@@ -1408,6 +1408,9 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         ! ** default ** for epsilon = v1/ve = u1/ue:
         pow = 0.2d0
         if(denstyp.eq.3) then !RDW
+           if (allocated(ptr)) deallocate(ptr)
+           allocate(ptr(2))
+           ptr = 0
            ! ** default ** for max(gravcor = fgrav/frad_press):
            ptr(1) = 0.5d0
            ! convergence criterion:
@@ -2729,11 +2732,11 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
      Elems = 0
      hdrslb1= '#     t        epsilon     tauF       RPr   '
      do iG = 1,nG
-        write(hdrslb2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)'), '    Td(',iG,') '
+        write(hdrslb2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)') '    Td(',iG,') '
      end do
      hdrsph1= '#     y         eta         t        tauF      epsilon      RPr'
      do iG = 1,nG
-        write(hdrsph2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)'), '    Td(',iG,') '
+        write(hdrsph2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)') '    Td(',iG,') '
      end do
      hdrdyn= '         u        drift'
      unt = 16
@@ -3835,6 +3838,7 @@ subroutine SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,&
   tau = 0
   if (sph) then
      if (initial.and.iterfbol.eq.1) then
+        nY = 15
         ! generate y-grid
         call Ygrid(pstar,iPstar,itereta,iterfbol,taumax,nY,nYprev,nP,nCav,nIns)
         ! generate p and z grid
@@ -3928,6 +3932,7 @@ subroutine Ygrid(pstar,iPstar,itereta,iterfbol,taumax,nY,nYprev,nP,&
      ! max number iter. over improving ratio of two Eta's
      irmax = 20
      ! save old grid and values of Eta (important for denstyp = 5 or 6)
+     print*,nY
      IF (nY.GT.0.AND.(denstyp.eq.3)) THEN
         DO iY = 1, nY
            Yprev(iY) = Y(iY)
@@ -4536,6 +4541,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   double precision,allocatable :: emiss(:,:,:),emiss_total(:,:)
   !---- local variable
   double precision,allocatable :: utot_old2(:,:)
+  double precision,allocatable :: sph_em(:,:)
   integer :: itlim,conv,iter,iG,iL,iY,iY1, moment, thread_id,i,istop,iOut
   double precision aux1,maxerrT(max_threads),maxerrU(max_threads),m,n,JL,JR,xx
   external eta
@@ -4554,6 +4560,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
      ! evaluate ETAzp (carried in common)
      CALL getETAzp(nY,nP)
   end if
+
 !!$  ! the tau-profile at the fiducious lambda (needed in prout)
 !!$  if (slb) then
 !!$     do iY = 1, nY
@@ -4585,6 +4592,17 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
 !     if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
 !  end if
   call Init_Temp(nY,T4_ext,us)
+  if (typentry(1).eq.5) then
+     allocate(sph_em(nL,nY))
+     sph_em = 0
+     call SPH_diff(0,0,nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,sph_em)
+     ! find initial total energy density
+     do iY = 1, nY
+        do  iL = 1, nL
+           utot(iL,iY) = us(iL,iY) + sph_em(iL,iY)
+        end do
+     end do
+  endif
   if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
   do iY = 1,nY
      do iG = 1,nG
@@ -4620,6 +4638,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
            else 
               aux1 = 0.0D0
            end if
+           ! Speed up after iteration 5000!
            utot_old2(iL,iY) = utot_old(iL,iY)
            utot_old(iL,iY) = utot(iL,iY)
            if ((iter.gt.5000).and.(mod(iter,5).eq.0)) then 
@@ -5470,6 +5489,7 @@ subroutine Find_Text(nY,T4_ext)
   fnum = 0
   allocate(fdenum(nL))
   fdenum = 0
+
 ! loop over grains
   do iG = 1, nG
      do iL = 1, nL
@@ -6801,6 +6821,8 @@ SUBROUTINE SPH_Int(nY,nP,fs)
   DO iL = 1, nL
      ! stellar intensity, Istell (extinction already included)
      Istell(iL) = fs(iL,nY) * stelfact
+     ! due to redefinition of fs in V4 (larger by 4*pi in Find_Tran)  (ZI, Mar 2020)
+     Istell(iL) = Istell(iL) / (4.0d0*pi) 
      ! total optical depth along a line of sight
      tauOut(iL) = numcorr*TAUtot(iL)
   END DO
@@ -12966,8 +12988,8 @@ SUBROUTINE WINDS(nY,nYprev,EtaOK)
   DO iY = 1, nY
      DO iL = 1, nL
         Faux(iL) = (SigmaA(1,iL)+SigmaS(1,iL))*ftot(iL,iY)/lambda(iL)
-        print*,'still single grain L7370'
-        stop
+        !print*,'still single grain L7370'
+        !stop
      END DO
      CALL Simpson(nL,1,nL,lambda,Faux,resaux)
      if (iY.eq.1)    phi1 = resaux
@@ -13071,8 +13093,10 @@ SUBROUTINE DYNAMICS(eps_loc, f, uScale, phi_loc, u, zeta,  &
   etaold = 0
   allocate(uold(npY))
   uold = 0
-  allocate(zeta(npG,npY))
-  zeta = 0
+  if (.not. allocated(zeta)) then
+     allocate(zeta(npG,npY))
+     zeta = 0
+  endif
 
   !  we may wish to control itMax and k as input parameters
   ! -----------------------------------------------------------------------
