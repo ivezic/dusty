@@ -3429,6 +3429,8 @@ SUBROUTINE SPH_Int(nY,nP,fs)
   DO iL = 1, nL
      ! stellar intensity, Istell (extinction already included)
      Istell(iL) = fs(iL,nY) * stelfact
+     ! due to redefinition of fs in V4 (larger by 4*pi in Find_Tran)  (ZI, Mar 2020)
+     Istell(iL) = Istell(iL) / (4.0d0*pi) 
      ! total optical depth along a line of sight
      tauOut(iL) = numcorr*TAUtot(iL)
   END DO
