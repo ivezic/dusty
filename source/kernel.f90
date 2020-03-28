@@ -463,6 +463,7 @@ subroutine SetGrids(pstar,iPstar,taumax,nY,nYprev,nP,nCav,nIns,initial,&
   tau = 0
   if (sph) then
      if (initial.and.iterfbol.eq.1) then
+        nY = 15
         ! generate y-grid
         call Ygrid(pstar,iPstar,itereta,iterfbol,taumax,nY,nYprev,nP,nCav,nIns)
         ! generate p and z grid
@@ -556,6 +557,7 @@ subroutine Ygrid(pstar,iPstar,itereta,iterfbol,taumax,nY,nYprev,nP,&
      ! max number iter. over improving ratio of two Eta's
      irmax = 20
      ! save old grid and values of Eta (important for denstyp = 5 or 6)
+     print*,nY
      IF (nY.GT.0.AND.(denstyp.eq.3)) THEN
         DO iY = 1, nY
            Yprev(iY) = Y(iY)
@@ -1164,6 +1166,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
   double precision,allocatable :: emiss(:,:,:),emiss_total(:,:)
   !---- local variable
   double precision,allocatable :: utot_old2(:,:)
+  double precision,allocatable :: sph_em(:,:)
   integer :: itlim,conv,iter,iG,iL,iY,iY1, moment, thread_id,i,istop,iOut
   double precision aux1,maxerrT(max_threads),maxerrU(max_threads),m,n,JL,JR,xx
   external eta
@@ -1182,6 +1185,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
      ! evaluate ETAzp (carried in common)
      CALL getETAzp(nY,nP)
   end if
+
 !!$  ! the tau-profile at the fiducious lambda (needed in prout)
 !!$  if (slb) then
 !!$     do iY = 1, nY
@@ -1213,6 +1217,17 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
 !     if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
 !  end if
   call Init_Temp(nY,T4_ext,us)
+  if (typentry(1).eq.5) then
+     allocate(sph_em(nL,nY))
+     sph_em = 0
+     call SPH_diff(0,0,nY,nP,initial,iter,iterfbol,T4_ext,emiss,us,sph_em)
+     ! find initial total energy density
+     do iY = 1, nY
+        do  iL = 1, nL
+           utot(iL,iY) = us(iL,iY) + sph_em(iL,iY)
+        end do
+     end do
+  endif
   if(iVerb.eq.2) write(*,*)' Done with initial dust temperature.'
   do iY = 1,nY
      do iG = 1,nG
@@ -1248,6 +1263,7 @@ subroutine Rad_Transf(initial,nY,nYprev,nP,itereta,pstar,y_incr,us,fs,emiss, &
            else 
               aux1 = 0.0D0
            end if
+           ! Speed up after iteration 5000!
            utot_old2(iL,iY) = utot_old(iL,iY)
            utot_old(iL,iY) = utot(iL,iY)
            if ((iter.gt.5000).and.(mod(iter,5).eq.0)) then 
@@ -2098,6 +2114,7 @@ subroutine Find_Text(nY,T4_ext)
   fnum = 0
   allocate(fdenum(nL))
   fdenum = 0
+
 ! loop over grains
   do iG = 1, nG
      do iL = 1, nL

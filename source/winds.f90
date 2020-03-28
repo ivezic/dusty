@@ -106,8 +106,8 @@ SUBROUTINE WINDS(nY,nYprev,EtaOK)
   DO iY = 1, nY
      DO iL = 1, nL
         Faux(iL) = (SigmaA(1,iL)+SigmaS(1,iL))*ftot(iL,iY)/lambda(iL)
-        print*,'still single grain L7370'
-        stop
+        !print*,'still single grain L7370'
+        !stop
      END DO
      CALL Simpson(nL,1,nL,lambda,Faux,resaux)
      if (iY.eq.1)    phi1 = resaux
@@ -211,8 +211,10 @@ SUBROUTINE DYNAMICS(eps_loc, f, uScale, phi_loc, u, zeta,  &
   etaold = 0
   allocate(uold(npY))
   uold = 0
-  allocate(zeta(npG,npY))
-  zeta = 0
+  if (.not. allocated(zeta)) then
+     allocate(zeta(npG,npY))
+     zeta = 0
+  endif
 
   !  we may wish to control itMax and k as input parameters
   ! -----------------------------------------------------------------------

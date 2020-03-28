@@ -598,6 +598,9 @@ subroutine Input(nameIn,nameOut,tau1,tau2,GridType,Nmodel)
         ! ** default ** for epsilon = v1/ve = u1/ue:
         pow = 0.2d0
         if(denstyp.eq.3) then !RDW
+           if (allocated(ptr)) deallocate(ptr)
+           allocate(ptr(2))
+           ptr = 0
            ! ** default ** for max(gravcor = fgrav/frad_press):
            ptr(1) = 0.5d0
            ! convergence criterion:
@@ -1919,11 +1922,11 @@ subroutine PrOut(nY,nP,nYprev,itereta,model,delta)
      Elems = 0
      hdrslb1= '#     t        epsilon     tauF       RPr   '
      do iG = 1,nG
-        write(hdrslb2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)'), '    Td(',iG,') '
+        write(hdrslb2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)') '    Td(',iG,') '
      end do
      hdrsph1= '#     y         eta         t        tauF      epsilon      RPr'
      do iG = 1,nG
-        write(hdrsph2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)'), '    Td(',iG,') '
+        write(hdrsph2(1+(iG-1)*11:1+(iG)*11),'(a7,i2.2,a2)') '    Td(',iG,') '
      end do
      hdrdyn= '         u        drift'
      unt = 16
