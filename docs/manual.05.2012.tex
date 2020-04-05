@@ -518,7 +518,7 @@ radiation pressure on the dust grains. \D\ can compute the wind
 structure by solving the hydrodynamics equations, including dust drift
 and the star's gravitational attraction, as a set coupled to radiative
 transfer.  This numerical solution is triggered with {\tt density type
-  = RDW}, while {\tt density type = RDW\_Analytic} utilizes an
+  = RDW}, while {\tt density type = RDWA} utilizes an
 analytic approximation for the dust density profile which is
 appropriate in most cases and offers the advantage of a much shorter
 run time.
@@ -553,7 +553,7 @@ run time.
   results of detailed numerical calculations (previous option). The
   ratio of initial to final velocity, $\epsilon_v = v_1/v_e$, is
   practically irrelevant as long as $\epsilon_v$ \la\ 0.2. The
-  selection {\tt density type = RDW\_Analytic} invokes this analytical
+  selection {\tt density type = RDWA} invokes this analytical
   solution with the default value $\epsilon_v = 0.2$. As for the
   previous option, the only input parameter that needs to be specified
   in this case is the outer boundary $Y$.
@@ -563,7 +563,7 @@ run time.
     shell relative thickness is $Y = 10^4$:
 
 \begin{verbatim}
-   density type = RDW_Analytic ;     Y = 1.e4
+   density type = RDWA ;     Y = 1.e4
 \end{verbatim}
 
 \end{itemize}
