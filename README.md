@@ -10,6 +10,15 @@
    You can get V4 as *tar  
    [file distribution](release/dusty.tar), 
    which also includes [the V4 manual](release/dusty/docs/manual.pdf)
+   
+## Important note:
+
+V4 is not nearly as much tested and verified as V2. V2 is recommended over V4, unless
+you require V4 functionality that doesn't exist in V2:
+
+- slab geometry (V2 only supports spherical geometry)
+- external heating (V2 only supports a central source of radiation)
+- multi-grain mixtures (V2 uses an approximation that is still single grain type model) 
 
 
 ## Building steps for V4: 
