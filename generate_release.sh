@@ -18,10 +18,9 @@ cat source/winds.f90 >> release/dusty/dusty.f90
 
 mkdir release/dusty/docs
 cd docs
-latex manual.05.2012.tex
-dvipdf manual.05.2012.dvi
+pdflatex manualV4.tex
 cd ..
-cp docs/manual.05.2012.pdf release/dusty/docs/manual.pdf
+cp docs/manualV4.pdf release/dusty/docs/manual.pdf
 cp -r data release/dusty/data
 cp dusty.mas release/dusty/ 
 cp userpar.inc release/dusty/ 
