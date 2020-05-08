@@ -1,5 +1,8 @@
 # Radiative transfer code Dusty
 
+[Team space:](https://github.com/dirac-institute/DustyCollaboration)
+
+
 ## There are two versions: 
 
 1) The original 1999 version, known internally as V2. Instructions,
