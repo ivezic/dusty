@@ -1,6 +1,6 @@
 # Radiative transfer code Dusty
 
-[Team space:](https://github.com/dirac-institute/DustyCollaboration)
+[Team space](https://github.com/dirac-institute/DustyCollaboration)
 
 
 ## There are two versions: 
